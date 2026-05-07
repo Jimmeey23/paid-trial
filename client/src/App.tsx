@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Analytics } from "@vercel/analytics/react"
 import { Physique57SignUpForm } from "@/components/physique57-sign-up-form"
 import { Barre57TrialForm } from "@/components/barre57-trial-form"
+import { ScheduleEmbed } from "@/components/schedule-embed"
 
 const BRAND_LOGO_URL = "https://i.postimg.cc/6Qt8YppB/Photoroom_20251014_101748.png"
 const BRAND_SITE_URL = "https://www.physique57.in"
@@ -24,6 +25,16 @@ const routeMeta = {
     description:
       "Book your complimentary Barre 57 trial and discover Physique 57 India's signature boutique fitness experience.",
     name: "Barre 57 Trial Form",
+  },
+  scheduleMum: {
+    title: "Physique 57 India | Schedule Mum",
+    description: "View the Physique 57 India Momence schedule for Mum.",
+    name: "Physique 57 Schedule Mum",
+  },
+  scheduleBlr: {
+    title: "Physique 57 India | Schedule Bengaluru",
+    description: "View the Physique 57 India Momence schedule for Bengaluru.",
+    name: "Physique 57 Schedule Bengaluru",
   },
 } as const
 
@@ -88,6 +99,8 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
   const isBarreRoute = currentPath === "/barre" || currentPath.startsWith("/barre/")
   const isTestRoute = currentPath === "/test" || currentPath.startsWith("/test/")
+  const isScheduleMumRoute = currentPath === "/schedule-mum" || currentPath.startsWith("/schedule-mum/")
+  const isScheduleBlrRoute = currentPath === "/schedule-blr" || currentPath.startsWith("/schedule-blr/")
 
   useEffect(() => {
     const handlePopState = () => {
@@ -103,7 +116,11 @@ export default function App() {
       ? routeMeta.barre
       : isTestRoute
         ? routeMeta.test
-        : routeMeta.default
+        : isScheduleMumRoute
+          ? routeMeta.scheduleMum
+          : isScheduleBlrRoute
+            ? routeMeta.scheduleBlr
+            : routeMeta.default
     const pageUrl = typeof window !== "undefined" ? window.location.href : BRAND_SITE_URL
 
     document.title = meta.title
@@ -146,13 +163,17 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isBarreRoute, isTestRoute])
+  }, [currentPath, isBarreRoute, isTestRoute, isScheduleMumRoute, isScheduleBlrRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
     : isTestRoute
       ? <Physique57SignUpForm testMode />
-      : <Physique57SignUpForm />
+      : isScheduleMumRoute
+        ? <ScheduleEmbed hostId="13752" locationIds={[]} />
+        : isScheduleBlrRoute
+          ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
+          : <Physique57SignUpForm />
 
   return (
     <>

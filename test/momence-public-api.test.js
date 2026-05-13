@@ -163,11 +163,11 @@ test('buildMomenceLeadRequestPayload can override sourceId for influencer leads'
     },
     {
       token: 'token',
-      sourceId: '14729'
+      sourceId: '201918'
     }
   );
 
-  assert.equal(payload.sourceId, '14729');
+  assert.equal(payload.sourceId, '201918');
   assert.equal(payload.token, 'token');
   assert.equal(payload.email, 'influencer@example.com');
 });

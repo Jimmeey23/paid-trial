@@ -2115,7 +2115,7 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
 
     try {
       await submitToMomence(leadData, {
-        sourceId: process.env.MOMENCE_INFLUENCER_SOURCE_ID || '14729'
+        sourceId: process.env.MOMENCE_INFLUENCER_SOURCE_ID || '201918'
       });
     } catch (error) {
       console.error('Momence lead webhook failed for influencer Barre:', error.message);

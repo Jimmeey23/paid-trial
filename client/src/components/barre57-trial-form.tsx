@@ -59,6 +59,66 @@ function createEventId() {
 
 interface Barre57TrialFormProps {
   onSubmit?: (data: any) => void
+  variant?: "barre" | "influencer"
+}
+
+interface ScheduleSession {
+  id: string
+  title: string
+  instructorName?: string
+  locationName?: string
+  startsAt: string
+  durationMinutes?: number | null
+  spotsRemaining?: number | null
+}
+
+interface ScheduleGroup {
+  date: string
+  items: ScheduleSession[]
+}
+
+interface SubmissionSchedule {
+  success: boolean
+  schedulePageUrl?: string
+  groupedSessions?: ScheduleGroup[]
+}
+
+interface SubmissionMomenceStatus {
+  openBarreProvisioned?: boolean
+  error?: string
+}
+
+function sameOriginApiUrl(path: string) {
+  if (typeof window === "undefined") {
+    return path
+  }
+
+  return new URL(path, window.location.origin).toString()
+}
+
+function formatScheduleDate(value: string) {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(parsed)
+}
+
+function formatScheduleTime(value: string) {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return ""
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(parsed)
 }
 
 // Barre 57 specific hero images
@@ -356,7 +416,8 @@ const REVIEW_CARD_GAP = 24
 const REVIEW_CARD_STRIDE = REVIEW_CARD_WIDTH + REVIEW_CARD_GAP
 const REVIEW_CARD_CENTER_OFFSET = REVIEW_CARD_WIDTH / 2
 
-export function Barre57TrialForm({ onSubmit }: Barre57TrialFormProps) {
+export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFormProps) {
+  const isInfluencerFlow = variant === "influencer"
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -386,9 +447,12 @@ export function Barre57TrialForm({ onSubmit }: Barre57TrialFormProps) {
   const [selectedWorkoutSection, setSelectedWorkoutSection] = useState<number>(0)
   const [selectedExercise, setSelectedExercise] = useState<number>(0)
   const [currentReview, setCurrentReview] = useState<number>(Math.floor(clientReviews.length / 2))
+  const [submissionSchedule, setSubmissionSchedule] = useState<SubmissionSchedule | null>(null)
+  const [submissionMomence, setSubmissionMomence] = useState<SubmissionMomenceStatus | null>(null)
 
   const selectedStudio = studios.find((studio) => studio.name === formData.studio)
   const redirectUrl = resolvedRedirectUrl || publicConfig?.redirectUrl || DEFAULT_REDIRECT_URL
+  const openBarreProvisioned = submissionMomence?.openBarreProvisioned === true
 
   function scheduleRedirectToMomence(url = redirectUrl, delay = 1400) {
     if (typeof window === "undefined") {
@@ -608,11 +672,11 @@ export function Barre57TrialForm({ onSubmit }: Barre57TrialFormProps) {
         type: "Barre 57",
         waiverAccepted: formData.acceptedTerms ? "accepted" : "",
         event_id: eventIdRef.current,
-        source_form: "barre-trial-form",
+        source_form: isInfluencerFlow ? "influencer-barre-form" : "barre-trial-form",
         ...trackingPayload,
       }
 
-      const response = await fetch("/api/submit-barre-lead", {
+      const response = await fetch(sameOriginApiUrl(isInfluencerFlow ? "/api/submit-influencer-lead" : "/api/submit-barre-lead"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -639,6 +703,8 @@ export function Barre57TrialForm({ onSubmit }: Barre57TrialFormProps) {
 
       const nextRedirectUrl = result.redirectUrl || publicConfigRef.current?.redirectUrl || DEFAULT_REDIRECT_URL
       setResolvedRedirectUrl(nextRedirectUrl)
+      setSubmissionSchedule(result.schedule || null)
+      setSubmissionMomence(result.momence || null)
       setShowSuccessModal(true)
       setFormData({
         firstName: "",
@@ -650,7 +716,7 @@ export function Barre57TrialForm({ onSubmit }: Barre57TrialFormProps) {
         acceptedTerms: false,
       })
       eventIdRef.current = createEventId()
-      scheduleRedirectToMomence(nextRedirectUrl)
+      scheduleRedirectToMomence(nextRedirectUrl, isInfluencerFlow ? 6500 : 2200)
 
       if (onSubmit) {
         onSubmit(result)
@@ -762,20 +828,51 @@ export function Barre57TrialForm({ onSubmit }: Barre57TrialFormProps) {
           <div className="mx-auto w-full min-w-0 max-w-[1120px] px-3 pt-0 pb-6 sm:px-4 sm:pt-0 md:px-6 lg:px-10 lg:pt-0 xl:px-14 xl:pt-0">
             {showSuccessModal ? (
               <div className="flex min-h-[78vh] items-center justify-center">
-                <div className="w-full max-w-2xl rounded-[32px] border border-slate-200/80 bg-white/85 px-4 py-12 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:px-12 sm:py-16">
+                <div className="w-full max-w-3xl rounded-[32px] border border-slate-200/80 bg-white/85 px-4 py-10 text-center shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:px-10 sm:py-12">
                   <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-blue-600 shadow-lg">
                     <CheckCircle2 className="h-12 w-12 text-white" />
                   </div>
-                  <p className="mt-8 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-900/70">Trial booked</p>
-                  <h2 className="mt-3 text-3xl font-bold text-slate-950 sm:text-4xl">Your Barre 57 Trial is Confirmed!</h2>
-                  <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-                    Check your email for class details and arrival instructions. Our team will contact you shortly.
+                  <p className="mt-8 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-900/70">
+                    {isInfluencerFlow && openBarreProvisioned ? "Open Barre added" : "Request received"}
                   </p>
+                  <h2 className="mt-3 text-3xl font-bold text-slate-950 sm:text-4xl">
+                    {isInfluencerFlow && openBarreProvisioned ? "Your Open Barre pass is ready" : "Thank you for your interest in Barre 57"}
+                  </h2>
+                  <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
+                    {isInfluencerFlow
+                      ? "You are now being redirected to the class schedule page. A member of our Customer Excellence team will be in touch shortly to help with your next step."
+                      : "A member of our Customer Excellence team will be in touch shortly to help you find the right Barre 57 studio session."}
+                  </p>
+                  {isInfluencerFlow && submissionSchedule?.groupedSessions?.length ? (
+                    <div className="mt-8 text-left">
+                      <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">Upcoming classes</h3>
+                      <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
+                        {submissionSchedule.groupedSessions.slice(0, 4).map((group) => (
+                          <div key={group.date} className="rounded-2xl border border-slate-200 bg-white/80 p-4">
+                            <p className="text-sm font-bold text-slate-950">{formatScheduleDate(group.date)}</p>
+                            <div className="mt-3 space-y-2">
+                              {group.items.slice(0, 3).map((session) => (
+                                <div key={session.id} className="grid grid-cols-[72px_1fr] gap-3 rounded-xl bg-slate-50 px-3 py-2">
+                                  <p className="text-sm font-bold text-blue-900">{formatScheduleTime(session.startsAt)}</p>
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-950">{session.title}</p>
+                                    <p className="text-xs text-slate-600">
+                                      {[session.instructorName, session.locationName, session.durationMinutes ? `${session.durationMinutes} min` : ""].filter(Boolean).join(" • ")}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <Button
                     className="mt-8 w-full bg-gradient-to-r from-emerald-600 to-blue-600 py-6 text-lg text-white hover:from-emerald-700 hover:to-blue-700"
                     onClick={() => window.location.assign(redirectUrl)}
                   >
-                    Return to Physique 57
+                    {isInfluencerFlow ? "View Class Schedule" : "Continue"}
                   </Button>
                 </div>
               </div>

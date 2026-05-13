@@ -70,8 +70,16 @@ function buildFbcValue(fbclid: string) {
   return `fb.1.${Date.now()}.${fbclid}`
 }
 
+function sameOriginApiUrl(path: string) {
+  if (typeof window === "undefined") {
+    return path
+  }
+
+  return new URL(path, window.location.origin).toString()
+}
+
 export async function loadPublicClientConfig(): Promise<PublicClientConfig> {
-  const response = await fetch("/api/public-config")
+  const response = await fetch(sameOriginApiUrl("/api/public-config"))
   if (!response.ok) {
     throw new Error("Unable to load public tracking config.")
   }

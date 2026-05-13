@@ -26,6 +26,12 @@ const routeMeta = {
       "Book your complimentary Barre 57 trial and discover Physique 57 India's signature boutique fitness experience.",
     name: "Barre 57 Trial Form",
   },
+  influencers: {
+    title: "Physique 57 India | Influencer Barre Experience",
+    description:
+      "Claim your Open Barre pass and view the latest Barre 57 schedule at your preferred Physique 57 India studio.",
+    name: "Physique 57 Influencer Barre Form",
+  },
   scheduleMum: {
     title: "Physique 57 India | Schedule Mum",
     description: "View the Physique 57 India Momence schedule for Mum.",
@@ -98,9 +104,11 @@ function upsertJsonLdScript(scriptId: string, payload: Record<string, unknown>) 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
   const isBarreRoute = currentPath === "/barre" || currentPath.startsWith("/barre/")
+  const isInfluencersRoute = currentPath === "/influencers" || currentPath.startsWith("/influencers/")
   const isTestRoute = currentPath === "/test" || currentPath.startsWith("/test/")
   const isScheduleMumRoute = currentPath === "/schedule-mum" || currentPath.startsWith("/schedule-mum/")
   const isScheduleBlrRoute = currentPath === "/schedule-blr" || currentPath.startsWith("/schedule-blr/")
+  const scheduleLocationId = new URLSearchParams(window.location.search).get("locationId")
 
   useEffect(() => {
     const handlePopState = () => {
@@ -114,13 +122,15 @@ export default function App() {
   useEffect(() => {
     const meta = isBarreRoute
       ? routeMeta.barre
-      : isTestRoute
-        ? routeMeta.test
-        : isScheduleMumRoute
-          ? routeMeta.scheduleMum
-          : isScheduleBlrRoute
-            ? routeMeta.scheduleBlr
-            : routeMeta.default
+      : isInfluencersRoute
+        ? routeMeta.influencers
+        : isTestRoute
+          ? routeMeta.test
+          : isScheduleMumRoute
+            ? routeMeta.scheduleMum
+            : isScheduleBlrRoute
+              ? routeMeta.scheduleBlr
+              : routeMeta.default
     const pageUrl = typeof window !== "undefined" ? window.location.href : BRAND_SITE_URL
 
     document.title = meta.title
@@ -163,17 +173,19 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isBarreRoute, isTestRoute, isScheduleMumRoute, isScheduleBlrRoute])
+  }, [currentPath, isBarreRoute, isInfluencersRoute, isTestRoute, isScheduleMumRoute, isScheduleBlrRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
-    : isTestRoute
-      ? <Physique57SignUpForm testMode />
-      : isScheduleMumRoute
-        ? <ScheduleEmbed hostId="13752" locationIds={[]} />
-        : isScheduleBlrRoute
-          ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
-          : <Physique57SignUpForm />
+    : isInfluencersRoute
+      ? <Barre57TrialForm variant="influencer" />
+      : isTestRoute
+        ? <Physique57SignUpForm testMode />
+        : isScheduleMumRoute
+          ? <ScheduleEmbed hostId="13752" locationIds={scheduleLocationId ? [scheduleLocationId] : []} />
+          : isScheduleBlrRoute
+            ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
+            : <Physique57SignUpForm />
 
   return (
     <>
@@ -182,4 +194,3 @@ export default function App() {
     </>
   )
 }
-

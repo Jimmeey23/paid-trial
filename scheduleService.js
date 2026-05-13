@@ -87,6 +87,7 @@ function extractSessions(payload) {
   }
 
   const candidates = [
+    payload?.payload,
     payload?.sessions,
     payload?.data,
     payload?.items,
@@ -119,6 +120,7 @@ function normalizeSession(rawSession) {
   ) || 'Scheduled class';
   const locationRaw = pickString(
     rawSession.locationName,
+    rawSession.inPersonLocation?.name,
     rawSession.location?.name,
     rawSession.location?.title,
     rawSession.venue?.name,
@@ -131,6 +133,7 @@ function normalizeSession(rawSession) {
   const instructorName = pickString(
     rawSession.teacher?.name,
     rawSession.teacher?.fullName,
+    [rawSession.teacher?.firstName, rawSession.teacher?.lastName].filter(Boolean).join(' '),
     rawSession.teacherName,
     rawSession.instructor?.name,
     rawSession.instructor?.fullName,
@@ -144,22 +147,28 @@ function normalizeSession(rawSession) {
     rawSession.price,
     rawSession.cost?.amount
   );
+  const capacity = pickNumber(rawSession.capacity, rawSession.spots?.capacity, rawSession.maxCapacity);
+  const bookingCount = pickNumber(rawSession.bookingCount, rawSession.bookedCount, rawSession.spots?.booked);
   const spotsRemaining = pickNumber(
     rawSession.spotsRemaining,
     rawSession.remainingSpots,
     rawSession.availableSpots,
     rawSession.spots?.remaining,
-    rawSession.capacityRemaining
+    rawSession.capacityRemaining,
+    Number.isFinite(capacity) && Number.isFinite(bookingCount)
+      ? capacity - bookingCount
+      : null
   );
   const durationMinutes = deriveDurationMinutes(
     startsAt,
     endsAt,
-    pickNumber(rawSession.durationMinutes, rawSession.duration)
+    pickNumber(rawSession.durationMinutes, rawSession.durationInMinutes, rawSession.duration)
   );
 
   return {
     id: String(rawSession.id || rawSession.sessionId || rawSession.uuid || rawSession.slug || `${title}-${startsAtRaw}`),
     title,
+    description: pickString(rawSession.description, rawSession.shortDescription, rawSession.summary),
     classFormat,
     instructorName,
     locationName,
@@ -169,6 +178,13 @@ function normalizeSession(rawSession) {
     bookingUrl,
     price,
     spotsRemaining,
+    capacity,
+    bookingCount,
+    isCancelled: Boolean(rawSession.isCancelled),
+    isRecurring: Boolean(rawSession.isRecurring),
+    tags: Array.isArray(rawSession.tags)
+      ? rawSession.tags.map((tag) => pickString(tag.name, tag.label, tag)).filter(Boolean)
+      : [],
     raw: rawSession
   };
 }
@@ -215,6 +231,13 @@ function buildGroupedSessions(sessions) {
     }));
 }
 
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function defaultDateRange(days) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -222,8 +245,8 @@ function defaultDateRange(days) {
   endDate.setDate(endDate.getDate() + days);
 
   return {
-    startDate: today.toISOString().split('T')[0],
-    endDate: endDate.toISOString().split('T')[0]
+    startDate: formatLocalDate(today),
+    endDate: formatLocalDate(endDate)
   };
 }
 

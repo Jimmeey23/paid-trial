@@ -31,6 +31,11 @@ const STUDIO_CLASS_OPTIONS = {
   'Kwality House, Kemps Corner': ['powerCycle', 'Strength Lab', 'Barre 57']
 };
 
+const STUDIO_SCHEDULE_LOCATION_IDS = {
+  'Supreme Headquarters, Bandra': ['29821'],
+  'Kwality House, Kemps Corner': ['9030']
+};
+
 const ALLOWED_TIME_WINDOWS = [
   'Early Morning (6 AM - 9 AM)',
   'Mid-Morning (9 AM - 12 PM)',
@@ -435,6 +440,435 @@ function getMomencePostPaymentConfig(stageName = normalizePaymentStage()) {
     functionKey,
     action: String(process.env.SUPABASE_MOMENCE_PAYMENT_SYNC_ACTION || 'create-member-and-purchase-membership').trim(),
     membership
+  };
+}
+
+function resolveScheduleLocationIds(center = '') {
+  const normalizedCenter = String(center || '').trim().toLowerCase();
+  const match = Object.entries(STUDIO_SCHEDULE_LOCATION_IDS).find(([studioName]) => {
+    const normalizedStudioName = studioName.toLowerCase();
+    return normalizedCenter === normalizedStudioName
+      || normalizedCenter.includes(normalizedStudioName)
+      || normalizedStudioName.includes(normalizedCenter);
+  });
+
+  return match ? [...match[1]] : [];
+}
+
+function buildStudioSchedulePageUrl(req, center = '') {
+  const origin = getRequestOrigin(req);
+  const locationIds = resolveScheduleLocationIds(center);
+  const targetUrl = new URL('/schedule-mum', `${origin}/`);
+
+  if (locationIds.length) {
+    targetUrl.searchParams.set('locationId', locationIds[0]);
+  }
+
+  return targetUrl.toString();
+}
+
+function normalizePhoneDigits(phone = '') {
+  return normalizePhone(phone);
+}
+
+function buildOpenBarreMembershipConfig(overrides = {}) {
+  const envConfig = parseJson(process.env.MOMENCE_OPEN_BARRE_MEMBERSHIP_JSON, {});
+  const membership = deepMerge({
+    id: 33609,
+    name: 'Studio Open Barre Class',
+    price: 0,
+    priceAfterProration: 0,
+    currency: 'inr',
+    homeLocationId: parseInteger(process.env.MOMENCE_DEFAULT_HOME_LOCATION_ID, 29821)
+  }, envConfig);
+
+  return deepMerge(membership, overrides);
+}
+
+class MomencePublicApiClient {
+  constructor(config = {}) {
+    this.apiBaseUrl = String(config.apiBaseUrl || process.env.MOMENCE_API_V2_BASE_URL || 'https://api.momence.com/api/v2').replace(/\/$/, '');
+    this.basicAuth = String(config.basicAuth || process.env.MOMENCE_API_V2_BASIC_AUTH || '').trim();
+    this.username = String(config.username || process.env.MOMENCE_API_V2_USERNAME || '').trim();
+    this.password = String(config.password || process.env.MOMENCE_API_V2_PASSWORD || '').trim();
+    this.defaultHomeLocationId = parseInteger(config.defaultHomeLocationId ?? process.env.MOMENCE_DEFAULT_HOME_LOCATION_ID, 29821);
+    this.homeLocationId = parseInteger(config.homeLocationId ?? process.env.MOMENCE_HOME_LOCATION_ID, this.defaultHomeLocationId);
+    this.kwalityHomeLocationId = parseInteger(config.kwalityHomeLocationId ?? process.env.MOMENCE_KWALITY_HOME_LOCATION_ID, this.homeLocationId);
+    this.fetchImpl = config.fetchImpl || fetch;
+    this.accessToken = String(config.accessToken || '').trim();
+  }
+
+  assertConfigured() {
+    if (!this.basicAuth || !this.username || !this.password) {
+      throw new Error('Momence API v2 is not configured. Set MOMENCE_API_V2_BASIC_AUTH, MOMENCE_API_V2_USERNAME, and MOMENCE_API_V2_PASSWORD.');
+    }
+  }
+
+  resolveHomeLocationId(input = {}) {
+    if (Number.isFinite(Number(input.homeLocationId)) && Number(input.homeLocationId) > 0) {
+      return Number(input.homeLocationId);
+    }
+
+    const center = String(input.center || input.studio_location || '').toLowerCase();
+    if (center.includes('kwality') || center.includes('kemps')) {
+      return this.kwalityHomeLocationId || this.homeLocationId || this.defaultHomeLocationId;
+    }
+
+    return this.defaultHomeLocationId || this.homeLocationId;
+  }
+
+  async getAccessToken() {
+    if (this.accessToken) {
+      return this.accessToken;
+    }
+
+    this.assertConfigured();
+
+    const response = await this.fetchImpl(`${this.apiBaseUrl}/auth/token`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: this.basicAuth,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        grant_type: 'password',
+        username: this.username,
+        password: this.password
+      })
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      throw new Error(`Momence auth failed: ${response.status} ${responseText || response.statusText}`.trim());
+    }
+
+    const data = responseText ? JSON.parse(responseText) : {};
+    this.accessToken = String(data.access_token || '').trim();
+    if (!this.accessToken) {
+      throw new Error('Momence auth response did not include an access token.');
+    }
+
+    return this.accessToken;
+  }
+
+  async request(pathname, options = {}) {
+    const accessToken = await this.getAccessToken();
+    const response = await this.fetchImpl(`${this.apiBaseUrl}${pathname}`, {
+      ...options,
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.headers || {})
+      }
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+    if (!response.ok) {
+      throw new Error(`Momence API request failed: ${response.status} ${responseText || response.statusText}`.trim());
+    }
+
+    return data;
+  }
+
+  parseMember(member, action = 'found_existing') {
+    return {
+      memberId: Number(member.memberId || member.id || 0),
+      email: String(member.email || ''),
+      firstName: String(member.firstName || member.first_name || ''),
+      lastName: String(member.lastName || member.last_name || ''),
+      phoneNumber: String(member.phoneNumber || member.phone || ''),
+      action
+    };
+  }
+
+  getMembersFromResponse(data) {
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    if (Array.isArray(data?.payload)) {
+      return data.payload;
+    }
+
+    if (Array.isArray(data?.data)) {
+      return data.data;
+    }
+
+    if (Array.isArray(data?.items)) {
+      return data.items;
+    }
+
+    return [];
+  }
+
+  async listMembers(query) {
+    const params = new URLSearchParams({
+      page: '0',
+      pageSize: '20',
+      query: String(query || '').trim()
+    });
+    const data = await this.request(`/host/members?${params.toString()}`);
+    return this.getMembersFromResponse(data).map((member) => this.parseMember(member));
+  }
+
+  async findMemberByEmailOrPhone(email, phoneNumber) {
+    const normalizedEmail = sanitizeEmail(email);
+    const normalizedPhone = normalizePhoneDigits(phoneNumber);
+    const queries = [normalizedEmail, phoneNumber].map((query) => String(query || '').trim()).filter(Boolean);
+
+    for (const query of queries) {
+      const members = await this.listMembers(query);
+      const matchedMember = members.find((member) => {
+        const emailMatches = normalizedEmail && sanitizeEmail(member.email) === normalizedEmail;
+        const phoneMatches = normalizedPhone && normalizePhoneDigits(member.phoneNumber) === normalizedPhone;
+        return emailMatches || phoneMatches;
+      });
+
+      if (matchedMember?.memberId) {
+        return matchedMember;
+      }
+    }
+
+    return null;
+  }
+
+  async createMember(input) {
+    const payload = {
+      email: sanitizeEmail(input.email),
+      firstName: sanitizeText(input.firstName, 100),
+      lastName: sanitizeText(input.lastName, 100),
+      phoneNumber: sanitizePhone(input.phoneNumber),
+      homeLocationId: this.resolveHomeLocationId(input)
+    };
+
+    const data = await this.request('/host/members', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    const memberId = Number(data.memberId || data.id || 0);
+    if (!memberId) {
+      throw new Error('Momence member creation response did not include a member id.');
+    }
+
+    return {
+      ...payload,
+      memberId,
+      action: 'created_new'
+    };
+  }
+
+  async ensureMember(input) {
+    const existingMember = await this.findMemberByEmailOrPhone(input.email, input.phoneNumber);
+    if (existingMember?.memberId) {
+      return existingMember;
+    }
+
+    return this.createMember(input);
+  }
+
+  async addMembershipToMember(memberId, membershipConfig = buildOpenBarreMembershipConfig()) {
+    const membershipId = Number(membershipConfig.id || membershipConfig.membershipId || 0);
+    if (!membershipId) {
+      throw new Error('Open Barre membership id is missing.');
+    }
+
+    const payload = {
+      memberId: Number(memberId),
+      homeLocationId: parseInteger(membershipConfig.homeLocationId, this.defaultHomeLocationId),
+      items: [
+        {
+          id: 'open-barre-membership',
+          type: 'subscription',
+          membershipId,
+          attemptedPriceInCurrency: String(Number(membershipConfig.priceAfterProration ?? membershipConfig.price ?? 0))
+        }
+      ],
+      paymentMethods: [
+        {
+          id: 'open-barre-free',
+          type: 'free'
+        }
+      ]
+    };
+
+    const data = await this.request('/host/checkout', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    const purchasedItem = Array.isArray(data.purchasedItems) ? data.purchasedItems[0] : null;
+
+    return {
+      success: true,
+      memberId: Number(memberId),
+      purchaseId: purchasedItem?.boughtMembershipId || purchasedItem?.id || data.orderId || '',
+      membershipId,
+      data
+    };
+  }
+
+  async ensureMemberAndAddMembership(input, membershipConfig = buildOpenBarreMembershipConfig()) {
+    const member = await this.ensureMember(input);
+    const checkout = await this.addMembershipToMember(member.memberId, {
+      ...membershipConfig,
+      homeLocationId: membershipConfig.homeLocationId || this.resolveHomeLocationId(input)
+    });
+
+    return {
+      ...checkout,
+      member,
+      customerAction: member.action
+    };
+  }
+}
+
+function getOpenBarreSyncConfig(overrides = {}) {
+  const paymentConfig = getMomencePostPaymentConfig();
+  return {
+    functionUrl: overrides.functionUrl || paymentConfig.functionUrl,
+    functionKey: overrides.functionKey || paymentConfig.functionKey,
+    action: overrides.action || paymentConfig.action,
+    membership: overrides.membership || buildOpenBarreMembershipConfig()
+  };
+}
+
+function buildMomenceMemberInput(leadData) {
+  return {
+    firstName: leadData.firstName,
+    lastName: leadData.lastName,
+    email: leadData.email,
+    phoneNumber: leadData.phoneNumber,
+    center: leadData.center,
+    homeLocationId: leadData.homeLocationId
+  };
+}
+
+async function provisionOpenBarreViaSupabase(leadData, options = {}) {
+  const syncConfig = getOpenBarreSyncConfig(options.syncConfig || {});
+  const fetchImpl = options.fetchImpl || fetch;
+
+  if (!syncConfig.functionUrl || !syncConfig.functionKey) {
+    throw new Error('Supabase Momence sync is not configured for Open Barre provisioning.');
+  }
+
+  const member = buildMomenceMemberInput(leadData);
+  const response = await fetchImpl(syncConfig.functionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${syncConfig.functionKey}`,
+      apikey: syncConfig.functionKey
+    },
+    body: JSON.stringify({
+      action: syncConfig.action,
+      source: 'influencer-barre-form',
+      lead: {
+        ...member,
+        phoneCountry: leadData.phoneCountry,
+        type: leadData.type,
+        waiverAccepted: leadData.waiverAccepted,
+        event_id: leadData.event_id,
+        draft_id: leadData.draft_id
+      },
+      member,
+      membership: syncConfig.membership
+    })
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.success === false) {
+    throw new Error(result.error || result.message || `Supabase Momence sync failed with ${response.status}`);
+  }
+
+  return {
+    success: true,
+    source: 'supabase-function',
+    memberId: result.memberId || result.customerId || '',
+    purchaseId: result.purchaseId || result.orderId || result.membershipPurchaseId || '',
+    membershipId: result.membershipId || syncConfig.membership?.id || '',
+    customerAction: result.action || result.customerAction || '',
+    raw: result
+  };
+}
+
+async function provisionOpenBarreMembership(leadData, options = {}) {
+  const client = options.client || new MomencePublicApiClient();
+  const membershipConfig = options.membershipConfig || buildOpenBarreMembershipConfig();
+
+  try {
+    return await client.ensureMemberAndAddMembership(buildMomenceMemberInput(leadData), membershipConfig);
+  } catch (directError) {
+    if (options.disableFallback) {
+      throw directError;
+    }
+
+    try {
+      const fallbackResult = await provisionOpenBarreViaSupabase(leadData, options);
+      return {
+        ...fallbackResult,
+        directError: directError.message || 'Direct Momence checkout failed.'
+      };
+    } catch (fallbackError) {
+      throw new Error(`Direct Momence checkout failed: ${directError.message || directError}; Supabase fallback failed: ${fallbackError.message || fallbackError}`);
+    }
+  }
+}
+
+async function getScheduleForLead(leadData, req) {
+  try {
+    const sessionsPayload = await scheduleService.getSessions({
+      center: leadData.center,
+      type: 'Barre'
+    });
+
+    return {
+      success: true,
+      ...sessionsPayload,
+      schedulePageUrl: buildStudioSchedulePageUrl(req, leadData.center),
+      fallbackUrl: getPublicClientConfig().scheduleUrl
+    };
+  } catch (error) {
+    console.error('Influencer schedule fetch failed:', error.message);
+    return {
+      success: false,
+      error: error.message || 'Unable to load the schedule right now.',
+      meta: {
+        center: leadData.center || '',
+        type: 'Barre',
+        totalSessions: 0
+      },
+      sessions: [],
+      groupedSessions: [],
+      schedulePageUrl: buildStudioSchedulePageUrl(req, leadData.center),
+      fallbackUrl: getPublicClientConfig().scheduleUrl
+    };
+  }
+}
+
+function buildInfluencerSubmissionSuccessPayload({
+  leadData,
+  momenceSyncResult = {},
+  schedule = {},
+  fallbackRedirectUrl = getPublicClientConfig().scheduleUrl
+}) {
+  const openBarreProvisioned = Boolean(momenceSyncResult.success);
+
+  return {
+    success: true,
+    id: leadData.id,
+    momence: {
+      openBarreProvisioned,
+      memberId: momenceSyncResult.memberId || momenceSyncResult.member?.memberId || '',
+      membershipId: momenceSyncResult.membershipId || '',
+      purchaseId: momenceSyncResult.purchaseId || '',
+      customerAction: momenceSyncResult.customerAction || '',
+      error: openBarreProvisioned ? '' : String(momenceSyncResult.error || '')
+    },
+    schedule,
+    redirectUrl: schedule.schedulePageUrl || fallbackRedirectUrl
   };
 }
 
@@ -1072,20 +1506,30 @@ async function sendMetaLeadEvent(leadData, req) {
   return { sent: true, eventId, response: responseText };
 }
 
-async function submitToMomence(leadData) {
-  const momenceToken = process.env.MOMENCE_API_TOKEN || process.env.MOMENCE_TOKEN;
-  const momenceSourceId = process.env.MOMENCE_SOURCE_ID;
+function buildMomenceLeadRequestPayload(leadData, options = {}) {
+  const momenceToken = options.token || process.env.MOMENCE_API_TOKEN || process.env.MOMENCE_TOKEN;
+  const momenceSourceId = options.sourceId || process.env.MOMENCE_SOURCE_ID;
+
+  return {
+    token: momenceToken,
+    sourceId: String(momenceSourceId || ''),
+    ...buildMomencePayload(leadData)
+  };
+}
+
+async function submitToMomence(leadData, options = {}) {
+  const momenceToken = options.token || process.env.MOMENCE_API_TOKEN || process.env.MOMENCE_TOKEN;
+  const momenceSourceId = options.sourceId || process.env.MOMENCE_SOURCE_ID;
   const momenceEndpoint = process.env.MOMENCE_LEAD_ENDPOINT;
 
   if (!momenceToken || !momenceSourceId || !momenceEndpoint) {
     throw new Error('Server configuration incomplete. Please set the Momence environment variables.');
   }
 
-  const momencePayload = {
+  const momencePayload = buildMomenceLeadRequestPayload(leadData, {
     token: momenceToken,
-    sourceId: momenceSourceId,
-    ...buildMomencePayload(leadData)
-  };
+    sourceId: momenceSourceId
+  });
 
   const momenceResponse = await fetch(momenceEndpoint, {
     method: 'POST',
@@ -1375,6 +1819,13 @@ app.get(['/barre', '/barre/*'], (req, res) => {
   return sendAppIndex(res);
 });
 
+app.get(['/influencers', '/influencers/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(res);
+});
+
 app.get(['/schedule-mum', '/schedule-mum/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
@@ -1579,7 +2030,7 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
       console.error('Meta Conversions API send failed for Barre:', error.message);
     }
 
-    // Try to submit to Momence
+    // Standard Barre submissions only create the Momence lead for team follow-up.
     try {
       await submitToMomence(leadData);
     } catch (error) {
@@ -1608,6 +2059,95 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
     });
   } catch (error) {
     console.error('Error submitting Barre lead:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'An unexpected error occurred.'
+    });
+  }
+});
+
+app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, res) => {
+  try {
+    const validation = validateLeadPayload(req.body);
+
+    if (validation.isBot) {
+      return res.status(202).json({
+        success: true,
+        id: 'filtered',
+        redirectUrl: getPublicClientConfig().scheduleUrl
+      });
+    }
+
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed.',
+        fieldErrors: validation.fieldErrors
+      });
+    }
+
+    const leadData = buildLeadRecord({
+      ...validation.data,
+      source_form: 'influencer-barre-form',
+      class_format: 'Barre 57'
+    });
+
+    const storeResult = await supabaseLeadStore.saveBarreLeadData(leadData, {
+      ip_address: getClientIp(req),
+      user_agent: req.get('user-agent') || ''
+    });
+
+    if (!storeResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Unable to save your trial request. Please try again.'
+      });
+    }
+
+    try {
+      const metaResult = await sendMetaLeadEvent(leadData, req);
+      if (metaResult.sent) {
+        console.log(`Meta Conversions API event sent for influencer Barre: ${metaResult.eventId}`);
+      }
+    } catch (error) {
+      console.error('Meta Conversions API send failed for influencer Barre:', error.message);
+    }
+
+    try {
+      await submitToMomence(leadData, {
+        sourceId: process.env.MOMENCE_INFLUENCER_SOURCE_ID || '14729'
+      });
+    } catch (error) {
+      console.error('Momence lead webhook failed for influencer Barre:', error.message);
+      return res.status(502).json({
+        success: false,
+        stored: true,
+        error: 'Your details were saved, but we could not notify the studio team. Please try again or contact the studio directly.',
+        detail: error.message || 'Unable to submit to Momence.'
+      });
+    }
+
+    let momenceSyncResult = { success: false, error: '' };
+    try {
+      momenceSyncResult = await provisionOpenBarreMembership(leadData);
+    } catch (error) {
+      console.error('Open Barre provisioning failed for influencer Barre:', error.message);
+      momenceSyncResult = {
+        success: false,
+        error: error.message || 'Unable to add Open Barre in Momence.'
+      };
+    }
+
+    const schedule = await getScheduleForLead(leadData, req);
+
+    return res.json(buildInfluencerSubmissionSuccessPayload({
+      leadData,
+      momenceSyncResult,
+      schedule,
+      fallbackRedirectUrl: getPublicClientConfig().scheduleUrl
+    }));
+  } catch (error) {
+    console.error('Error submitting influencer Barre lead:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'An unexpected error occurred.'
@@ -1666,3 +2206,13 @@ if (require.main === module) {
 module.exports = app;
 module.exports.app = app;
 module.exports.validateLeadPayload = validateLeadPayload;
+module.exports.MomencePublicApiClient = MomencePublicApiClient;
+module.exports.buildOpenBarreMembershipConfig = buildOpenBarreMembershipConfig;
+module.exports.buildMomenceLeadRequestPayload = buildMomenceLeadRequestPayload;
+module.exports.buildInfluencerSubmissionSuccessPayload = buildInfluencerSubmissionSuccessPayload;
+module.exports.normalizePhoneDigits = normalizePhoneDigits;
+module.exports.provisionOpenBarreMembership = provisionOpenBarreMembership;
+module.exports.provisionOpenBarreViaSupabase = provisionOpenBarreViaSupabase;
+module.exports.resolveScheduleLocationIds = resolveScheduleLocationIds;
+module.exports.buildStudioSchedulePageUrl = buildStudioSchedulePageUrl;
+module.exports.getScheduleForLead = getScheduleForLead;

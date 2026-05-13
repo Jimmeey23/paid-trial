@@ -11,3 +11,4 @@ package-lock.json
 CREDENTIALS_PRIVATE.md
 dist/
 *.tsbuildinfo
+.vercel

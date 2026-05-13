@@ -830,8 +830,8 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
           <div className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-x-0 bottom-0 p-12 text-white">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-900/10 bg-gradient-to-br from-white/98 via-blue-50/95 to-blue-100/92 px-4 py-2 backdrop-blur-md shadow-sm">
-              <Sparkles className="h-4 w-4 text-blue-200" />
-              <span className="text-sm font-medium">Barre 57 Trial</span>
+              <Sparkles className="h-4 w-4 text-blue-900" />
+              <span className="text-sm font-semibold text-slate-950">Barre 57 Trial</span>
             </div>
             <h1 className="mb-4 max-w-md text-5xl font-bold">Experience Barre 57</h1>
             <p className="max-w-lg text-lg text-white/88">Join us for a complimentary Barre 57 class and discover the power of this proven method.</p>

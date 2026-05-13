@@ -65,11 +65,16 @@ interface Barre57TrialFormProps {
 interface ScheduleSession {
   id: string
   title: string
+  description?: string
   instructorName?: string
   locationName?: string
   startsAt: string
+  endsAt?: string
   durationMinutes?: number | null
   spotsRemaining?: number | null
+  capacity?: number | null
+  bookingCount?: number | null
+  tags?: string[]
 }
 
 interface ScheduleGroup {
@@ -119,6 +124,15 @@ function formatScheduleTime(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(parsed)
+}
+
+function truncateText(value = "", maxLength = 170) {
+  const normalized = value.replace(/\s+/g, " ").trim()
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+
+  return `${normalized.slice(0, maxLength - 1).trim()}...`
 }
 
 // Barre 57 specific hero images
@@ -851,17 +865,41 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                           <div key={group.date} className="rounded-2xl border border-slate-200 bg-white/80 p-4">
                             <p className="text-sm font-bold text-slate-950">{formatScheduleDate(group.date)}</p>
                             <div className="mt-3 space-y-2">
-                              {group.items.slice(0, 3).map((session) => (
-                                <div key={session.id} className="grid grid-cols-[72px_1fr] gap-3 rounded-xl bg-slate-50 px-3 py-2">
-                                  <p className="text-sm font-bold text-blue-900">{formatScheduleTime(session.startsAt)}</p>
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-950">{session.title}</p>
-                                    <p className="text-xs text-slate-600">
-                                      {[session.instructorName, session.locationName, session.durationMinutes ? `${session.durationMinutes} min` : ""].filter(Boolean).join(" • ")}
+                              {group.items.slice(0, 3).map((session) => {
+                                const timing = [formatScheduleTime(session.startsAt), session.endsAt ? formatScheduleTime(session.endsAt) : ""].filter(Boolean).join(" - ")
+                                const spotsLabel = typeof session.spotsRemaining === "number" ? `${session.spotsRemaining} spots left` : ""
+                                const capacityLabel = typeof session.capacity === "number" ? `${session.bookingCount || 0}/${session.capacity} booked` : ""
+
+                                return (
+                                  <div key={session.id} className="rounded-xl bg-slate-50 px-3 py-3">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                      <div>
+                                        <p className="text-sm font-semibold text-slate-950">{session.title}</p>
+                                        <p className="mt-1 text-xs font-medium text-blue-900">
+                                          {[timing, session.durationMinutes ? `${session.durationMinutes} min` : ""].filter(Boolean).join(" • ")}
+                                        </p>
+                                      </div>
+                                      <div className="flex shrink-0 flex-wrap gap-2">
+                                        {spotsLabel ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">{spotsLabel}</span> : null}
+                                        {capacityLabel ? <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">{capacityLabel}</span> : null}
+                                      </div>
+                                    </div>
+                                    <p className="mt-2 text-xs text-slate-600">
+                                      {[session.instructorName ? `Trainer: ${session.instructorName}` : "", session.locationName].filter(Boolean).join(" • ")}
                                     </p>
+                                    {session.description ? (
+                                      <p className="mt-2 text-xs leading-relaxed text-slate-600">{truncateText(session.description)}</p>
+                                    ) : null}
+                                    {session.tags?.length ? (
+                                      <div className="mt-2 flex flex-wrap gap-1.5">
+                                        {session.tags.slice(0, 3).map((tag) => (
+                                          <span key={tag} className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-900">{tag}</span>
+                                        ))}
+                                      </div>
+                                    ) : null}
                                   </div>
-                                </div>
-                              ))}
+                                )
+                              })}
                             </div>
                           </div>
                         ))}

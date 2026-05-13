@@ -20,6 +20,7 @@ test('getSessions reads Momence edge function payload sessions and filters Barre
       {
         id: 134322442,
         name: 'Studio Cardio Barre',
+        description: 'Achieve next-level results with more intense strength training variations and higher reps.',
         startsAt: '2026-05-13T02:00:00.000Z',
         endsAt: '2026-05-13T02:57:00.000Z',
         durationInMinutes: 57,

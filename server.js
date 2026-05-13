@@ -479,7 +479,29 @@ function buildOpenBarreMembershipConfig(overrides = {}) {
     price: 0,
     priceAfterProration: 0,
     currency: 'inr',
-    homeLocationId: parseInteger(process.env.MOMENCE_DEFAULT_HOME_LOCATION_ID, 29821)
+    homeLocationId: parseInteger(process.env.MOMENCE_DEFAULT_HOME_LOCATION_ID, 29821),
+    checkoutItemId: 'open-barre-membership',
+    paymentMethodId: 'open-barre-free'
+  }, envConfig);
+
+  return deepMerge(membership, overrides);
+}
+
+function buildStudioComplimentaryClassMembershipConfig(overrides = {}) {
+  const envConfig = parseJson(process.env.MOMENCE_STUDIO_COMPLIMENTARY_CLASS_MEMBERSHIP_JSON, {});
+  const membershipId = parseInteger(
+    process.env.MOMENCE_STUDIO_COMPLIMENTARY_CLASS_MEMBERSHIP_ID,
+    Number(envConfig.id || envConfig.membershipId || 97880)
+  );
+  const membership = deepMerge({
+    id: membershipId,
+    name: 'Studio Complimentary Class',
+    price: 0,
+    priceAfterProration: 0,
+    currency: 'inr',
+    homeLocationId: parseInteger(process.env.MOMENCE_DEFAULT_HOME_LOCATION_ID, 29821),
+    checkoutItemId: 'studio-complimentary-class-membership',
+    paymentMethodId: 'studio-complimentary-class-free'
   }, envConfig);
 
   return deepMerge(membership, overrides);
@@ -673,7 +695,7 @@ class MomencePublicApiClient {
   async addMembershipToMember(memberId, membershipConfig = buildOpenBarreMembershipConfig()) {
     const membershipId = Number(membershipConfig.id || membershipConfig.membershipId || 0);
     if (!membershipId) {
-      throw new Error('Open Barre membership id is missing.');
+      throw new Error(`${membershipConfig.name || 'Momence'} membership id is missing.`);
     }
 
     const payload = {
@@ -681,7 +703,7 @@ class MomencePublicApiClient {
       homeLocationId: parseInteger(membershipConfig.homeLocationId, this.defaultHomeLocationId),
       items: [
         {
-          id: 'open-barre-membership',
+          id: String(membershipConfig.checkoutItemId || 'membership'),
           type: 'subscription',
           membershipId,
           attemptedPriceInCurrency: String(Number(membershipConfig.priceAfterProration ?? membershipConfig.price ?? 0))
@@ -689,7 +711,7 @@ class MomencePublicApiClient {
       ],
       paymentMethods: [
         {
-          id: 'open-barre-free',
+          id: String(membershipConfig.paymentMethodId || 'free'),
           type: 'free'
         }
       ]
@@ -735,6 +757,16 @@ function getOpenBarreSyncConfig(overrides = {}) {
   };
 }
 
+function getInfluencerMembershipSyncConfig(overrides = {}) {
+  const paymentConfig = getMomencePostPaymentConfig();
+  return {
+    functionUrl: overrides.functionUrl || paymentConfig.functionUrl,
+    functionKey: overrides.functionKey || paymentConfig.functionKey,
+    action: overrides.action || paymentConfig.action,
+    membership: overrides.membership || buildStudioComplimentaryClassMembershipConfig()
+  };
+}
+
 function buildMomenceMemberInput(leadData) {
   return {
     firstName: leadData.firstName,
@@ -746,12 +778,12 @@ function buildMomenceMemberInput(leadData) {
   };
 }
 
-async function provisionOpenBarreViaSupabase(leadData, options = {}) {
-  const syncConfig = getOpenBarreSyncConfig(options.syncConfig || {});
+async function provisionMembershipViaSupabase(leadData, options = {}) {
+  const syncConfig = (options.getSyncConfig || getOpenBarreSyncConfig)(options.syncConfig || {});
   const fetchImpl = options.fetchImpl || fetch;
 
   if (!syncConfig.functionUrl || !syncConfig.functionKey) {
-    throw new Error('Supabase Momence sync is not configured for Open Barre provisioning.');
+    throw new Error(`Supabase Momence sync is not configured for ${syncConfig.membership?.name || 'membership'} provisioning.`);
   }
 
   const member = buildMomenceMemberInput(leadData);
@@ -789,24 +821,40 @@ async function provisionOpenBarreViaSupabase(leadData, options = {}) {
     memberId: result.memberId || result.customerId || '',
     purchaseId: result.purchaseId || result.orderId || result.membershipPurchaseId || '',
     membershipId: result.membershipId || syncConfig.membership?.id || '',
+    membershipName: syncConfig.membership?.name || '',
     customerAction: result.action || result.customerAction || '',
     raw: result
   };
 }
 
-async function provisionOpenBarreMembership(leadData, options = {}) {
+async function provisionOpenBarreViaSupabase(leadData, options = {}) {
+  return provisionMembershipViaSupabase(leadData, {
+    ...options,
+    getSyncConfig: getOpenBarreSyncConfig
+  });
+}
+
+async function provisionMembership(leadData, options = {}) {
   const client = options.client || new MomencePublicApiClient();
   const membershipConfig = options.membershipConfig || buildOpenBarreMembershipConfig();
+  const getSyncConfig = options.getSyncConfig || getOpenBarreSyncConfig;
 
   try {
-    return await client.ensureMemberAndAddMembership(buildMomenceMemberInput(leadData), membershipConfig);
+    const result = await client.ensureMemberAndAddMembership(buildMomenceMemberInput(leadData), membershipConfig);
+    return {
+      ...result,
+      membershipName: membershipConfig.name || ''
+    };
   } catch (directError) {
     if (options.disableFallback) {
       throw directError;
     }
 
     try {
-      const fallbackResult = await provisionOpenBarreViaSupabase(leadData, options);
+      const fallbackResult = await provisionMembershipViaSupabase(leadData, {
+        ...options,
+        getSyncConfig
+      });
       return {
         ...fallbackResult,
         directError: directError.message || 'Direct Momence checkout failed.'
@@ -815,6 +863,22 @@ async function provisionOpenBarreMembership(leadData, options = {}) {
       throw new Error(`Direct Momence checkout failed: ${directError.message || directError}; Supabase fallback failed: ${fallbackError.message || fallbackError}`);
     }
   }
+}
+
+async function provisionOpenBarreMembership(leadData, options = {}) {
+  return provisionMembership(leadData, {
+    ...options,
+    membershipConfig: options.membershipConfig || buildOpenBarreMembershipConfig(),
+    getSyncConfig: getOpenBarreSyncConfig
+  });
+}
+
+async function provisionInfluencerMembership(leadData, options = {}) {
+  return provisionMembership(leadData, {
+    ...options,
+    membershipConfig: options.membershipConfig || buildStudioComplimentaryClassMembershipConfig(),
+    getSyncConfig: getInfluencerMembershipSyncConfig
+  });
 }
 
 async function getScheduleForLead(leadData, req) {
@@ -854,18 +918,20 @@ function buildInfluencerSubmissionSuccessPayload({
   schedule = {},
   fallbackRedirectUrl = getPublicClientConfig().scheduleUrl
 }) {
-  const openBarreProvisioned = Boolean(momenceSyncResult.success);
+  const membershipProvisioned = Boolean(momenceSyncResult.success);
 
   return {
     success: true,
     id: leadData.id,
     momence: {
-      openBarreProvisioned,
+      membershipProvisioned,
+      membershipName: momenceSyncResult.membershipName || momenceSyncResult.membership?.name || 'Studio Complimentary Class',
+      openBarreProvisioned: membershipProvisioned,
       memberId: momenceSyncResult.memberId || momenceSyncResult.member?.memberId || '',
       membershipId: momenceSyncResult.membershipId || '',
       purchaseId: momenceSyncResult.purchaseId || '',
       customerAction: momenceSyncResult.customerAction || '',
-      error: openBarreProvisioned ? '' : String(momenceSyncResult.error || '')
+      error: membershipProvisioned ? '' : String(momenceSyncResult.error || '')
     },
     schedule,
     redirectUrl: schedule.schedulePageUrl || fallbackRedirectUrl
@@ -2129,12 +2195,12 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
 
     let momenceSyncResult = { success: false, error: '' };
     try {
-      momenceSyncResult = await provisionOpenBarreMembership(leadData);
+      momenceSyncResult = await provisionInfluencerMembership(leadData);
     } catch (error) {
-      console.error('Open Barre provisioning failed for influencer Barre:', error.message);
+      console.error('Studio Complimentary Class provisioning failed for influencer Barre:', error.message);
       momenceSyncResult = {
         success: false,
-        error: error.message || 'Unable to add Open Barre in Momence.'
+        error: error.message || 'Unable to add Studio Complimentary Class in Momence.'
       };
     }
 
@@ -2208,10 +2274,12 @@ module.exports.app = app;
 module.exports.validateLeadPayload = validateLeadPayload;
 module.exports.MomencePublicApiClient = MomencePublicApiClient;
 module.exports.buildOpenBarreMembershipConfig = buildOpenBarreMembershipConfig;
+module.exports.buildStudioComplimentaryClassMembershipConfig = buildStudioComplimentaryClassMembershipConfig;
 module.exports.buildMomenceLeadRequestPayload = buildMomenceLeadRequestPayload;
 module.exports.buildInfluencerSubmissionSuccessPayload = buildInfluencerSubmissionSuccessPayload;
 module.exports.normalizePhoneDigits = normalizePhoneDigits;
 module.exports.provisionOpenBarreMembership = provisionOpenBarreMembership;
+module.exports.provisionInfluencerMembership = provisionInfluencerMembership;
 module.exports.provisionOpenBarreViaSupabase = provisionOpenBarreViaSupabase;
 module.exports.resolveScheduleLocationIds = resolveScheduleLocationIds;
 module.exports.buildStudioSchedulePageUrl = buildStudioSchedulePageUrl;

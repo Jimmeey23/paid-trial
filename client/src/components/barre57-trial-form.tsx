@@ -89,6 +89,8 @@ interface SubmissionSchedule {
 }
 
 interface SubmissionMomenceStatus {
+  membershipProvisioned?: boolean
+  membershipName?: string
   openBarreProvisioned?: boolean
   error?: string
 }
@@ -466,7 +468,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
 
   const selectedStudio = studios.find((studio) => studio.name === formData.studio)
   const redirectUrl = resolvedRedirectUrl || publicConfig?.redirectUrl || DEFAULT_REDIRECT_URL
-  const openBarreProvisioned = submissionMomence?.openBarreProvisioned === true
+  const complimentaryClassProvisioned = (submissionMomence?.membershipProvisioned ?? submissionMomence?.openBarreProvisioned) === true
 
   function scheduleRedirectToMomence(url = redirectUrl, delay = 1400) {
     if (typeof window === "undefined") {
@@ -847,10 +849,10 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                     <CheckCircle2 className="h-12 w-12 text-white" />
                   </div>
                   <p className="mt-8 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-900/70">
-                    {isInfluencerFlow && openBarreProvisioned ? "Open Barre added" : "Request received"}
+                    {isInfluencerFlow && complimentaryClassProvisioned ? "Studio Complimentary Class added" : "Request received"}
                   </p>
                   <h2 className="mt-3 text-3xl font-bold text-slate-950 sm:text-4xl">
-                    {isInfluencerFlow && openBarreProvisioned ? "Your Open Barre pass is ready" : "Thank you for your interest in Barre 57"}
+                    {isInfluencerFlow && complimentaryClassProvisioned ? "Your complimentary class is ready" : "Thank you for your interest in Barre 57"}
                   </h2>
                   <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
                     {isInfluencerFlow

@@ -29,7 +29,7 @@ const routeMeta = {
   influencers: {
     title: "Physique 57 India | Influencer Barre Experience",
     description:
-      "Claim your Open Barre pass and view the latest Barre 57 schedule at your preferred Physique 57 India studio.",
+      "Claim your Studio Complimentary Class and view the latest Barre 57 schedule at your preferred Physique 57 India studio.",
     name: "Physique 57 Influencer Barre Form",
   },
   scheduleMum: {

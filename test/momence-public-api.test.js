@@ -4,10 +4,11 @@ const test = require('node:test');
 const {
   MomencePublicApiClient,
   buildOpenBarreMembershipConfig,
+  buildStudioComplimentaryClassMembershipConfig,
   buildMomenceLeadRequestPayload,
   buildInfluencerSubmissionSuccessPayload,
   normalizePhoneDigits,
-  provisionOpenBarreMembership,
+  provisionInfluencerMembership,
   resolveScheduleLocationIds,
   buildStudioSchedulePageUrl
 } = require('../server');
@@ -149,6 +150,20 @@ test('addMembershipToMember performs a free checkout for the Open Barre membersh
   assert.equal(result.purchaseId, 789);
 });
 
+test('buildStudioComplimentaryClassMembershipConfig uses the Studio Complimentary Class package', () => {
+  const defaultConfig = buildStudioComplimentaryClassMembershipConfig();
+  const overrideConfig = buildStudioComplimentaryClassMembershipConfig({
+    id: 55555,
+    homeLocationId: 29821
+  });
+
+  assert.equal(defaultConfig.id, 97880);
+  assert.equal(defaultConfig.name, 'Studio Complimentary Class');
+  assert.equal(defaultConfig.price, 0);
+  assert.equal(defaultConfig.priceAfterProration, 0);
+  assert.equal(overrideConfig.id, 55555);
+});
+
 test('normalizePhoneDigits keeps only phone digits for matching', () => {
   assert.equal(normalizePhoneDigits('+91 98765 43210'), '919876543210');
 });
@@ -172,9 +187,9 @@ test('buildMomenceLeadRequestPayload can override sourceId for influencer leads'
   assert.equal(payload.email, 'influencer@example.com');
 });
 
-test('provisionOpenBarreMembership falls back to Supabase sync when direct checkout fails', async () => {
+test('provisionInfluencerMembership falls back to Supabase sync with Studio Complimentary Class when direct checkout fails', async () => {
   const calls = [];
-  const result = await provisionOpenBarreMembership(
+  const result = await provisionInfluencerMembership(
     {
       firstName: 'Fallback',
       lastName: 'Lead',
@@ -192,7 +207,7 @@ test('provisionOpenBarreMembership falls back to Supabase sync when direct check
         functionUrl: 'https://example.test/functions/v1/manual-momence-sync',
         functionKey: 'service-key',
         action: 'create-member-and-purchase-membership',
-        membership: buildOpenBarreMembershipConfig()
+        membership: buildStudioComplimentaryClassMembershipConfig({ id: 55555 })
       },
       fetchImpl: async (url, options = {}) => {
         calls.push({ url: String(url), options });
@@ -200,7 +215,7 @@ test('provisionOpenBarreMembership falls back to Supabase sync when direct check
           success: true,
           memberId: 777,
           purchaseId: 'completed',
-          membershipId: 33609
+          membershipId: 55555
         });
       }
     }
@@ -210,15 +225,17 @@ test('provisionOpenBarreMembership falls back to Supabase sync when direct check
   assert.equal(result.memberId, 777);
   assert.equal(result.source, 'supabase-function');
   assert.equal(calls.length, 1);
-  assert.equal(JSON.parse(calls[0].options.body).membership.id, 33609);
+  const fallbackPayload = JSON.parse(calls[0].options.body);
+  assert.equal(fallbackPayload.membership.id, 55555);
+  assert.equal(fallbackPayload.membership.name, 'Studio Complimentary Class');
 });
 
-test('buildInfluencerSubmissionSuccessPayload stays successful when Open Barre provisioning fails', () => {
+test('buildInfluencerSubmissionSuccessPayload stays successful when complimentary class provisioning fails', () => {
   const payload = buildInfluencerSubmissionSuccessPayload({
     leadData: { id: 'lead_123' },
     momenceSyncResult: {
       success: false,
-      error: 'Open Barre checkout failed'
+      error: 'Studio Complimentary Class checkout failed'
     },
     schedule: {
       schedulePageUrl: 'https://example.test/schedule',
@@ -229,19 +246,21 @@ test('buildInfluencerSubmissionSuccessPayload stays successful when Open Barre p
 
   assert.equal(payload.success, true);
   assert.equal(payload.id, 'lead_123');
+  assert.equal(payload.momence.membershipProvisioned, false);
   assert.equal(payload.momence.openBarreProvisioned, false);
-  assert.equal(payload.momence.error, 'Open Barre checkout failed');
+  assert.equal(payload.momence.error, 'Studio Complimentary Class checkout failed');
   assert.equal(payload.redirectUrl, 'https://example.test/schedule');
   assert.equal(payload.schedule.groupedSessions.length, 1);
 });
 
-test('buildInfluencerSubmissionSuccessPayload includes Open Barre details when provisioning succeeds', () => {
+test('buildInfluencerSubmissionSuccessPayload includes complimentary class details when provisioning succeeds', () => {
   const payload = buildInfluencerSubmissionSuccessPayload({
     leadData: { id: 'lead_456' },
     momenceSyncResult: {
       success: true,
       memberId: 777,
-      membershipId: 33609,
+      membershipId: 55555,
+      membershipName: 'Studio Complimentary Class',
       purchaseId: 'completed',
       customerAction: 'created_new'
     },
@@ -253,9 +272,11 @@ test('buildInfluencerSubmissionSuccessPayload includes Open Barre details when p
   });
 
   assert.equal(payload.success, true);
+  assert.equal(payload.momence.membershipProvisioned, true);
   assert.equal(payload.momence.openBarreProvisioned, true);
   assert.equal(payload.momence.memberId, 777);
-  assert.equal(payload.momence.membershipId, 33609);
+  assert.equal(payload.momence.membershipId, 55555);
+  assert.equal(payload.momence.membershipName, 'Studio Complimentary Class');
 });
 
 test('resolveScheduleLocationIds maps selected studios to Momence schedule locations', () => {

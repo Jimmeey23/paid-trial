@@ -166,7 +166,7 @@ export const formats: FormatOption[] = [
     description: "Meaningful resistance, music, and measurable progress.",
     fullDescription:
       "PowerCycle is our signature indoor cycling experience that combines rhythm-based choreography with inspiring music. Expect a full-body workout that challenges cardiovascular endurance while building lean muscle.",
-    image: "https://i.postimg.cc/GtJNPK7P/hp-Img-1774213193.png",
+    image: "https://i.postimg.cc/1XWy5H3w/main2.png",
     imageAlt: "powerCycle indoor cycling class at Physique 57 India",
     intensity: "Moderate to high",
     bestFor: "Cardio conditioning, toned legs, endorphin boost",

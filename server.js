@@ -1673,8 +1673,8 @@ async function processLeadSubmission(leadData, req) {
       success: true,
       stored: true,
       id: leadData.id,
-      warning: 'Your payment was verified and your lead was stored, but the Momence sync failed. Please contact the studio team to complete the booking.',
-      error: 'Your payment was verified and your lead was stored, but the Momence sync failed. Please contact the studio team to complete the booking.',
+      warning: 'Your details were saved, but the Momence sync failed. Please contact the studio team to complete the booking.',
+      error: 'Your details were saved, but the Momence sync failed. Please contact the studio team to complete the booking.',
       detail: momenceSyncResult.error,
       redirectUrl: getPublicClientConfig().redirectUrl
     };

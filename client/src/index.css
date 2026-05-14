@@ -89,3 +89,35 @@
     @apply min-h-screen;
   }
 }
+
+@keyframes trial-badge-shine {
+  0% {
+    transform: translateX(-130%) skewX(-12deg);
+    opacity: 0;
+  }
+
+  22% {
+    opacity: 0.9;
+  }
+
+  46% {
+    transform: translateX(360%) skewX(-12deg);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(360%) skewX(-12deg);
+    opacity: 0;
+  }
+}
+
+@keyframes trial-badge-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-1px);
+  }
+}

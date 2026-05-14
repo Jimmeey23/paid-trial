@@ -6,9 +6,9 @@ import {
   Award,
   Building2,
   Calendar,
+  CalendarCheck,
   CheckCircle2,
   Clock,
-  CreditCard,
   Dumbbell,
   Heart,
   Info,
@@ -36,7 +36,6 @@ import {
   heroImages,
   journeySteps,
   keyBenefits,
-  membershipOffer,
   studios,
   type Benefit,
   waiverSections,
@@ -374,7 +373,6 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
   const [statusMessage, setStatusMessage] = useState<{ tone: "error" | "success"; text: string } | null>(null)
   const [showSchedule, setShowSchedule] = useState(false)
   const [showFormatInfo, setShowFormatInfo] = useState<string | null>(null)
-  const [showMembershipModal, setShowMembershipModal] = useState(false)
   const [showWaiverModal, setShowWaiverModal] = useState(false)
   const [showAllFaqsModal, setShowAllFaqsModal] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
@@ -427,29 +425,22 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
 
   const activePaymentStage = publicConfig?.defaultPaymentStage ?? "production"
   const effectivePaymentStage = isTestRoute ? "testing" : activePaymentStage
-  const testStageConfig = publicConfig?.paymentStages?.testing
-  const membershipPriceDisplay = isTestRoute
-    ? testStageConfig?.amountDisplay || "₹1.00"
-    : membershipOffer.price
-
-  const primaryButtonLabel = paymentVerified && paymentSessionId
-    ? "Complete booking"
-    : isTestRoute
-    ? testStageConfig?.buttonLabel || "Pay ₹1"
-    : publicConfig?.paymentButtonLabel || "Pay ₹1,838.00"
+  const primaryButtonLabel = "Submit"
 
   const shouldHideFormForProcessing = isPostPaymentProcessing && !showSuccessModal
-  const redirectUrl = publicConfig?.redirectUrl || DEFAULT_REDIRECT_URL
+  const scheduleRedirectUrl = selectedStudio?.scheduleLocationId
+    ? `/schedule-mum?locationId=${encodeURIComponent(selectedStudio.scheduleLocationId)}`
+    : "/schedule-mum"
 
-  function redirectToMomence() {
+  function redirectToSelectedStudioSchedule() {
     if (typeof window === "undefined") {
       return
     }
 
-    window.location.assign(redirectUrl)
+    window.location.assign(scheduleRedirectUrl)
   }
 
-  function scheduleRedirectToMomence(delay = 1400) {
+  function scheduleRedirectToStudioSchedule(delay = 2600) {
     if (typeof window === "undefined") {
       return
     }
@@ -459,7 +450,7 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
     }
 
     redirectTimeoutRef.current = window.setTimeout(() => {
-      redirectToMomence()
+      redirectToSelectedStudioSchedule()
     }, delay)
   }
 
@@ -786,7 +777,7 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
   }, [selectedStudio, showSchedule])
 
   useEffect(() => {
-    if (!availableFormats.some((format) => format.id === formData.format)) {
+    if (formData.format && !availableFormats.some((format) => format.id === formData.format)) {
       setFormData((prev) => ({ ...prev, format: availableFormats[0]?.id ?? "powercycle" }))
     }
   }, [availableFormats, formData.format])
@@ -893,11 +884,11 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
           await celebrateSuccess()
           setStatusMessage({
             tone: "success",
-            text: result.leadSubmission.error || result.leadSubmission.warning || "Payment verified and booking completed successfully.",
+            text: result.leadSubmission.error || result.leadSubmission.warning || "Your details have been received. A member of our team will get in touch shortly.",
           })
           setShowSuccessModal(true)
           setIsPostPaymentProcessing(false)
-          scheduleRedirectToMomence()
+          scheduleRedirectToStudioSchedule()
           return
         }
 
@@ -973,7 +964,8 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
       stage: effectivePaymentStage,
       returnPath: isTestRoute ? "/test" : "/",
       event_id: eventIdRef.current,
-      source_form: isTestRoute ? "physique57-test-route" : "paid-trial-form",
+      source_form: isTestRoute ? "physique57-test-free-route" : "free-trial-form",
+      bypassPayment: true,
       ...trackingPayload,
     }
   }
@@ -1020,11 +1012,11 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
 
           setStatusMessage({
             tone: "success",
-            text: result.error || "Your payment was verified and your details were saved. Our team will complete the booking follow-up shortly.",
+            text: result.error || "Your details have been received. A member of our team will get in touch shortly.",
           })
           setShowSuccessModal(true)
           setIsPostPaymentProcessing(false)
-          scheduleRedirectToMomence()
+          scheduleRedirectToStudioSchedule()
           return
         }
 
@@ -1070,11 +1062,11 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
 
       setStatusMessage({
         tone: "success",
-        text: "Payment verified and booking completed successfully.",
+        text: "Your details have been received. A member of our team will get in touch shortly.",
       })
       setShowSuccessModal(true)
       setIsPostPaymentProcessing(false)
-      scheduleRedirectToMomence()
+      scheduleRedirectToStudioSchedule()
     } catch {
       setIsPostPaymentProcessing(false)
       setStatusMessage({ tone: "error", text: "We could not complete the request right now. Please try again in a moment." })
@@ -1185,15 +1177,7 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
 
     const payload = buildLeadPayload()
 
-    if (!paymentVerified || !paymentSessionId) {
-      await createCheckoutSession(payload)
-      return
-    }
-
-    await submitLeadToApi({
-      ...payload,
-      payment_session_id: paymentSessionId,
-    })
+    await submitLeadToApi(payload)
   }
 
   function handleOpenWhatsApp() {
@@ -1251,9 +1235,9 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
             transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
           />
           <div className="absolute inset-x-0 bottom-0 p-12 text-white">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-900/10 bg-gradient-to-br from-white/98 via-blue-50/95 to-blue-100/92 px-4 py-2 backdrop-blur-md shadow-sm">
-              <Sparkles className="h-4 w-4 text-blue-900" />
-              <span className="text-sm font-medium text-blue-950">Premium Fitness Experience</span>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-4 py-2 shadow-[0_16px_40px_rgba(15,23,42,0.28)] backdrop-blur-md">
+              <Sparkles className="h-4 w-4 text-blue-100" />
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white">Strong looks good on you</span>
             </div>
             <h1 className="mb-4 max-w-md bg-gradient-to-r from-white to-blue-100 bg-clip-text text-5xl font-bold text-transparent xl:text-6xl">
               Transform Your Body
@@ -1273,13 +1257,13 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                       <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
                     <p className="mt-8 text-xs font-semibold uppercase tracking-[0.24em] text-blue-900/70">Booking in progress</p>
-                    <h2 className="mt-3 text-3xl font-bold text-slate-950 sm:text-4xl">Confirming your payment and finalising your booking</h2>
+                    <h2 className="mt-3 text-3xl font-bold text-slate-950 sm:text-4xl">Finalising your booking request</h2>
                     <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-                      Please stay on this page while we capture your successful payment, submit your details, and finish the studio booking workflow.
+                      Please stay on this page while we submit your details and finish the studio booking workflow.
                     </p>
                     <div className="mx-auto mt-8 flex max-w-md items-center gap-3 rounded-2xl border border-blue-900/10 bg-blue-50/80 px-4 py-3 text-left text-sm text-blue-900 shadow-sm">
                       <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-                      <span>{statusMessage?.text || "Secure checkout completed. We’re submitting your form automatically."}</span>
+                      <span>{statusMessage?.text || "We’re submitting your form automatically."}</span>
                     </div>
                   </div>
                 </div>
@@ -1297,40 +1281,47 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                           Internal test mode
                         </span>
                         <span className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700/90">
-                          ₹1 checkout enabled
+                          Free booking enabled
                         </span>
                       </div>
                       <p className="mt-2 leading-relaxed text-amber-900/90">
-                        This route keeps the normal booking and payment flow intact for <span className="font-semibold">powerCycle</span> and <span className="font-semibold">Strength Lab</span>, but charges <span className="font-semibold">₹1</span> for internal testing at <span className="font-semibold">trial.physique57india.com/test</span>.
+                        This route keeps the normal booking workflow intact for <span className="font-semibold">powerCycle</span> and <span className="font-semibold">Strength Lab</span>, but does not collect payment during internal testing at <span className="font-semibold">trial.physique57india.com/test</span>.
                       </p>
                     </div>
                   </div>
                 </div>
               ) : null}
-              <div className="mb-8">
-                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-900/10 bg-gradient-to-br from-white/98 via-blue-50/95 to-blue-100/92 px-4 py-2 backdrop-blur-sm shadow-sm">
-                  <Sparkles className="h-4 w-4 text-blue-900" />
-                  <span className="text-sm font-semibold text-blue-950">Book Your First Class</span>
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                  Share your details and preferred studio. Our team will help you complete the next step.
+                </p>
+                <div className="group relative inline-flex w-fit shrink-0 overflow-hidden rounded-lg border border-blue-300/35 bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500 px-3.5 py-2 shadow-[0_10px_24px_rgba(37,99,235,0.20)]">
+                  <span className="absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-white/18 motion-safe:animate-[trial-badge-shine_3.2s_ease-in-out_infinite]" />
+                  <span className="relative z-10 flex items-center gap-2 motion-safe:animate-[trial-badge-float_3.6s_ease-in-out_infinite]">
+                    <CalendarCheck className="h-4 w-4 text-blue-100" />
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white">Book your trial class</span>
+                  </span>
                 </div>
-                <h2 className="mb-2 text-2xl font-bold text-foreground sm:text-3xl">Get Started</h2>
-                <p className="text-muted-foreground">Sign up for your first class at Physique 57.</p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="relative space-y-6 rounded-2xl border border-slate-300/90 bg-white/55 p-4 pt-8 shadow-sm sm:p-6 sm:pt-9">
-                <div className="absolute -top-3 left-4 inline-flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 rounded-full border border-blue-900/10 bg-gradient-to-br from-white/98 via-blue-50/95 to-blue-100/92 px-4 py-1.5 shadow-sm backdrop-blur-md">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-950">1. Personal details</span>
-                  <span className="text-destructive">*</span>
+              <form onSubmit={handleSubmit} className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.18)]">
+              <section className="border-b border-slate-200">
+                <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3.5 sm:px-5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-950 text-[11px] font-bold text-white">01</div>
+                  <div className="min-w-0 leading-tight">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Required details</p>
+                    <h3 className="text-sm font-semibold text-slate-950">Personal details</h3>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3.5 px-4 py-[18px] sm:grid-cols-2 sm:px-5">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName" className="font-semibold">First name <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="firstName" className="text-sm font-semibold text-slate-800">First name <span className="text-destructive">*</span></Label>
                     <Input
                       id="firstName"
                       value={formData.firstName}
                       onChange={(event) => handleInputChange("firstName", event.target.value)}
                       className={cn(
-                        "h-12 border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
+                        "h-11 rounded-[10px] border-slate-300 bg-white text-sm shadow-none focus:border-slate-950 focus:ring-slate-950/10",
                         errors.firstName && "border-destructive"
                       )}
                     />
@@ -1338,13 +1329,13 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="lastName" className="font-semibold">Last name <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="lastName" className="text-sm font-semibold text-slate-800">Last name <span className="text-destructive">*</span></Label>
                     <Input
                       id="lastName"
                       value={formData.lastName}
                       onChange={(event) => handleInputChange("lastName", event.target.value)}
                       className={cn(
-                        "h-12 border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
+                        "h-11 rounded-[10px] border-slate-300 bg-white text-sm shadow-none focus:border-slate-950 focus:ring-slate-950/10",
                         errors.lastName && "border-destructive"
                       )}
                     />
@@ -1352,14 +1343,14 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="font-semibold">Email <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="email" className="text-sm font-semibold text-slate-800">Email <span className="text-destructive">*</span></Label>
                     <Input
                       id="email"
                       type="email"
                       value={formData.email}
                       onChange={(event) => handleInputChange("email", event.target.value)}
                       className={cn(
-                        "h-12 border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
+                        "h-11 rounded-[10px] border-slate-300 bg-white text-sm shadow-none focus:border-slate-950 focus:ring-slate-950/10",
                         errors.email && "border-destructive"
                       )}
                     />
@@ -1367,12 +1358,18 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="font-semibold">Phone number <span className="text-destructive">*</span></Label>
-                    <div className="grid grid-cols-[56px_minmax(0,1fr)] items-stretch gap-2">
+                    <Label htmlFor="phone" className="text-sm font-semibold text-slate-800">Phone number <span className="text-destructive">*</span></Label>
+                    <div className={cn(
+                      "grid h-12 grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-[10px] border border-slate-300 bg-white transition-[border-color,box-shadow] focus-within:border-slate-950 focus-within:ring-4 focus-within:ring-slate-950/10",
+                      errors.phone && "border-destructive focus-within:border-destructive focus-within:ring-destructive/10"
+                    )}>
                       <Select value={formData.countryCode} onValueChange={(value) => handleInputChange("countryCode", value)}>
-                        <SelectTrigger size="lg" className="h-12 w-[56px] min-w-[56px] shrink-0 justify-center border-slate-300/95 bg-white/70 px-2 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15">
+                        <SelectTrigger size="lg" className="h-full min-h-0 rounded-none border-0 border-r border-slate-200 bg-slate-50/80 px-3 py-0 shadow-none focus:ring-0 focus-visible:ring-0 [&>span]:flex [&>span]:h-full [&>span]:items-center">
                           <SelectValue placeholder="Code">
-                            <span className="text-base leading-none">{getCountryOption(formData.countryCode)?.flag}</span>
+                            <span className="flex w-full items-center justify-between gap-2">
+                              <span className="text-base leading-none">{getCountryOption(formData.countryCode)?.flag}</span>
+                              <span className="text-xs font-semibold text-slate-700">{getCountryOption(formData.countryCode)?.code}</span>
+                            </span>
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent className="border-slate-300 bg-white/95">
@@ -1392,43 +1389,55 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                         placeholder="98765 43210"
                         value={formData.phone}
                         onChange={(event) => handleInputChange("phone", event.target.value)}
-                        className={cn(
-                          "h-12 flex-1 border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
-                          errors.phone && "border-destructive"
-                        )}
+                        className="h-full rounded-none border-0 bg-white px-3 py-0 text-sm leading-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                       />
                     </div>
-                    <p className="text-sm text-muted-foreground">Choose your country code, then enter your number.</p>
                     {errors.phone ? <p className="text-sm text-destructive">{errors.phone}</p> : null}
                   </div>
                 </div>
-              </div>
+              </section>
 
-              <div className="relative space-y-5 rounded-2xl border border-slate-300/90 bg-white/55 p-4 pt-8 shadow-sm sm:p-6 sm:pt-9">
-                <div className="absolute -top-3 left-4 inline-flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 rounded-full border border-blue-900/10 bg-gradient-to-br from-white/98 via-blue-50/95 to-blue-100/92 px-4 py-1.5 shadow-sm backdrop-blur-md">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-950">2. Studio & format</span>
-                  <span className="text-destructive">*</span>
+              <section className="border-b border-slate-200">
+                <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3.5 sm:px-5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-950 text-[11px] font-bold text-white">02</div>
+                  <div className="min-w-0 leading-tight">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Preference</p>
+                    <h3 className="text-sm font-semibold text-slate-950">Studio and format</h3>
+                  </div>
                 </div>
-                <div className="space-y-6 pt-0">
-                  <div className="space-y-2">
-                    <Label htmlFor="studio" className="font-semibold">Preferred studio <span className="text-destructive">*</span></Label>
-                    <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="space-y-6 px-4 py-[18px] sm:px-5">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5">
+                    <div className="mb-3 flex flex-wrap items-end justify-between gap-2 border-b border-slate-200 pb-2.5">
+                      <Label htmlFor="studio" className="text-[12px] font-bold uppercase tracking-[0.14em] text-slate-950">
+                        Location <span className="text-destructive">*</span>
+                      </Label>
+                      <p className="text-xs font-medium text-slate-500">Choose your studio</p>
+                    </div>
+                    <div className="space-y-2">
+                    <div className="grid items-stretch gap-2.5 sm:grid-cols-[minmax(0,1fr)_152px]">
                       <Select value={formData.studio} onValueChange={(value) => handleInputChange("studio", value)}>
                         <SelectTrigger
                           size="lg"
                           className={cn(
-                            "w-full border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
+                            "h-14 min-h-14 w-full rounded-xl border-slate-300 bg-white px-3 text-left text-sm shadow-[0_8px_20px_rgba(15,23,42,0.04)] focus:border-slate-950 focus:ring-slate-950/10 [&>span]:flex [&>span]:min-w-0 [&>span]:items-center",
                             errors.studio && "border-destructive"
                           )}
                         >
-                          <SelectValue placeholder="Select a studio" />
+                          <SelectValue placeholder="Select a studio">
+                            {selectedStudio ? (
+                              <span className="flex min-w-0 flex-col items-start leading-tight">
+                                <span className="truncate text-[13px] font-semibold text-slate-950">{selectedStudio.name}</span>
+                                <span className="mt-0.5 truncate text-xs font-medium text-slate-500">{selectedStudio.location}</span>
+                              </span>
+                            ) : null}
+                          </SelectValue>
                         </SelectTrigger>
-                        <SelectContent className="border-slate-300 bg-white/95">
+                        <SelectContent className="border-slate-300 bg-white/95 shadow-xl">
                           {studios.map((studio) => (
                             <SelectItem key={studio.name} value={studio.name}>
-                              <div>
-                                <div className="font-medium">{studio.name}</div>
-                                <div className="text-xs text-muted-foreground">{studio.location}</div>
+                              <div className="flex min-w-0 flex-col py-1 leading-tight">
+                                <div className="truncate text-sm font-semibold text-slate-950">{studio.name}</div>
+                                <div className="mt-1 truncate text-xs font-medium text-muted-foreground">{studio.location}</div>
                               </div>
                             </SelectItem>
                           ))}
@@ -1437,7 +1446,7 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-12 w-full border-slate-300 text-slate-800 hover:border-slate-800 hover:bg-slate-100 sm:w-auto sm:min-w-[170px]"
+                        className="h-14 min-h-14 w-full rounded-xl border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-[0_8px_20px_rgba(15,23,42,0.04)] hover:border-slate-950 hover:bg-slate-50"
                         onClick={() => setShowSchedule(true)}
                       >
                         <Calendar className="mr-2 h-4 w-4" />
@@ -1446,59 +1455,75 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                     </div>
                     {errors.studio ? <p className="text-sm text-destructive">{errors.studio}</p> : null}
                   </div>
+                  </div>
 
-                  <div className="space-y-3 pt-1">
-                    <div className="space-y-2">
-                      <Label className="font-semibold">Select a preferred format <span className="text-destructive">*</span></Label>
-                      <p className="text-sm text-muted-foreground">Choose the format that feels right for your first visit.</p>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5">
+                    <div className="mb-3 flex flex-wrap items-end justify-between gap-2 border-b border-slate-200 pb-2.5">
+                      <Label className="text-[12px] font-bold uppercase tracking-[0.14em] text-slate-950">
+                        Format <span className="text-destructive">*</span>
+                      </Label>
+                      <p className="text-xs font-medium text-slate-500">Choose the format that feels right for your first visit</p>
                     </div>
-                    <div role="radiogroup" aria-label="Choose your first format" className="space-y-2.5">
-                      {availableFormats.map((format) => (
-                        <div
-                          key={format.id}
-                          className={cn(
-                            "relative cursor-pointer rounded-xl border-2 p-3.5 transition-all backdrop-blur-sm sm:p-4",
-                            formData.format === format.id
-                              ? "border-blue-900/30 bg-gradient-to-br from-white/98 via-blue-50/95 to-blue-100/92 shadow-lg shadow-blue-900/5"
-                              : "border-border/50 bg-white/60 hover:border-blue-900/30 hover:shadow-md"
-                          )}
-                        >
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                            <button
-                              type="button"
-                              role="radio"
-                              aria-checked={formData.format === format.id}
-                              aria-label={`Select ${format.subtitle}`}
-                              onClick={() => handleInputChange("format", format.id)}
-                              className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center self-start rounded-full border border-slate-400 text-blue-900 outline-none transition-[color,box-shadow,border-color] focus-visible:border-blue-900 focus-visible:ring-2 focus-visible:ring-blue-900/20"
-                            >
-                              <span
-                                className={cn(
-                                  "h-2 w-2 rounded-full bg-blue-900 transition-opacity",
-                                  formData.format === format.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleInputChange("format", format.id)}
-                              className="flex min-w-0 flex-1 items-start gap-2.5 text-left"
-                            >
+                    <div className="space-y-2.5">
+                    <div role="radiogroup" aria-label="Choose your first format" className="grid gap-3 sm:grid-cols-2">
+                      {availableFormats.map((format) => {
+                        const isSelected = formData.format === format.id
+
+                        return (
+                          <div
+                            key={format.id}
+                            role="radio"
+                            aria-checked={isSelected}
+                            tabIndex={0}
+                            onClick={() => handleInputChange("format", isSelected ? "" : format.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault()
+                                handleInputChange("format", isSelected ? "" : format.id)
+                              }
+                            }}
+                            className={cn(
+                              "group relative min-h-[126px] cursor-pointer overflow-hidden rounded-xl border p-3 outline-none transition-all duration-300 focus-visible:ring-4 focus-visible:ring-blue-900/15",
+                              isSelected
+                                ? "border-blue-700/55 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_48%,#f8fafc_100%)] shadow-[0_6px_16px_rgba(37,99,235,0.08)]"
+                                : "border-slate-200 bg-white shadow-none hover:-translate-y-0.5 hover:border-blue-900/25 hover:shadow-[0_8px_18px_rgba(15,23,42,0.07)]"
+                            )}
+                          >
+                            <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-1 transition-opacity", isSelected ? "bg-gradient-to-r from-blue-700 via-sky-500 to-blue-400 opacity-100" : "bg-slate-200 opacity-0 group-hover:opacity-100")} />
+                            <div className="flex items-start justify-between gap-3">
                               <div className="flex min-w-0 items-start gap-2.5">
-                                <span className="text-2xl leading-none sm:text-[1.65rem]">{format.icon}</span>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-[15px] font-semibold leading-snug text-slate-950">{format.title}</div>
-                                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-900">{format.subtitle}</div>
-                                  <p className="mt-1 break-words text-xs leading-relaxed text-muted-foreground sm:text-[13px]">{format.description}</p>
+                                <span className={cn(
+                                  "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border bg-white text-lg leading-none shadow-sm transition-transform duration-300 group-hover:scale-105",
+                                  isSelected ? "border-blue-200 shadow-blue-900/10" : "border-slate-200"
+                                )}>
+                                  {format.icon}
+                                </span>
+                                <div className="min-w-0">
+                                  <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-900">{format.subtitle}</div>
+                                  <div className="mt-0.5 text-[15px] font-semibold leading-tight text-slate-950">{format.title}</div>
                                 </div>
                               </div>
-                            </button>
-                            <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 pl-0 sm:w-auto sm:flex-col sm:items-end sm:self-start sm:pl-2">
+                              <span
+                                className={cn(
+                                  "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border bg-white shadow-sm transition-colors",
+                                  isSelected ? "border-blue-800" : "border-slate-300"
+                                )}
+                              >
+                                <span className={cn("h-2.5 w-2.5 rounded-full bg-blue-800 transition-opacity", isSelected ? "opacity-100" : "opacity-0")} />
+                              </span>
+                            </div>
+
+                            <p className="mt-2 line-clamp-2 text-xs leading-snug text-slate-600">{format.description}</p>
+
+                            <div className="mt-3 flex items-center justify-between gap-2">
+                              <span className={cn("text-[10px] font-semibold uppercase tracking-[0.14em]", isSelected ? "text-blue-800" : "text-slate-400")}>
+                                {isSelected ? "Selected" : "Tap to select"}
+                              </span>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 rounded-full px-2.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-950 sm:h-8 sm:px-3 sm:text-[11px]"
+                                className="h-7 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 shadow-sm hover:border-blue-900/20 hover:bg-blue-50 hover:text-blue-950"
                                 onClick={(event) => {
                                   event.stopPropagation()
                                   setShowFormatInfo(format.id)
@@ -1506,111 +1531,57 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                               >
                                 Know more
                               </Button>
-                              {formData.format === format.id ? (
-                                <div className="flex items-center gap-1 rounded-full border border-blue-900/10 bg-gradient-to-br from-white/98 via-blue-50/95 to-blue-100/92 px-2 py-1 text-[11px] font-semibold text-blue-950 shadow-sm">
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                  <span>Selected</span>
-                                </div>
-                              ) : null}
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                     {errors.format ? <p className="text-sm text-destructive">{errors.format}</p> : null}
                   </div>
-                </div>
-              </div>
-
-              <div className="relative space-y-4 rounded-2xl border border-slate-300/90 bg-white/55 p-4 pt-8 shadow-sm sm:p-6 sm:pt-9">
-                <div className="absolute -top-3 left-4 inline-flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 rounded-full border border-blue-900/10 bg-gradient-to-br from-white/98 via-blue-50/95 to-blue-100/92 px-4 py-1.5 shadow-sm backdrop-blur-md">
-                  <CreditCard className="h-3.5 w-3.5 text-blue-950" />
-                  <span className="mb-0 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-950">3. Membership included</span>
-                </div>
-                <p className="text-sm leading-relaxed text-slate-600">Almost there. Complete your order to claim both sessions</p>
-                <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(239,246,255,0.92))] text-slate-950 shadow-[0_20px_55px_rgba(15,23,42,0.10)] ring-1 ring-slate-200/70">
-                  <div className="px-5 py-6 sm:px-6 sm:py-7">
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="max-w-2xl">
-                        <div className="inline-flex items-center rounded-full border border-blue-900/10 bg-blue-950 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white shadow-sm">
-                          Premium membership
-                        </div>
-                        <h3 className="mt-4 text-[1.5rem] font-bold tracking-[-0.02em] text-slate-950 sm:text-[2rem]">{membershipOffer.name}</h3>
-                        <p className="mt-2 max-w-xl text-sm leading-7 text-slate-600 sm:text-[15px]">
-                          New here? We'll meet you where you are — twice, for the price of once.
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl border border-blue-900/10 bg-white/85 px-4 py-4 shadow-sm sm:px-5 lg:min-w-[200px]">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-900/70">Today&apos;s total</p>
-                        <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-slate-950">{membershipPriceDisplay}</p>
-                        <p className="mt-1 text-xs text-slate-500">Includes both introductory sessions</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-6 grid gap-3 border-t border-slate-200/80 pt-5 sm:grid-cols-3">
-                      {[
-                        { label: "Sessions", value: membershipOffer.sessions },
-                        { label: "Valid for", value: membershipOffer.validFor },
-                        { label: "Access", value: "Full access" },
-                      ].map((item) => (
-                        <div key={item.label} className="rounded-2xl bg-white/70 px-4 py-4 ring-1 ring-slate-200/80">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
-                          <p className="mt-2 text-base font-semibold text-slate-950">{item.value}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-5 flex flex-col gap-4 border-t border-slate-200/80 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
-                        Includes guided onboarding, secure checkout, and dedicated studio follow-up to complete your booking.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="rounded-full border-slate-300 bg-white px-5 text-slate-900 font-semibold hover:border-slate-900 hover:bg-slate-900 hover:text-white transition-all shadow-sm"
-                        onClick={() => setShowMembershipModal(true)}
-                      >
-                        Learn more
-                      </Button>
-                    </div>
                   </div>
                 </div>
-              </div>
+              </section>
 
-                <div className="relative space-y-3 rounded-2xl border border-slate-300/90 bg-white/55 p-5 pt-9 shadow-sm sm:p-6 sm:pt-10">
-                <div className="absolute -top-3 left-4 inline-flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 rounded-full border border-blue-900/20 bg-gradient-to-r from-blue-900/15 to-slate-200/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-900">4. Before you confirm</span>
-                </div>
-                <div className="flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-3 sm:items-center sm:gap-4">
-                  <Checkbox
-                    id="terms"
-                    checked={formData.acceptedTerms}
-                    onCheckedChange={(checked) => handleInputChange("acceptedTerms", Boolean(checked))}
-                    className={cn("mt-0.5 h-5 w-5 rounded-md border-slate-400 data-[state=checked]:border-blue-900 data-[state=checked]:bg-blue-900 sm:mt-0", errors.acceptedTerms && "border-destructive")}
-                  />
-                  <div className="flex-1">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <label htmlFor="terms" className="cursor-pointer text-sm font-semibold leading-relaxed text-slate-900 sm:flex-1">
-                        I have read and accept the waiver and booking terms. <span className="text-destructive">*</span>
-                      </label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-9 rounded-full border-slate-300 bg-white px-4 text-xs font-semibold tracking-[0.08em] text-slate-800 hover:border-slate-900 hover:bg-slate-900 hover:text-white sm:self-auto"
-                        onClick={(event) => {
-                          event.preventDefault()
-                          setShowWaiverModal(true)
-                        }}
-                      >
-                        View terms & conditions
-                      </Button>
-                    </div>
+              <section className="border-b border-slate-200">
+                <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3.5 sm:px-5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-950 text-[11px] font-bold text-white">03</div>
+                  <div className="min-w-0 leading-tight">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Final check</p>
+                    <h3 className="text-sm font-semibold text-slate-950">Confirmation</h3>
                   </div>
                 </div>
-                {errors.acceptedTerms ? <p className="text-sm text-destructive">{errors.acceptedTerms}</p> : null}
-              </div>
+                <div className="px-4 py-[18px] sm:px-5">
+                  <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:items-center sm:gap-4 sm:px-4">
+                    <Checkbox
+                      id="terms"
+                      checked={formData.acceptedTerms}
+                      onCheckedChange={(checked) => handleInputChange("acceptedTerms", Boolean(checked))}
+                      className={cn("mt-0.5 h-5 w-5 rounded-md border-slate-400 data-[state=checked]:border-blue-900 data-[state=checked]:bg-blue-900 sm:mt-0", errors.acceptedTerms && "border-destructive")}
+                    />
+                    <div className="flex-1">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <label htmlFor="terms" className="cursor-pointer text-sm font-semibold leading-relaxed text-slate-900 sm:flex-1">
+                          I have read and accept the waiver and booking terms. <span className="text-destructive">*</span>
+                        </label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 rounded-lg border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 shadow-none hover:border-slate-900 hover:bg-slate-900 hover:text-white sm:self-auto"
+                          onClick={(event) => {
+                            event.preventDefault()
+                            setShowWaiverModal(true)
+                          }}
+                        >
+                          View terms & conditions
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  {errors.acceptedTerms ? <p className="mt-2 text-sm text-destructive">{errors.acceptedTerms}</p> : null}
+                </div>
+              </section>
 
+              <div className="space-y-3 bg-slate-50 px-4 py-4 sm:px-5">
               {statusMessage ? (
                 <div className={cn(
                   "rounded-xl border px-4 py-3 text-sm",
@@ -1626,22 +1597,28 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
                 <p className="text-sm text-destructive">{errors.payment || errors.form}</p>
               ) : null}
 
-              <Button
-                id="trial-submit-button"
-                type="submit"
-                size="lg"
-                className="h-14 w-full bg-gradient-to-r from-blue-950 to-blue-900 text-lg shadow-lg transition-all duration-300 hover:from-slate-950 hover:to-blue-950 hover:shadow-xl"
-                disabled={isSubmitting || isCreatingCheckout || !isFormValid}
-              >
-                {isSubmitting || isCreatingCheckout ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    {isCreatingCheckout ? "Starting secure checkout..." : "Submitting your booking..."}
-                  </>
-                ) : (
-                  primaryButtonLabel
-                )}
-              </Button>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm leading-relaxed text-slate-600">
+                    No payment collected. A team member will get in touch shortly.
+                  </p>
+                  <Button
+                    id="trial-submit-button"
+                    type="submit"
+                    size="lg"
+                    className="h-12 w-full rounded-xl bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500 px-8 text-sm font-semibold uppercase tracking-[0.12em] text-white shadow-[0_18px_42px_rgba(37,99,235,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-800 hover:via-blue-700 hover:to-sky-600 hover:shadow-[0_22px_52px_rgba(37,99,235,0.42)] disabled:translate-y-0 disabled:opacity-55 sm:w-auto sm:min-w-[190px]"
+                    disabled={isSubmitting || isCreatingCheckout || !isFormValid}
+                  >
+                    {isSubmitting || isCreatingCheckout ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting your booking...
+                      </>
+                    ) : (
+                      primaryButtonLabel
+                    )}
+                  </Button>
+                </div>
+              </div>
               </form>
             </div>
             )}
@@ -2078,12 +2055,12 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-blue-600 shadow-xl">
           <CheckCircle2 className="h-12 w-12 text-white" />
         </div>
-        <h3 className="mb-3 text-3xl font-bold text-foreground">Payment Successful!</h3>
+        <h3 className="mb-3 text-3xl font-bold text-foreground">Request Submitted!</h3>
         <p className="mb-8 leading-relaxed text-muted-foreground">
-          Your booking is confirmed. Check your email for class details and arrival instructions.
+          Your details have been received. A member of our team will get in touch shortly. We&apos;ll redirect you to your selected studio schedule now.
         </p>
-        <Button className="w-full bg-gradient-to-r from-blue-600 to-emerald-600 py-6 text-lg text-white hover:from-blue-700 hover:to-emerald-700" onClick={redirectToMomence}>
-          Continue to Momence
+        <Button className="w-full bg-gradient-to-r from-blue-600 to-emerald-600 py-6 text-lg text-white hover:from-blue-700 hover:to-emerald-700" onClick={redirectToSelectedStudioSchedule}>
+          View selected studio schedule
         </Button>
       </ModalShell>
 
@@ -2205,52 +2182,6 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
             </div>
           </>
         ) : null}
-      </ModalShell>
-
-      <ModalShell open={showMembershipModal} onClose={() => setShowMembershipModal(false)} className="max-w-3xl">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-blue-900/70">Membership details</p>
-            <h3 className="text-2xl font-semibold text-slate-950">{membershipOffer.name}</h3>
-            <p className="text-sm text-muted-foreground">Complete package information and what’s included.</p>
-          </div>
-          <button onClick={() => setShowMembershipModal(false)} className="text-muted-foreground hover:text-foreground">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Price</p>
-            <p className="mt-2 text-2xl font-bold text-slate-950">{membershipOffer.price}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Sessions</p>
-            <p className="mt-2 text-2xl font-bold text-slate-950">{membershipOffer.sessions}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Valid for</p>
-            <p className="mt-2 text-2xl font-bold text-slate-950">{membershipOffer.validFor}</p>
-          </div>
-        </div>
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm">
-          <h4 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-600">Package description</h4>
-          <div className="space-y-3 text-sm leading-relaxed text-slate-700">
-            {membershipOffer.description.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
-          </div>
-        </div>
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm">
-          <h4 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-600">Important terms</h4>
-          <ul className="space-y-2 text-sm leading-relaxed text-slate-700">
-            {membershipOffer.highlights.map((highlight) => (
-              <li key={highlight} className="flex gap-2">
-                <span className="mt-1 h-2 w-2 rounded-full bg-blue-900" />
-                <span>{highlight}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
       </ModalShell>
 
       <ModalShell open={showAllFaqsModal} onClose={() => setShowAllFaqsModal(false)} className="max-h-[85vh] max-w-4xl overflow-y-auto">

@@ -876,11 +876,15 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
           lastPartialPayloadRef.current = ""
           setPaymentVerified(false)
           setPaymentSessionId("")
-          await trackSuccessfulSubmission({
-            event_id: result.paymentSessionId || returnedSessionId,
-            utm_campaign: typeof fallbackPayload?.utm_campaign === "string" ? fallbackPayload.utm_campaign : undefined,
-            utm_source: typeof fallbackPayload?.utm_source === "string" ? fallbackPayload.utm_source : undefined,
-          })
+          if (result.leadSubmission.momenceSynced === true) {
+            await trackSuccessfulSubmission({
+              event_id: typeof result.leadSubmission.event_id === "string"
+                ? result.leadSubmission.event_id
+                : (typeof fallbackPayload?.event_id === "string" ? fallbackPayload.event_id : result.paymentSessionId || returnedSessionId),
+              utm_campaign: typeof fallbackPayload?.utm_campaign === "string" ? fallbackPayload.utm_campaign : undefined,
+              utm_source: typeof fallbackPayload?.utm_source === "string" ? fallbackPayload.utm_source : undefined,
+            })
+          }
           await celebrateSuccess()
           setStatusMessage({
             tone: "success",
@@ -1003,7 +1007,14 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
           lastPartialPayloadRef.current = ""
           setPaymentVerified(false)
           setPaymentSessionId("")
-          await trackSuccessfulSubmission(payload as { event_id?: string; utm_campaign?: string; utm_source?: string })
+          if (result.momenceSynced === true) {
+            await trackSuccessfulSubmission({
+              ...(payload as { event_id?: string; utm_campaign?: string; utm_source?: string }),
+              event_id: typeof result.event_id === "string"
+                ? result.event_id
+                : (payload as { event_id?: string }).event_id,
+            })
+          }
           await celebrateSuccess()
 
           if (onSubmit) {
@@ -1039,7 +1050,14 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
         return
       }
 
-      await trackSuccessfulSubmission(payload as { event_id?: string; utm_campaign?: string; utm_source?: string })
+      if (result.momenceSynced === true) {
+        await trackSuccessfulSubmission({
+          ...(payload as { event_id?: string; utm_campaign?: string; utm_source?: string }),
+          event_id: typeof result.event_id === "string"
+            ? result.event_id
+            : (payload as { event_id?: string }).event_id,
+        })
+      }
 
       try {
         window.sessionStorage.removeItem(STORAGE_KEYS.formState)

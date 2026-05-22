@@ -923,6 +923,8 @@ function buildInfluencerSubmissionSuccessPayload({
   return {
     success: true,
     id: leadData.id,
+    event_id: leadData.event_id,
+    momenceSynced: true,
     momence: {
       membershipProvisioned,
       membershipName: momenceSyncResult.membershipName || momenceSyncResult.membership?.name || 'Studio Complimentary Class',
@@ -1639,27 +1641,19 @@ async function storeLeadData(leadData, requestMeta = {}) {
   return leadData;
 }
 
-async function processLeadSubmission(leadData, req) {
+async function processLeadSubmission(leadData, req, dependencies = {}) {
+  const persistLead = dependencies.storeLeadData || storeLeadData;
+  const sendMetaEvent = dependencies.sendMetaLeadEvent || sendMetaLeadEvent;
+  const syncToMomence = dependencies.submitToMomence || submitToMomence;
   let momenceSyncResult = { success: true, error: '' };
 
-  await storeLeadData(leadData, {
+  await persistLead(leadData, {
     ip_address: getClientIp(req),
     user_agent: req.get('user-agent') || ''
   });
 
   try {
-    const metaResult = await sendMetaLeadEvent(leadData, req);
-    if (metaResult.sent) {
-      console.log(`Meta Conversions API event sent: ${metaResult.eventId}`);
-    } else {
-      console.log(`Meta Conversions API skipped: ${metaResult.reason}`);
-    }
-  } catch (error) {
-    console.error('Meta Conversions API send failed:', error.message);
-  }
-
-  try {
-    await submitToMomence(leadData);
+    await syncToMomence(leadData);
   } catch (error) {
     momenceSyncResult = {
       success: false,
@@ -1673,6 +1667,8 @@ async function processLeadSubmission(leadData, req) {
       success: true,
       stored: true,
       id: leadData.id,
+      event_id: leadData.event_id,
+      momenceSynced: false,
       warning: 'Your details were saved, but the Momence sync failed. Please contact the studio team to complete the booking.',
       error: 'Your details were saved, but the Momence sync failed. Please contact the studio team to complete the booking.',
       detail: momenceSyncResult.error,
@@ -1680,9 +1676,22 @@ async function processLeadSubmission(leadData, req) {
     };
   }
 
+  try {
+    const metaResult = await sendMetaEvent(leadData, req);
+    if (metaResult.sent) {
+      console.log(`Meta Conversions API event sent: ${metaResult.eventId}`);
+    } else {
+      console.log(`Meta Conversions API skipped: ${metaResult.reason}`);
+    }
+  } catch (error) {
+    console.error('Meta Conversions API send failed:', error.message);
+  }
+
   return {
     success: true,
     id: leadData.id,
+    event_id: leadData.event_id,
+    momenceSynced: true,
     redirectUrl: getPublicClientConfig().redirectUrl
   };
 }
@@ -2086,16 +2095,6 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
       });
     }
 
-    // Track Meta event
-    try {
-      const metaResult = await sendMetaLeadEvent(leadData, req);
-      if (metaResult.sent) {
-        console.log(`Meta Conversions API event sent for Barre: ${metaResult.eventId}`);
-      }
-    } catch (error) {
-      console.error('Meta Conversions API send failed for Barre:', error.message);
-    }
-
     // Standard Barre submissions only create the Momence lead for team follow-up.
     try {
       await submitToMomence(leadData);
@@ -2111,6 +2110,8 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
       return res.status(200).json({
         success: true,
         stored: true,
+        momenceSynced: false,
+        event_id: leadData.event_id,
         warning: 'Your trial request was saved, but we had an issue notifying the studio. Please contact us to confirm.',
         error: 'Your trial request was saved, but we had an issue notifying the studio. Please contact us to confirm.',
         detail: momenceSyncResult.error,
@@ -2118,9 +2119,20 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
       });
     }
 
+    try {
+      const metaResult = await sendMetaLeadEvent(leadData, req);
+      if (metaResult.sent) {
+        console.log(`Meta Conversions API event sent for Barre: ${metaResult.eventId}`);
+      }
+    } catch (error) {
+      console.error('Meta Conversions API send failed for Barre:', error.message);
+    }
+
     return res.json({
       success: true,
       id: leadData.id,
+      event_id: leadData.event_id,
+      momenceSynced: true,
       redirectUrl: getPublicClientConfig().redirectUrl
     });
   } catch (error) {
@@ -2171,15 +2183,6 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
     }
 
     try {
-      const metaResult = await sendMetaLeadEvent(leadData, req);
-      if (metaResult.sent) {
-        console.log(`Meta Conversions API event sent for influencer Barre: ${metaResult.eventId}`);
-      }
-    } catch (error) {
-      console.error('Meta Conversions API send failed for influencer Barre:', error.message);
-    }
-
-    try {
       await submitToMomence(leadData, {
         sourceId: process.env.MOMENCE_INFLUENCER_SOURCE_ID || '201918'
       });
@@ -2188,9 +2191,20 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
       return res.status(502).json({
         success: false,
         stored: true,
+        momenceSynced: false,
+        event_id: leadData.event_id,
         error: 'Your details were saved, but we could not notify the studio team. Please try again or contact the studio directly.',
         detail: error.message || 'Unable to submit to Momence.'
       });
+    }
+
+    try {
+      const metaResult = await sendMetaLeadEvent(leadData, req);
+      if (metaResult.sent) {
+        console.log(`Meta Conversions API event sent for influencer Barre: ${metaResult.eventId}`);
+      }
+    } catch (error) {
+      console.error('Meta Conversions API send failed for influencer Barre:', error.message);
     }
 
     let momenceSyncResult = { success: false, error: '' };
@@ -2278,6 +2292,7 @@ module.exports.buildStudioComplimentaryClassMembershipConfig = buildStudioCompli
 module.exports.buildMomenceLeadRequestPayload = buildMomenceLeadRequestPayload;
 module.exports.buildInfluencerSubmissionSuccessPayload = buildInfluencerSubmissionSuccessPayload;
 module.exports.normalizePhoneDigits = normalizePhoneDigits;
+module.exports.processLeadSubmission = processLeadSubmission;
 module.exports.provisionOpenBarreMembership = provisionOpenBarreMembership;
 module.exports.provisionInfluencerMembership = provisionInfluencerMembership;
 module.exports.provisionOpenBarreViaSupabase = provisionOpenBarreViaSupabase;

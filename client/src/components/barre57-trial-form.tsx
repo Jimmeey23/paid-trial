@@ -711,8 +711,14 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         return
       }
 
-      // Track successful submission
-      await trackSuccessfulSubmission(payload as { event_id?: string; utm_campaign?: string; utm_source?: string })
+      if (result.momenceSynced === true) {
+        await trackSuccessfulSubmission({
+          ...(payload as { event_id?: string; utm_campaign?: string; utm_source?: string }),
+          event_id: typeof result.event_id === "string"
+            ? result.event_id
+            : (payload as { event_id?: string }).event_id,
+        })
+      }
 
       // Show success celebration
       celebrateSuccess()

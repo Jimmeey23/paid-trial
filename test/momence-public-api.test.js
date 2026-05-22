@@ -8,6 +8,7 @@ const {
   buildMomenceLeadRequestPayload,
   buildInfluencerSubmissionSuccessPayload,
   normalizePhoneDigits,
+  processLeadSubmission,
   provisionInfluencerMembership,
   resolveScheduleLocationIds,
   buildStudioSchedulePageUrl
@@ -185,6 +186,46 @@ test('buildMomenceLeadRequestPayload can override sourceId for influencer leads'
   assert.equal(payload.sourceId, '201918');
   assert.equal(payload.token, 'token');
   assert.equal(payload.email, 'influencer@example.com');
+});
+
+test('processLeadSubmission only sends Meta after Momence sync succeeds', async () => {
+  let metaSendCount = 0;
+
+  const result = await processLeadSubmission(
+    {
+      id: 'stored_lead_id',
+      event_id: 'lead_event_id',
+      firstName: 'Meta',
+      lastName: 'Mismatch',
+      email: 'meta-mismatch@example.com',
+      phoneNumber: '+919876543210',
+      center: 'Supreme Headquarters, Bandra',
+      type: 'Barre 57',
+      time: 'Flexible / Needs Recommendation',
+      waiverAccepted: 'accepted'
+    },
+    {
+      get: () => 'test-agent',
+      headers: {},
+      ip: '127.0.0.1'
+    },
+    {
+      storeLeadData: async () => ({ success: true }),
+      submitToMomence: async () => {
+        throw new Error('Momence rejected lead');
+      },
+      sendMetaLeadEvent: async () => {
+        metaSendCount += 1;
+        return { sent: true, eventId: 'lead_event_id' };
+      }
+    }
+  );
+
+  assert.equal(result.success, true);
+  assert.equal(result.stored, true);
+  assert.equal(result.momenceSynced, false);
+  assert.equal(result.event_id, 'lead_event_id');
+  assert.equal(metaSendCount, 0);
 });
 
 test('provisionInfluencerMembership falls back to Supabase sync with Studio Complimentary Class when direct checkout fails', async () => {

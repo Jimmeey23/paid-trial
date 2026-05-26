@@ -1922,6 +1922,13 @@ app.get(['/test', '/test/*'], (req, res) => {
   return sendAppIndex(res);
 });
 
+app.get(['/thank-you', '/thank-you/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(res);
+});
+
 app.get(['/', '/index.html'], (req, res, next) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return next();
@@ -1973,6 +1980,7 @@ app.get('/api/schedule/sessions', async (req, res) => {
       startDate: sanitizeText(req.query.startDate, 20),
       endDate: sanitizeText(req.query.endDate, 20),
       center: sanitizeText(req.query.center, 120),
+      locationId: sanitizeText(req.query.locationId, 40),
       type: sanitizeText(req.query.type, 80)
     });
 

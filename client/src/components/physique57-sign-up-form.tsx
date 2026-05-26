@@ -43,11 +43,10 @@ import {
 import { cn } from "@/lib/utils"
 import {
   getSubmissionTrackingPayload,
-  initializeTracking,
   loadPublicClientConfig,
-  trackLeadSubmission,
   type PublicClientConfig,
 } from "@/lib/tracking"
+import { getThankYouUrl, saveTrialSuccessPayload } from "@/lib/submission-success"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -454,28 +453,6 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
     }, delay)
   }
 
-  async function ensureTrackingReady() {
-    let config = publicConfigRef.current
-
-    if (!config) {
-      try {
-        config = await loadPublicClientConfig()
-        publicConfigRef.current = config
-        setPublicConfig((current) => current ?? config)
-        initializeTracking(config)
-      } catch {
-        return null
-      }
-    }
-
-    return config
-  }
-
-  async function trackSuccessfulSubmission(leadPayload: { event_id?: string; utm_campaign?: string; utm_source?: string }) {
-    const config = await ensureTrackingReady()
-    trackLeadSubmission(config, leadPayload)
-  }
-
   function buildPartialLeadPayload(): Record<string, string> {
     const trackingPayload = getSubmissionTrackingPayload() as Record<string, string>
 
@@ -586,7 +563,6 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
         if (!cancelled) {
           publicConfigRef.current = config
           setPublicConfig(config)
-          initializeTracking(config)
         }
       } catch {
         // Tracking config is optional for the booking flow itself.
@@ -598,10 +574,6 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
     }
   }, [])
 
-
-            const cachedPayloadRaw = window.sessionStorage.getItem(STORAGE_KEYS.submitPayload)
-            const cachedPayload = cachedPayloadRaw ? JSON.parse(cachedPayloadRaw) : null
-            const fallbackPayload = cachedPayload ?? buildLeadPayload()
   useEffect(() => {
     if (typeof window === "undefined") {
       return
@@ -828,6 +800,9 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
         setStatusMessage({ tone: "success", text: "Verifying your payment and finishing the booking..." })
         const response = await fetch(`/api/verify-payment?session_id=${encodeURIComponent(returnedSessionId)}`)
         const result = await response.json().catch(() => ({}))
+        const cachedPayloadRaw = window.sessionStorage.getItem(STORAGE_KEYS.submitPayload)
+        const cachedPayload = cachedPayloadRaw ? JSON.parse(cachedPayloadRaw) : null
+        const fallbackPayload = cachedPayload ?? buildLeadPayload()
 
         if (!response.ok || !result.paid) {
           setPaymentVerified(false)
@@ -876,23 +851,12 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
           lastPartialPayloadRef.current = ""
           setPaymentVerified(false)
           setPaymentSessionId("")
-          if (result.leadSubmission.momenceSynced === true) {
-            await trackSuccessfulSubmission({
-              event_id: typeof result.leadSubmission.event_id === "string"
-                ? result.leadSubmission.event_id
-                : (typeof fallbackPayload?.event_id === "string" ? fallbackPayload.event_id : result.paymentSessionId || returnedSessionId),
-              utm_campaign: typeof fallbackPayload?.utm_campaign === "string" ? fallbackPayload.utm_campaign : undefined,
-              utm_source: typeof fallbackPayload?.utm_source === "string" ? fallbackPayload.utm_source : undefined,
-            })
-          }
           await celebrateSuccess()
-          setStatusMessage({
-            tone: "success",
-            text: result.leadSubmission.error || result.leadSubmission.warning || "Your details have been received. A member of our team will get in touch shortly.",
-          })
+          const successText = result.leadSubmission.error || result.leadSubmission.warning || "Your details have been received. A member of our team will get in touch shortly."
+          setStatusMessage({ tone: "success", text: successText })
           setShowSuccessModal(true)
           setIsPostPaymentProcessing(false)
-          scheduleRedirectToStudioSchedule()
+          redirectToThankYouPage(fallbackPayload, result.leadSubmission, successText)
           return
         }
 
@@ -974,6 +938,46 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
     }
   }
 
+  function redirectToThankYouPage(
+    payload: Record<string, unknown>,
+    result: Record<string, any> = {},
+    statusText = "Your details have been received. A member of our team will get in touch shortly."
+  ) {
+    const eventId = typeof result.event_id === "string"
+      ? result.event_id
+      : (typeof payload.event_id === "string" ? payload.event_id : eventIdRef.current)
+    const sourceForm = typeof payload.source_form === "string" ? payload.source_form : (isTestRoute ? "physique57-test-free-route" : "free-trial-form")
+
+    saveTrialSuccessPayload({
+      eventId,
+      firstName: formData.firstName.trim(),
+      studioName: selectedStudio?.name ?? formData.studio,
+      studioBackendName: selectedStudio?.backendName ?? formData.studio,
+      studioLocationId: selectedStudio?.scheduleLocationId,
+      formatName: selectedFormat?.subtitle ?? formData.format,
+      classType: selectedFormat?.backendValue ?? formData.format,
+      sourceForm,
+      statusMessage: statusText,
+      redirectUrl: scheduleRedirectUrl,
+      schedulePageUrl: scheduleRedirectUrl,
+      leadTracking: {
+        event_id: eventId,
+        utm_campaign: typeof payload.utm_campaign === "string" ? payload.utm_campaign : undefined,
+        utm_source: typeof payload.utm_source === "string" ? payload.utm_source : undefined,
+      },
+      createdAt: new Date().toISOString(),
+    })
+    if (typeof window !== "undefined") {
+      if (redirectTimeoutRef.current) {
+        window.clearTimeout(redirectTimeoutRef.current)
+      }
+
+      redirectTimeoutRef.current = window.setTimeout(() => {
+        window.location.assign(getThankYouUrl())
+      }, 450)
+    }
+  }
+
   async function submitLeadToApi(payload: Record<string, unknown>) {
     setIsSubmitting(true)
     setIsPostPaymentProcessing(true)
@@ -1007,14 +1011,6 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
           lastPartialPayloadRef.current = ""
           setPaymentVerified(false)
           setPaymentSessionId("")
-          if (result.momenceSynced === true) {
-            await trackSuccessfulSubmission({
-              ...(payload as { event_id?: string; utm_campaign?: string; utm_source?: string }),
-              event_id: typeof result.event_id === "string"
-                ? result.event_id
-                : (payload as { event_id?: string }).event_id,
-            })
-          }
           await celebrateSuccess()
 
           if (onSubmit) {
@@ -1027,7 +1023,7 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
           })
           setShowSuccessModal(true)
           setIsPostPaymentProcessing(false)
-          scheduleRedirectToStudioSchedule()
+          redirectToThankYouPage(payload, result, result.error || "Your details have been received. A member of our team will get in touch shortly.")
           return
         }
 
@@ -1048,15 +1044,6 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
 
         setStatusMessage({ tone: "error", text: result.error || "The request could not be completed. Please try again." })
         return
-      }
-
-      if (result.momenceSynced === true) {
-        await trackSuccessfulSubmission({
-          ...(payload as { event_id?: string; utm_campaign?: string; utm_source?: string }),
-          event_id: typeof result.event_id === "string"
-            ? result.event_id
-            : (payload as { event_id?: string }).event_id,
-        })
       }
 
       try {
@@ -1084,7 +1071,7 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
       })
       setShowSuccessModal(true)
       setIsPostPaymentProcessing(false)
-      scheduleRedirectToStudioSchedule()
+      redirectToThankYouPage(payload, result)
     } catch {
       setIsPostPaymentProcessing(false)
       setStatusMessage({ tone: "error", text: "We could not complete the request right now. Please try again in a moment." })

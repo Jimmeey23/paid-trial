@@ -5,6 +5,11 @@ const CENTER_ALIASES = {
   'Kwality House, Kemps Corner': ['kemps', 'kemps corner', 'kwality house', 'grant road']
 };
 
+const CENTER_LOCATION_IDS = {
+  'Supreme Headquarters, Bandra': ['29821'],
+  'Kwality House, Kemps Corner': ['9030']
+};
+
 const TYPE_ALIASES = {
   Barre: ['barre', 'band barre'],
   powerCycle: ['powercycle', 'power cycle'],
@@ -40,6 +45,20 @@ function pickNumber(...values) {
   return null;
 }
 
+function pickId(...values) {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return '';
+}
+
 function safeDate(value) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -69,7 +88,19 @@ function inferClassFormat(title = '') {
   return title || 'Class';
 }
 
-function normalizeLocationName(rawLocation = '') {
+function normalizeLocationName(rawLocation = '', rawLocationId = '') {
+  const normalizedLocationId = String(rawLocationId || '').trim();
+
+  if (normalizedLocationId) {
+    const match = Object.entries(CENTER_LOCATION_IDS).find(([, locationIds]) => (
+      locationIds.includes(normalizedLocationId)
+    ));
+
+    if (match) {
+      return match[0];
+    }
+  }
+
   const normalized = slugify(rawLocation);
 
   for (const [center, aliases] of Object.entries(CENTER_ALIASES)) {
@@ -78,7 +109,7 @@ function normalizeLocationName(rawLocation = '') {
     }
   }
 
-  return rawLocation || 'Studio TBA';
+  return rawLocation;
 }
 
 function extractSessions(payload) {
@@ -120,7 +151,9 @@ function normalizeSession(rawSession) {
   ) || 'Scheduled class';
   const locationRaw = pickString(
     rawSession.locationName,
+    rawSession.inPersonLocationName,
     rawSession.inPersonLocation?.name,
+    rawSession.location,
     rawSession.location?.name,
     rawSession.location?.title,
     rawSession.venue?.name,
@@ -129,12 +162,21 @@ function normalizeSession(rawSession) {
     rawSession.address?.name,
     rawSession.place?.name
   );
-  const locationName = normalizeLocationName(locationRaw);
+  const locationId = pickId(
+    rawSession.locationId,
+    rawSession.inPersonLocationId,
+    rawSession.inPersonLocation?.id,
+    rawSession.location?.id,
+    rawSession.venue?.id,
+    rawSession.site?.id
+  );
+  const locationName = normalizeLocationName(locationRaw, locationId);
   const instructorName = pickString(
     rawSession.teacher?.name,
     rawSession.teacher?.fullName,
     [rawSession.teacher?.firstName, rawSession.teacher?.lastName].filter(Boolean).join(' '),
     rawSession.teacherName,
+    rawSession.instructor,
     rawSession.instructor?.name,
     rawSession.instructor?.fullName,
     rawSession.staff?.name
@@ -151,6 +193,7 @@ function normalizeSession(rawSession) {
   const bookingCount = pickNumber(rawSession.bookingCount, rawSession.bookedCount, rawSession.spots?.booked);
   const spotsRemaining = pickNumber(
     rawSession.spotsRemaining,
+    rawSession.spotsLeft,
     rawSession.remainingSpots,
     rawSession.availableSpots,
     rawSession.spots?.remaining,
@@ -162,7 +205,7 @@ function normalizeSession(rawSession) {
   const durationMinutes = deriveDurationMinutes(
     startsAt,
     endsAt,
-    pickNumber(rawSession.durationMinutes, rawSession.durationInMinutes, rawSession.duration)
+    pickNumber(rawSession.durationMinutes, rawSession.durationInMinutes, rawSession.durationMin, rawSession.duration)
   );
 
   return {
@@ -171,6 +214,7 @@ function normalizeSession(rawSession) {
     description: pickString(rawSession.description, rawSession.shortDescription, rawSession.summary),
     classFormat,
     instructorName,
+    locationId,
     locationName,
     startsAt: startsAt ? startsAt.toISOString() : '',
     endsAt: endsAt ? endsAt.toISOString() : '',
@@ -189,7 +233,23 @@ function normalizeSession(rawSession) {
   };
 }
 
-function filterByCenter(session, center) {
+function filterByCenter(session, center, locationId) {
+  const normalizedLocationId = String(locationId || '').trim();
+
+  if (normalizedLocationId) {
+    if (String(session.locationId || '').trim() === normalizedLocationId) {
+      return true;
+    }
+
+    if (session.locationId) {
+      return false;
+    }
+
+    if (!center) {
+      return false;
+    }
+  }
+
   if (!center) {
     return true;
   }
@@ -289,7 +349,7 @@ class ScheduleService {
     return response.json();
   }
 
-  async getSessions({ startDate, endDate, center, type } = {}) {
+  async getSessions({ startDate, endDate, center, locationId, type } = {}) {
     const dateRange = {
       ...defaultDateRange(Number.isFinite(this.lookaheadDays) ? this.lookaheadDays : DEFAULT_LOOKAHEAD_DAYS),
       ...(startDate ? { startDate } : {}),
@@ -300,7 +360,7 @@ class ScheduleService {
     const normalizedSessions = extractSessions(rawPayload)
       .map(normalizeSession)
       .filter((session) => session.startsAt)
-      .filter((session) => filterByCenter(session, center))
+      .filter((session) => filterByCenter(session, center, locationId))
       .filter((session) => filterByType(session, type));
 
     return {
@@ -308,6 +368,7 @@ class ScheduleService {
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
         center: center || '',
+        locationId: locationId || '',
         type: type || '',
         totalSessions: normalizedSessions.length
       },

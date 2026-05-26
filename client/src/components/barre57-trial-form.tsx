@@ -39,11 +39,10 @@ import {
 import { cn } from "@/lib/utils"
 import {
   getSubmissionTrackingPayload,
-  initializeTracking,
   loadPublicClientConfig,
-  trackLeadSubmission,
   type PublicClientConfig,
 } from "@/lib/tracking"
+import { getThankYouUrl, saveTrialSuccessPayload } from "@/lib/submission-success"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -139,6 +138,10 @@ function truncateText(value = "", maxLength = 170) {
 
 // Barre 57 specific hero images
 const BARRE_HERO_IMAGES = [
+  "/p57-assets/p57-barre-group.jpg",
+  "/p57-assets/p57-barre-studio.jpg",
+  "/p57-assets/p57-strength-wide.jpg",
+  "/p57-assets/p57-cycle-close.jpg",
   "https://i.postimg.cc/BbPhr4br/hp-Img-1770172966.png",
   "https://i.postimg.cc/vZ8VzFH8/654600560_18105657745867483_8944120182227400336_n.jpg",
   "https://i.postimg.cc/PqqkNKTC/10210_Physique_57_by_Atelier_Birjis_3.webp",
@@ -484,30 +487,6 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
     }, delay)
   }
 
-  async function ensureTrackingReady() {
-    let config = publicConfigRef.current
-
-    if (!config) {
-      try {
-        config = await loadPublicClientConfig()
-        publicConfigRef.current = config
-        setPublicConfig((current) => current ?? config)
-        const resolvedConfigRedirectUrl = config?.redirectUrl || DEFAULT_REDIRECT_URL
-        setResolvedRedirectUrl((current) => current || resolvedConfigRedirectUrl)
-        initializeTracking(config)
-      } catch {
-        return null
-      }
-    }
-
-    return config
-  }
-
-  async function trackSuccessfulSubmission(leadPayload: { event_id?: string; utm_campaign?: string; utm_source?: string }) {
-    const config = await ensureTrackingReady()
-    trackLeadSubmission(config, leadPayload)
-  }
-
   useEffect(() => {
     const imageNodes = BARRE_HERO_IMAGES.map((src, index) => {
       const image = new window.Image()
@@ -562,7 +541,6 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
           publicConfigRef.current = config
           setPublicConfig(config)
           setResolvedRedirectUrl(config.redirectUrl || DEFAULT_REDIRECT_URL)
-          initializeTracking(config)
         }
       } catch {
         // Tracking config is optional for the booking flow itself.
@@ -690,7 +668,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         event_id: eventIdRef.current,
         source_form: isInfluencerFlow ? "influencer-barre-form" : "barre-trial-form",
         ...trackingPayload,
-      }
+      } as Record<string, string>
 
       const response = await fetch(sameOriginApiUrl(isInfluencerFlow ? "/api/submit-influencer-lead" : "/api/submit-barre-lead"), {
         method: "POST",
@@ -711,15 +689,6 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         return
       }
 
-      if (result.momenceSynced === true) {
-        await trackSuccessfulSubmission({
-          ...(payload as { event_id?: string; utm_campaign?: string; utm_source?: string }),
-          event_id: typeof result.event_id === "string"
-            ? result.event_id
-            : (payload as { event_id?: string }).event_id,
-        })
-      }
-
       // Show success celebration
       celebrateSuccess()
 
@@ -738,7 +707,27 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         acceptedTerms: false,
       })
       eventIdRef.current = createEventId()
-      scheduleRedirectToMomence(nextRedirectUrl, isInfluencerFlow ? 6500 : 2200)
+      saveTrialSuccessPayload({
+        eventId: typeof result.event_id === "string" ? result.event_id : payload.event_id,
+        firstName: formData.firstName.trim(),
+        studioName: selectedStudio?.name ?? formData.studio,
+        studioBackendName: selectedStudio?.backendName ?? formData.studio,
+        studioLocationId: selectedStudio?.scheduleLocationId,
+        formatName: "Barre 57",
+        classType: "Barre",
+        sourceForm: isInfluencerFlow ? "influencer-barre-form" : "barre-trial-form",
+        statusMessage: result.error || result.warning || "Your details have been received.",
+        redirectUrl: nextRedirectUrl,
+        schedulePageUrl: result.schedule?.schedulePageUrl,
+        schedule: result.schedule || null,
+        leadTracking: {
+          event_id: typeof result.event_id === "string" ? result.event_id : payload.event_id,
+          utm_campaign: typeof payload.utm_campaign === "string" ? payload.utm_campaign : undefined,
+          utm_source: typeof payload.utm_source === "string" ? payload.utm_source : undefined,
+        },
+        createdAt: new Date().toISOString(),
+      })
+      scheduleRedirectToMomence(getThankYouUrl(), 450)
 
       if (onSubmit) {
         onSubmit(result)

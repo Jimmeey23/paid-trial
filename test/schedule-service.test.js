@@ -44,6 +44,16 @@ test('getSessions reads Momence edge function payload sessions and filters Barre
           id: 9030,
           name: 'Kwality House, Kemps Corner'
         }
+      },
+      {
+        id: 134322444,
+        name: 'Studio Cardio Barre',
+        startsAt: '2026-05-13T03:00:00.000Z',
+        durationInMinutes: 57,
+        inPersonLocation: {
+          id: 29821,
+          name: 'Supreme Headquarters, Bandra'
+        }
       }
     ]
   });
@@ -60,6 +70,7 @@ test('getSessions reads Momence edge function payload sessions and filters Barre
     assert.equal(result.meta.totalSessions, 1);
     assert.equal(result.sessions[0].title, 'Studio Cardio Barre');
     assert.equal(result.sessions[0].locationName, 'Kwality House, Kemps Corner');
+    assert.equal(result.sessions[0].locationId, '9030');
     assert.equal(result.sessions[0].instructorName, 'Simonelle De Vitre');
     assert.equal(result.sessions[0].durationMinutes, 57);
     assert.equal(result.sessions[0].spotsRemaining, 17);
@@ -67,6 +78,60 @@ test('getSessions reads Momence edge function payload sessions and filters Barre
     assert.equal(result.sessions[0].bookingCount, 3);
     assert.match(result.sessions[0].description, /next-level results/);
     assert.equal(result.groupedSessions.length, 1);
+  } finally {
+    global.fetch = originalFetch;
+    process.env.SUPABASE_MOMENCE_SESSIONS_URL = originalUrl;
+  }
+});
+
+test('getSessions filters selected studio by location id and does not invent TBA locations', async () => {
+  const originalUrl = process.env.SUPABASE_MOMENCE_SESSIONS_URL;
+  process.env.SUPABASE_MOMENCE_SESSIONS_URL = 'https://example.test/momence-sessions';
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => jsonResponse({
+    payload: [
+      {
+        id: 134322445,
+        name: 'powerCycle',
+        startsAt: '2026-05-13T02:00:00.000Z',
+        durationInMinutes: 45,
+        inPersonLocation: {
+          id: 29821
+        }
+      },
+      {
+        id: 134322446,
+        name: 'powerCycle',
+        startsAt: '2026-05-13T03:00:00.000Z',
+        durationInMinutes: 45
+      },
+      {
+        id: 134322447,
+        name: 'powerCycle',
+        startsAt: '2026-05-13T04:00:00.000Z',
+        durationInMinutes: 45,
+        inPersonLocation: {
+          id: 9030
+        }
+      }
+    ]
+  });
+
+  try {
+    const service = new ScheduleService();
+    const result = await service.getSessions({
+      startDate: '2026-05-13',
+      endDate: '2026-05-14',
+      locationId: '29821',
+      type: 'powerCycle'
+    });
+
+    assert.equal(result.meta.locationId, '29821');
+    assert.equal(result.meta.totalSessions, 1);
+    assert.equal(result.sessions[0].locationId, '29821');
+    assert.equal(result.sessions[0].locationName, 'Supreme Headquarters, Bandra');
+    assert.equal(result.sessions.some((session) => session.locationName === 'Studio TBA'), false);
   } finally {
     global.fetch = originalFetch;
     process.env.SUPABASE_MOMENCE_SESSIONS_URL = originalUrl;

@@ -118,6 +118,10 @@ export const countryCodes: CountryCode[] = [
 ]
 
 export const heroImages = [
+  "/p57-assets/p57-barre-group.jpg",
+  "/p57-assets/p57-cycle-close.jpg",
+  "/p57-assets/p57-strength-color.jpg",
+  "/p57-assets/p57-strength-wide.jpg",
   "https://i.postimg.cc/VvZTF5Sj/hp-Img-1770172692.png",
   "https://i.postimg.cc/1XWy5H3w/main2.png",
   "https://i.postimg.cc/wMDd7jtj/IMG-7853-2.jpg",

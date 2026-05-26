@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/react"
 import { Physique57SignUpForm } from "@/components/physique57-sign-up-form"
 import { Barre57TrialForm } from "@/components/barre57-trial-form"
 import { ScheduleEmbed } from "@/components/schedule-embed"
+import { ThankYouPage } from "@/components/thank-you-page"
 
 const BRAND_LOGO_URL = "https://i.postimg.cc/6Qt8YppB/Photoroom_20251014_101748.png"
 const BRAND_SITE_URL = "https://www.physique57.in"
@@ -41,6 +42,12 @@ const routeMeta = {
     title: "Physique 57 India | Schedule Bengaluru",
     description: "View the Physique 57 India Momence schedule for Bengaluru.",
     name: "Physique 57 Schedule Bengaluru",
+  },
+  thankYou: {
+    title: "Thank You | Physique 57 India Trial Request",
+    description:
+      "Your Physique 57 India trial request has been received. Explore upcoming Signature Experiences for the week ahead.",
+    name: "Physique 57 Trial Thank You",
   },
 } as const
 
@@ -108,6 +115,7 @@ export default function App() {
   const isTestRoute = currentPath === "/test" || currentPath.startsWith("/test/")
   const isScheduleMumRoute = currentPath === "/schedule-mum" || currentPath.startsWith("/schedule-mum/")
   const isScheduleBlrRoute = currentPath === "/schedule-blr" || currentPath.startsWith("/schedule-blr/")
+  const isThankYouRoute = currentPath === "/thank-you" || currentPath.startsWith("/thank-you/")
   const scheduleLocationId = new URLSearchParams(window.location.search).get("locationId")
 
   useEffect(() => {
@@ -130,7 +138,9 @@ export default function App() {
             ? routeMeta.scheduleMum
             : isScheduleBlrRoute
               ? routeMeta.scheduleBlr
-              : routeMeta.default
+              : isThankYouRoute
+                ? routeMeta.thankYou
+                : routeMeta.default
     const pageUrl = typeof window !== "undefined" ? window.location.href : BRAND_SITE_URL
 
     document.title = meta.title
@@ -173,7 +183,7 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isBarreRoute, isInfluencersRoute, isTestRoute, isScheduleMumRoute, isScheduleBlrRoute])
+  }, [currentPath, isBarreRoute, isInfluencersRoute, isTestRoute, isScheduleMumRoute, isScheduleBlrRoute, isThankYouRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
@@ -185,7 +195,9 @@ export default function App() {
           ? <ScheduleEmbed hostId="13752" locationIds={scheduleLocationId ? [scheduleLocationId] : []} />
           : isScheduleBlrRoute
             ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
-            : <Physique57SignUpForm />
+            : isThankYouRoute
+              ? <ThankYouPage />
+              : <Physique57SignUpForm />
 
   return (
     <>

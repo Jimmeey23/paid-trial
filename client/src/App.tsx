@@ -7,6 +7,8 @@ import { ThankYouPage } from "@/components/thank-you-page"
 
 const BRAND_LOGO_URL = "https://i.postimg.cc/6Qt8YppB/Photoroom_20251014_101748.png"
 const BRAND_SITE_URL = "https://www.physique57.in"
+const EMPTY_SCHEDULE_FILTER_IDS: string[] = []
+const BEGINNER_SCHEDULE_TAG_IDS = ["284832"]
 
 const routeMeta = {
   default: {
@@ -37,6 +39,11 @@ const routeMeta = {
     title: "Physique 57 India | Schedule Mum",
     description: "View the Physique 57 India Momence schedule for Mum.",
     name: "Physique 57 Schedule Mum",
+  },
+  scheduleMumBegin: {
+    title: "Physique 57 India | Beginner Schedule Mum",
+    description: "View beginner-friendly Physique 57 India Momence classes for Mum.",
+    name: "Physique 57 Beginner Schedule Mum",
   },
   scheduleBlr: {
     title: "Physique 57 India | Schedule Bengaluru",
@@ -114,6 +121,7 @@ export default function App() {
   const isInfluencersRoute = currentPath === "/influencers" || currentPath.startsWith("/influencers/")
   const isTestRoute = currentPath === "/test" || currentPath.startsWith("/test/")
   const isScheduleMumRoute = currentPath === "/schedule-mum" || currentPath.startsWith("/schedule-mum/")
+  const isScheduleMumBeginRoute = currentPath === "/schedule-mum-begin" || currentPath.startsWith("/schedule-mum-begin/")
   const isScheduleBlrRoute = currentPath === "/schedule-blr" || currentPath.startsWith("/schedule-blr/")
   const isThankYouRoute = currentPath === "/thank-you" || currentPath.startsWith("/thank-you/")
   const scheduleLocationId = new URLSearchParams(window.location.search).get("locationId")
@@ -136,11 +144,13 @@ export default function App() {
           ? routeMeta.test
           : isScheduleMumRoute
             ? routeMeta.scheduleMum
-            : isScheduleBlrRoute
-              ? routeMeta.scheduleBlr
-              : isThankYouRoute
-                ? routeMeta.thankYou
-                : routeMeta.default
+            : isScheduleMumBeginRoute
+              ? routeMeta.scheduleMumBegin
+              : isScheduleBlrRoute
+                ? routeMeta.scheduleBlr
+                : isThankYouRoute
+                  ? routeMeta.thankYou
+                  : routeMeta.default
     const pageUrl = typeof window !== "undefined" ? window.location.href : BRAND_SITE_URL
 
     document.title = meta.title
@@ -183,7 +193,7 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isBarreRoute, isInfluencersRoute, isTestRoute, isScheduleMumRoute, isScheduleBlrRoute, isThankYouRoute])
+  }, [currentPath, isBarreRoute, isInfluencersRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isThankYouRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
@@ -193,11 +203,25 @@ export default function App() {
         ? <Physique57SignUpForm testMode />
         : isScheduleMumRoute
           ? <ScheduleEmbed hostId="13752" locationIds={scheduleLocationId ? [scheduleLocationId] : []} />
-          : isScheduleBlrRoute
-            ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
-            : isThankYouRoute
-              ? <ThankYouPage />
-              : <Physique57SignUpForm />
+          : isScheduleMumBeginRoute
+            ? (
+              <ScheduleEmbed
+                hostId="13752"
+                locationIds={scheduleLocationId ? [scheduleLocationId] : []}
+                teacherIds={EMPTY_SCHEDULE_FILTER_IDS}
+                tagIds={BEGINNER_SCHEDULE_TAG_IDS}
+                sessionType="class"
+                hideTags
+                defaultFilter="show-all"
+                locale="en"
+                lockTimezone="Asia/Kolkata"
+              />
+            )
+            : isScheduleBlrRoute
+              ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
+              : isThankYouRoute
+                ? <ThankYouPage />
+                : <Physique57SignUpForm />
 
   return (
     <>

@@ -1908,6 +1908,13 @@ app.get(['/schedule-mum', '/schedule-mum/*'], (req, res) => {
   return sendAppIndex(res);
 });
 
+app.get(['/schedule-mum-begin', '/schedule-mum-begin/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(res);
+});
+
 app.get(['/schedule-blr', '/schedule-blr/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');

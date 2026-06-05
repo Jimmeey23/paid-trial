@@ -13,22 +13,22 @@ const BEGINNER_SCHEDULE_TAG_IDS = ["284832"]
 
 const routeMeta = {
   default: {
-    title: "Physique 57 India | Book Your Trial Class Today",
+    title: "Physique 57 India | Book Your Studio Session",
     description:
-      "Book your Physique 57 India trial class and explore premium boutique fitness experiences across Barre, Strength Lab, and powerCycle.",
-    name: "Physique 57 Trial Form",
+      "Book your Physique 57 India studio session and explore premium boutique fitness experiences across Barre, Strength Lab, and powerCycle.",
+    name: "Physique 57 Studio Session Form",
   },
   test: {
-    title: "Physique 57 India | Test Trial Submission",
+    title: "Physique 57 India | Test Submission",
     description:
-      "Internal testing route for Physique 57 India trial submissions with ₹1 checkout for powerCycle and Strength Lab.",
-    name: "Physique 57 Trial Test Form",
+      "Internal testing route for Physique 57 India submissions with ₹1 checkout for powerCycle and Strength Lab.",
+    name: "Physique 57 Test Form",
   },
   barre: {
-    title: "Barre 57 — Book Your Complimentary Trial",
+    title: "Barre 57 | Book Your Complimentary Class",
     description:
-      "Book your complimentary Barre 57 trial and discover Physique 57 India's signature boutique fitness experience.",
-    name: "Barre 57 Trial Form",
+      "Book your complimentary Barre 57 class and discover Physique 57 India's signature boutique fitness experience.",
+    name: "Barre 57 Complimentary Class Form",
   },
   influencers: {
     title: "Physique 57 India | Influencer Barre Experience",
@@ -58,10 +58,10 @@ const routeMeta = {
     name: "Physique 57 Schedule Bengaluru",
   },
   thankYou: {
-    title: "Thank You | Physique 57 India Trial Request",
+    title: "Thank You | Physique 57 India Request",
     description:
-      "Your Physique 57 India trial request has been received. Explore upcoming Signature Experiences for the week ahead.",
-    name: "Physique 57 Trial Thank You",
+      "Your Physique 57 India request has been received. Explore upcoming Signature Experiences for the week ahead.",
+    name: "Physique 57 Thank You",
   },
 } as const
 

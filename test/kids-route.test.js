@@ -76,10 +76,19 @@ test('Express serves kids-specific link preview metadata in raw HTML', async () 
     assert.match(html, /content="Register for Physique 57 Juniors for ages 9-13/);
     assert.match(html, /p57-juniors-hero-2026-1\.png/);
     assert.doesNotMatch(html, /<title>Physique 57 India \| Book Your Trial Class Today<\/title>/);
+    assert.doesNotMatch(html, /Juniors Trial/i);
     assert.doesNotMatch(html, /trial/i);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+test('Static document metadata does not use trial copy', () => {
+  const source = readProjectFile('client/index.html');
+
+  assert.match(source, /Physique 57 India \| Book Your Studio Session/);
+  assert.doesNotMatch(source, /Book Your Trial/i);
+  assert.doesNotMatch(source, /trial class/i);
 });
 
 test('React app routes /kids to the Kids Juniors form', () => {

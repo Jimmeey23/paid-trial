@@ -181,7 +181,7 @@ const STUDIO_JOURNEY_STEPS = [
 const PARENT_NOTES = [
   "Designed for young movers aged 9 to 13.",
   "We will confirm availability and help you choose the most suitable class.",
-  "Your contact details help us coordinate your child's trial session.",
+  "Your contact details help us coordinate your child's first session.",
 ]
 
 const FIELD_GROUP_CLASS =
@@ -430,7 +430,7 @@ export function KidsTrialForm() {
         window.location.assign(getThankYouUrl())
       }, 650)
     } catch (error) {
-      console.error("Juniors trial submission error:", error)
+      console.error("Juniors submission error:", error)
       setStatusMessage({
         text: "An error occurred. Please try again.",
         tone: "error",
@@ -535,7 +535,7 @@ export function KidsTrialForm() {
               <div className="bg-slate-950 text-white">
                 <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-6 lg:px-8">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200 sm:text-xs">Juniors Trial</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200 sm:text-xs">P57 Juniors</p>
                     <h2 className="mt-2 max-w-xl text-[1.7rem] font-bold leading-[1.08] tracking-normal text-white sm:text-3xl sm:leading-[1.12]">
                       Plan your child's first session
                     </h2>
@@ -851,7 +851,7 @@ export function KidsTrialForm() {
                           Submitting...
                         </>
                       ) : (
-                        "Submit Juniors Trial Request"
+                        "Submit Juniors Request"
                       )}
                     </Button>
                   </div>

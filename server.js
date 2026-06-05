@@ -22,6 +22,13 @@ app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
 const CLIENT_APP_DIRECTORY = path.join(__dirname, 'dist');
 const CLIENT_APP_INDEX_PATH = path.join(CLIENT_APP_DIRECTORY, 'index.html');
+const BRAND_LOGO_URL = 'https://i.postimg.cc/6Qt8YppB/Photoroom_20251014_101748.png';
+const KIDS_ROUTE_META = {
+  title: 'Physique 57 Juniors | Kids Strength & Agility Program',
+  description: 'Register for Physique 57 Juniors for ages 9-13 and choose your preferred Bandra or Kemps Corner batch.',
+  image: '/p57-assets/p57-juniors-hero-2026-1.png',
+  imageAlt: 'Young movers at a Physique 57 Juniors barre session'
+};
 const googleSheets = new GoogleSheetsService();
 const supabaseLeadStore = new SupabaseLeadStore();
 const scheduleService = new ScheduleService();
@@ -178,13 +185,71 @@ function setStaticAssetCacheHeaders(res, filePath) {
   res.setHeader('Cache-Control', 'public, max-age=3600');
 }
 
-function sendAppIndex(res) {
+function escapeHtmlAttribute(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function absoluteUrl(req, value) {
+  if (!value) {
+    return '';
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+  const host = req.get('host') || 'www.physique57.in';
+  return `${protocol}://${host}${String(value).startsWith('/') ? value : `/${value}`}`;
+}
+
+function replaceMetaContent(html, selectorPattern, content) {
+  const escapedContent = escapeHtmlAttribute(content);
+  const pattern = new RegExp(`(<meta\\s+${selectorPattern}\\s+content=")[^"]*(")`, 'i');
+  return html.replace(pattern, `$1${escapedContent}$2`);
+}
+
+function renderAppIndexWithMeta(req, meta) {
+  const imageUrl = absoluteUrl(req, meta.image || BRAND_LOGO_URL);
+  const pageUrl = absoluteUrl(req, req.originalUrl || req.url || '/');
+  let html = fs.readFileSync(CLIENT_APP_INDEX_PATH, 'utf8');
+
+  html = html.replace(/<title>.*?<\/title>/i, `<title>${escapeHtmlAttribute(meta.title)}</title>`);
+  html = replaceMetaContent(html, 'name="description"', meta.description);
+  html = replaceMetaContent(html, 'property="og:title"', meta.title);
+  html = replaceMetaContent(html, 'property="og:description"', meta.description);
+  html = replaceMetaContent(html, 'property="og:image"', imageUrl);
+  html = replaceMetaContent(html, 'property="og:image:alt"', meta.imageAlt || 'Physique 57 India');
+  html = replaceMetaContent(html, 'name="twitter:title"', meta.title);
+  html = replaceMetaContent(html, 'name="twitter:description"', meta.description);
+  html = replaceMetaContent(html, 'name="twitter:image"', imageUrl);
+  html = replaceMetaContent(html, 'name="twitter:image:alt"', meta.imageAlt || 'Physique 57 India');
+  html = html.replace(
+    /<meta property="og:image:alt" content="[^"]*" \/>/i,
+    (match) => `${match}\n    <meta property="og:url" content="${escapeHtmlAttribute(pageUrl)}" />`
+  );
+
+  return html;
+}
+
+function sendAppIndex(req, res, meta) {
+  const headers = {
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0'
+  };
+
+  if (meta) {
+    res.set(headers);
+    return res.type('html').send(renderAppIndexWithMeta(req, meta));
+  }
+
   return res.sendFile(CLIENT_APP_INDEX_PATH, {
-    headers: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      Pragma: 'no-cache',
-      Expires: '0'
-    }
+    headers
   });
 }
 
@@ -1979,56 +2044,56 @@ app.get(['/barre', '/barre/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
-  return sendAppIndex(res);
+  return sendAppIndex(req, res);
 });
 
 app.get(['/influencers', '/influencers/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
-  return sendAppIndex(res);
+  return sendAppIndex(req, res);
 });
 
 app.get(['/kids', '/kids/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
-  return sendAppIndex(res);
+  return sendAppIndex(req, res, KIDS_ROUTE_META);
 });
 
 app.get(['/schedule-mum', '/schedule-mum/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
-  return sendAppIndex(res);
+  return sendAppIndex(req, res);
 });
 
 app.get(['/schedule-mum-begin', '/schedule-mum-begin/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
-  return sendAppIndex(res);
+  return sendAppIndex(req, res);
 });
 
 app.get(['/schedule-blr', '/schedule-blr/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
-  return sendAppIndex(res);
+  return sendAppIndex(req, res);
 });
 
 app.get(['/test', '/test/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
-  return sendAppIndex(res);
+  return sendAppIndex(req, res);
 });
 
 app.get(['/thank-you', '/thank-you/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
-  return sendAppIndex(res);
+  return sendAppIndex(req, res);
 });
 
 app.get(['/', '/index.html'], (req, res, next) => {
@@ -2036,7 +2101,7 @@ app.get(['/', '/index.html'], (req, res, next) => {
     return next();
   }
 
-  return sendAppIndex(res);
+  return sendAppIndex(req, res);
 });
 
 app.post('/api/partial-lead', async (req, res) => {

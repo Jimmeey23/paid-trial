@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const http = require('node:http');
 const path = require('node:path');
 const test = require('node:test');
 
@@ -38,7 +39,50 @@ test('Express serves the kids route through the client app fallback', () => {
   );
 });
 
-test('React app routes /kids to the Kids trial form', () => {
+test('Express serves kids-specific link preview metadata in raw HTML', async () => {
+  const distIndex = path.join(__dirname, '..', 'dist', 'index.html');
+
+  if (!fs.existsSync(distIndex)) {
+    assert.fail('dist/index.html is required for metadata route rendering');
+  }
+
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+
+  try {
+    const { port } = server.address();
+    const html = await new Promise((resolve, reject) => {
+      http.get({
+        hostname: '127.0.0.1',
+        port,
+        path: '/kids',
+        headers: {
+          Host: 'www.physique57.in',
+          'x-forwarded-proto': 'https'
+        }
+      }, (response) => {
+        let body = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          body += chunk;
+        });
+        response.on('end', () => resolve(body));
+      }).on('error', reject);
+    });
+
+    assert.match(html, /<title>Physique 57 Juniors \| Kids Strength &amp; Agility Program<\/title>/);
+    assert.match(html, /<meta property="og:title" content="Physique 57 Juniors \| Kids Strength &amp; Agility Program"/);
+    assert.match(html, /<meta name="twitter:title" content="Physique 57 Juniors \| Kids Strength &amp; Agility Program"/);
+    assert.match(html, /content="Register for Physique 57 Juniors for ages 9-13/);
+    assert.match(html, /p57-juniors-hero-2026-1\.png/);
+    assert.doesNotMatch(html, /<title>Physique 57 India \| Book Your Trial Class Today<\/title>/);
+    assert.doesNotMatch(html, /trial/i);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('React app routes /kids to the Kids Juniors form', () => {
   const source = readProjectFile('client/src/App.tsx');
 
   assert.match(source, /import \{ KidsTrialForm \} from "@\/components\/kids-trial-form"/);
@@ -48,7 +92,7 @@ test('React app routes /kids to the Kids trial form', () => {
   assert.match(source, /<KidsTrialForm \/>/);
 });
 
-test('Juniors trial form contains child name, child age, conditional batch options, brand content, and supplied media', () => {
+test('Juniors form contains child name, child age, conditional batch options, brand content, and supplied media', () => {
   const source = readProjectFile('client/src/components/kids-trial-form.tsx');
 
   assert.match(source, /p57-juniors-hero-2026-1\.png/);
@@ -89,12 +133,12 @@ test('Juniors trial form contains child name, child age, conditional batch optio
   assert.match(source, /\/api\/submit-kids-lead/);
 });
 
-test('Juniors trial form uses elevated copy, batch cards, and expanded method sections', () => {
+test('Juniors form uses elevated copy, batch cards, and expanded method sections', () => {
   const source = readProjectFile('client/src/components/kids-trial-form.tsx');
 
   assert.doesNotMatch(source, /Trial Batch Enquiry/);
   assert.doesNotMatch(source, /Brand USPs/);
-  assert.match(source, /Juniors Trial/);
+  assert.match(source, /P57 Juniors/);
   assert.match(source, /Plan your child's first session/);
   assert.match(source, /Inside The Juniors Method/);
   assert.match(source, /What Young Movers Build/);

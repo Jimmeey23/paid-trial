@@ -37,10 +37,10 @@ const routeMeta = {
     name: "Physique 57 Influencer Barre Form",
   },
   kids: {
-    title: "Physique 57 - Juniors Trial | Physique 57 India",
+    title: "Physique 57 Juniors | Kids Strength & Agility Program",
     description:
-      "Book a Physique 57 - Juniors trial at Physique 57 India and choose your preferred Bandra or Kemps Corner batch.",
-    name: "Physique 57 - Juniors Trial Form",
+      "Register for Physique 57 Juniors at Physique 57 India and choose your preferred Bandra or Kemps Corner batch.",
+    name: "Physique 57 Juniors Registration Form",
   },
   scheduleMum: {
     title: "Physique 57 India | Schedule Mum",

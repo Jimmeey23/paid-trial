@@ -530,34 +530,46 @@ export function KidsTrialForm() {
 
             <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_34px_90px_rgba(15,23,42,0.13)] ring-1 ring-white/70">
               <div className="bg-slate-950 text-white">
-                <div className="flex flex-col gap-4 px-5 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-7 lg:px-8">
+                <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-6 lg:px-8">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">Juniors Trial</p>
-                    <h2 className="mt-2 text-2xl font-bold tracking-normal text-white sm:text-3xl">Plan your child's first session</h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">
+                    <h2 className="mt-2 max-w-xl text-[2rem] font-bold leading-[1.12] tracking-normal text-white sm:text-3xl">
+                      Plan your child's first session
+                    </h2>
+                    <p className="mt-3 max-w-2xl text-[15px] leading-6 text-white/70 sm:text-sm">
                       Tell us where you would like to visit and which Juniors class works best for your child.
                     </p>
                   </div>
-                  <div className="w-fit rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white shadow-sm">
+                  <div className="w-fit rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white shadow-sm backdrop-blur">
                     P57 Juniors
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-px bg-slate-800 sm:grid-cols-5">
-                  {PROGRAM_OUTCOMES.map((outcome) => {
+                  {PROGRAM_OUTCOMES.map((outcome, index) => {
                     const Icon = outcome.icon
 
                     return (
-                      <div key={outcome.title} className="flex min-h-[112px] flex-col items-center justify-center bg-slate-950 px-3 py-4 text-center">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-400/10 text-sky-300 ring-1 ring-sky-300/20">
+                      <div
+                        key={outcome.title}
+                        className={cn(
+                          "flex min-h-[104px] flex-col items-center justify-center bg-slate-950 px-3 py-4 text-center sm:min-h-[112px]",
+                          index === PROGRAM_OUTCOMES.length - 1 && "col-span-2 sm:col-span-1"
+                        )}
+                      >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-sky-400/10 text-sky-300 ring-1 ring-sky-300/20 shadow-[0_10px_28px_rgba(14,165,233,0.08)] sm:h-11 sm:w-11 sm:rounded-2xl">
                           <Icon className="h-6 w-6" />
                         </div>
-                        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] leading-5 text-white/88">{outcome.title}</p>
+                        <p className="mt-3 text-[12px] font-extrabold uppercase tracking-[0.14em] leading-5 text-white/88">{outcome.title}</p>
                       </div>
                     )
                   })}
                 </div>
-                <div className="border-t border-slate-800 bg-slate-950 px-4 py-4 text-center text-xs font-semibold uppercase tracking-[0.22em] text-white/88 sm:text-sm">
-                  Build strength. <span className="mx-2 text-sky-400">/</span> Improve balance. <span className="mx-2 text-sky-400">/</span> Boost confidence.
+                <div className="border-t border-slate-800 bg-slate-950 px-4 py-4 text-center text-[11px] font-extrabold uppercase tracking-[0.18em] leading-6 text-white/88 sm:text-sm sm:tracking-[0.22em]">
+                  <span className="inline-block">Build strength.</span>
+                  <span className="mx-2 text-sky-400">/</span>
+                  <span className="inline-block">Improve balance.</span>
+                  <span className="mx-2 text-sky-400">/</span>
+                  <span className="inline-block">Boost confidence.</span>
                 </div>
               </div>
 

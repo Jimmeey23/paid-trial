@@ -4,7 +4,9 @@ import {
   Accessibility,
   Activity,
   Award,
+  BadgeCheck,
   Calendar,
+  CalendarCheck2,
   CheckCircle2,
   Clock,
   Dumbbell,
@@ -17,6 +19,7 @@ import {
   Sparkles,
   Table2,
   Target,
+  UserRoundCheck,
   Users,
   Zap,
 } from "lucide-react"
@@ -183,19 +186,19 @@ const PARENT_NOTES = [
 
 const FIELD_GROUP_CLASS =
   "group/field space-y-2.5"
-const FIELD_LABEL_CLASS = "inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-600 transition-colors group-focus-within/field:text-slate-950"
+const FIELD_LABEL_CLASS = "inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 transition-colors group-focus-within/field:text-slate-950"
 const FIELD_CONTROL_CLASS =
-  "h-12 rounded-[15px] border-slate-300/90 bg-white text-[15px] font-semibold text-slate-950 shadow-[0_1px_0_rgba(15,23,42,0.03)] transition-all placeholder:text-slate-400 hover:border-slate-400 hover:bg-white focus-visible:border-slate-950 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-slate-950/10"
+  "h-12 rounded-[15px] border-slate-300/90 bg-white text-[15px] font-medium text-slate-950 shadow-[0_1px_0_rgba(15,23,42,0.03)] transition-all placeholder:text-slate-400 hover:border-slate-400 hover:bg-white focus-visible:border-slate-950 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-slate-950/10"
 const FIELD_ERROR_CLASS = "text-sm font-semibold text-destructive"
 const FIELD_INVALID_CLASS = "border-destructive bg-red-50/40 focus-visible:ring-destructive/15"
 const SECTION_PANEL_CLASS =
   "rounded-[22px] border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/80 p-4 shadow-sm ring-1 ring-white/80 sm:p-5"
 const SECTION_ICON_CLASS =
-  "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[18px] shadow-sm ring-1"
-const SECTION_KICKER_CLASS =
-  "text-[11px] font-extrabold uppercase tracking-[0.18em]"
+  "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border bg-white shadow-[0_10px_24px_rgba(15,23,42,0.06)] ring-4"
 const SECTION_TITLE_CLASS =
-  "mt-1 text-lg font-extrabold tracking-normal text-slate-950"
+  "mt-1 text-xl font-semibold leading-snug tracking-normal text-slate-950"
+const SECTION_BADGE_CLASS =
+  "w-fit rounded-full border bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] shadow-sm"
 
 const KIDS_BATCH_OPTIONS: Record<string, string[]> = {
   "Supreme Headquarters, Bandra": [
@@ -530,21 +533,21 @@ export function KidsTrialForm() {
 
             <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_34px_90px_rgba(15,23,42,0.13)] ring-1 ring-white/70">
               <div className="bg-slate-950 text-white">
-                <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-6 lg:px-8">
+                <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-6 lg:px-8">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">Juniors Trial</p>
-                    <h2 className="mt-2 max-w-xl text-[2rem] font-bold leading-[1.12] tracking-normal text-white sm:text-3xl">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200 sm:text-xs">Juniors Trial</p>
+                    <h2 className="mt-2 max-w-xl text-[1.7rem] font-bold leading-[1.08] tracking-normal text-white sm:text-3xl sm:leading-[1.12]">
                       Plan your child's first session
                     </h2>
-                    <p className="mt-3 max-w-2xl text-[15px] leading-6 text-white/70 sm:text-sm">
+                    <p className="mt-2 max-w-2xl text-sm leading-5 text-white/70 sm:mt-3 sm:text-sm sm:leading-6">
                       Tell us where you would like to visit and which Juniors class works best for your child.
                     </p>
                   </div>
-                  <div className="w-fit rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white shadow-sm backdrop-blur">
+                  <div className="w-fit rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-white shadow-sm backdrop-blur sm:px-4 sm:py-2 sm:text-[11px]">
                     P57 Juniors
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-px bg-slate-800 sm:grid-cols-5">
+                <div className="grid grid-cols-3 gap-px bg-slate-800 sm:grid-cols-5">
                   {PROGRAM_OUTCOMES.map((outcome, index) => {
                     const Icon = outcome.icon
 
@@ -552,41 +555,41 @@ export function KidsTrialForm() {
                       <div
                         key={outcome.title}
                         className={cn(
-                          "flex min-h-[104px] flex-col items-center justify-center bg-slate-950 px-3 py-4 text-center sm:min-h-[112px]",
-                          index === PROGRAM_OUTCOMES.length - 1 && "col-span-2 sm:col-span-1"
+                          "flex min-h-[92px] flex-col items-center justify-center bg-slate-950 px-2.5 py-3 text-center sm:min-h-[112px] sm:px-3 sm:py-4",
+                          index > 2 && "hidden sm:flex"
                         )}
                       >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-sky-400/10 text-sky-300 ring-1 ring-sky-300/20 shadow-[0_10px_28px_rgba(14,165,233,0.08)] sm:h-11 sm:w-11 sm:rounded-2xl">
-                          <Icon className="h-6 w-6" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-400/10 text-sky-300 ring-1 ring-sky-300/20 shadow-[0_10px_28px_rgba(14,165,233,0.08)] sm:h-11 sm:w-11">
+                          <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
-                        <p className="mt-3 text-[12px] font-extrabold uppercase tracking-[0.14em] leading-5 text-white/88">{outcome.title}</p>
+                        <p className="mt-2.5 text-[10px] font-extrabold uppercase tracking-[0.13em] leading-4 text-white/88 sm:mt-3 sm:text-[12px] sm:leading-5">{outcome.title}</p>
                       </div>
                     )
                   })}
                 </div>
-                <div className="border-t border-slate-800 bg-slate-950 px-4 py-4 text-center text-[11px] font-extrabold uppercase tracking-[0.18em] leading-6 text-white/88 sm:text-sm sm:tracking-[0.22em]">
+                <div className="border-t border-slate-800 bg-slate-950 px-4 py-3 text-center text-[10px] font-extrabold uppercase tracking-[0.16em] leading-5 text-white/88 sm:py-4 sm:text-sm sm:tracking-[0.22em]">
                   <span className="inline-block">Build strength.</span>
                   <span className="mx-2 text-sky-400">/</span>
                   <span className="inline-block">Improve balance.</span>
                   <span className="mx-2 text-sky-400">/</span>
-                  <span className="inline-block">Boost confidence.</span>
+                  <span className="inline-block sm:hidden">Boost agility.</span>
+                  <span className="hidden sm:inline-block">Boost confidence.</span>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="relative space-y-5 p-3 sm:p-4 lg:p-5">
                 <div className="rounded-[24px] border border-slate-200/90 bg-white/95 p-3 shadow-[0_18px_52px_rgba(15,23,42,0.07)] ring-1 ring-white/80 sm:p-4">
                 <div className={SECTION_PANEL_CLASS}>
-                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3">
-                      <div className={cn(SECTION_ICON_CLASS, "bg-sky-50 text-sky-700 ring-sky-100")}>
-                        <Users className="h-5 w-5" />
+                      <div className={cn(SECTION_ICON_CLASS, "border-sky-100 text-sky-700 ring-sky-50")}>
+                        <UserRoundCheck className="h-5 w-5 stroke-[1.8]" />
                       </div>
                       <div>
-                        <p className={cn(SECTION_KICKER_CLASS, "text-sky-700")}>Parent Details</p>
                         <h3 className={SECTION_TITLE_CLASS}>Contact for confirmation</h3>
                       </div>
                     </div>
-                    <p className="w-fit rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-600 shadow-sm">Required *</p>
+                    <p className={cn(SECTION_BADGE_CLASS, "border-sky-100 text-sky-700")}>Parent Details</p>
                   </div>
                   <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
                   <div className={FIELD_GROUP_CLASS}>
@@ -657,14 +660,16 @@ export function KidsTrialForm() {
                 </div>
 
                 <div className={cn(SECTION_PANEL_CLASS, "mt-4")}>
-                  <div className="mb-4 flex items-start gap-3">
-                    <div className={cn(SECTION_ICON_CLASS, "bg-violet-50 text-violet-700 ring-violet-100")}>
-                      <Sparkles className="h-5 w-5" />
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className={cn(SECTION_ICON_CLASS, "border-violet-100 text-violet-700 ring-violet-50")}>
+                        <BadgeCheck className="h-5 w-5 stroke-[1.8]" />
+                      </div>
+                      <div>
+                        <h3 className={SECTION_TITLE_CLASS}>Choose the right starting point</h3>
+                      </div>
                     </div>
-                    <div>
-                      <p className={cn(SECTION_KICKER_CLASS, "text-violet-700")}>Child & Session</p>
-                      <h3 className={SECTION_TITLE_CLASS}>Choose the right starting point</h3>
-                    </div>
+                    <p className={cn(SECTION_BADGE_CLASS, "border-violet-100 text-violet-700")}>Child & Session</p>
                   </div>
                   <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
                   <div className={FIELD_GROUP_CLASS}>
@@ -719,19 +724,17 @@ export function KidsTrialForm() {
                 </div>
 
                 <div className={cn(SECTION_PANEL_CLASS, "mt-4")}>
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3">
-                      <div className={cn(SECTION_ICON_CLASS, "bg-emerald-50 text-emerald-700 ring-emerald-100")}>
-                        <Calendar className="h-5 w-5" />
+                      <div className={cn(SECTION_ICON_CLASS, "border-emerald-100 text-emerald-700 ring-emerald-50")}>
+                        <CalendarCheck2 className="h-5 w-5 stroke-[1.8]" />
                       </div>
                       <div>
-                        <p className={cn(SECTION_KICKER_CLASS, "text-emerald-700")}>Batch Preference</p>
+                        <h3 className={SECTION_TITLE_CLASS}>Select a class batch</h3>
                         <p className="mt-1 text-sm leading-6 text-slate-600">Choose a center to see the available Juniors classes.</p>
                       </div>
                     </div>
-                    <div className="w-fit rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-700 shadow-sm">
-                      {batchDetails.length ? `${batchDetails.length} option${batchDetails.length > 1 ? "s" : ""}` : "Select center"}
-                    </div>
+                    <p className={cn(SECTION_BADGE_CLASS, "border-emerald-100 text-emerald-700")}>Batch Preference</p>
                   </div>
                   <Select
                     value={formData.batch}
@@ -783,7 +786,7 @@ export function KidsTrialForm() {
                                   ) : null}
                                 </div>
                                 <div className="mt-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                  <h3 className="break-words text-sm font-bold leading-snug text-slate-950 [overflow-wrap:anywhere] sm:text-base">{batch.days}</h3>
+                                  <h3 className="break-words text-sm font-semibold leading-snug text-slate-950 [overflow-wrap:anywhere] sm:text-base">{batch.days}</h3>
                                   <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200">
                                     <Clock className={cn("h-3.5 w-3.5", batch.metaAccent)} />
                                     {batch.time}

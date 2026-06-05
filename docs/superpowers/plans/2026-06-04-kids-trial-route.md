@@ -37,7 +37,7 @@ Add center-specific kids batch options, `validateKidsLeadPayload`, and export it
 
 - [ ] **Step 2: Add `/api/submit-kids-lead`**
 
-Use the same no-payment submission path as Barre, with `source_form: "kids-trial-form"` and `type: "Kids 57"`.
+Use the same no-payment submission path as Barre, with `source_form: "kids-trial-form"` and `type: "Physique 57 - Juniors"`.
 
 - [ ] **Step 3: Include kids fields downstream**
 

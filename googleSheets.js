@@ -111,12 +111,15 @@ class GoogleSheetsService {
         leadData.fbc || '',
         leadData.landing_page || '',
         leadData.referrer || '',
-        leadData.event_id || ''
+        leadData.event_id || '',
+        leadData.childName || '',
+        leadData.childAge || '',
+        leadData.batch || leadData.batchPreference || ''
       ];
 
       const request = {
         spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A:X`,
+        range: `${this.sheetName}!A:AA`,
         valueInputOption: 'USER_ENTERED',
         insertDataOption: 'INSERT_ROWS',
         resource: {
@@ -171,12 +174,15 @@ class GoogleSheetsService {
         'Meta Click ID (fbc)',
         'Landing Page',
         'Referrer',
-        'Event ID'
+        'Event ID',
+        'Child Name',
+        'Child Age',
+        'Batch'
       ];
 
       const request = {
         spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A1:X1`,
+        range: `${this.sheetName}!A1:AA1`,
         valueInputOption: 'USER_ENTERED',
         resource: {
           values: [headers]

@@ -31,6 +31,19 @@ const STUDIO_CLASS_OPTIONS = {
   'Kwality House, Kemps Corner': ['powerCycle', 'Strength Lab', 'Barre 57']
 };
 
+const KIDS_CLASS_TYPE = 'Physique 57 - Juniors';
+const KIDS_SOURCE_FORM = 'kids-trial-form';
+const DEFAULT_MOMENCE_SOURCE_ID = '212426';
+const KIDS_BATCH_OPTIONS = {
+  'Supreme Headquarters, Bandra': [
+    'Tuesday & Friday - 4:30 PM - Simonelle & Cauveri'
+  ],
+  'Kwality House, Kemps Corner': [
+    'Batch 1 - Monday & Wednesday - 4:30 PM - Cauveri & Karan',
+    'Batch 2 - Tuesday & Thursday - 11:30 AM - Karan & Cauveri'
+  ]
+};
+
 const STUDIO_SCHEDULE_LOCATION_IDS = {
   'Supreme Headquarters, Bandra': ['29821'],
   'Kwality House, Kemps Corner': ['9030']
@@ -1280,8 +1293,10 @@ function isTruthyConsent(value) {
   return ['accepted', 'true', '1', 'on', 'yes'].includes(String(value || '').trim().toLowerCase());
 }
 
-function validateLeadPayload(payload) {
+function validateLeadPayload(payload, options = {}) {
   const fieldErrors = {};
+  const studioClassOptions = options.studioClassOptions || STUDIO_CLASS_OPTIONS;
+  const defaultType = sanitizeText(options.defaultType, 80);
 
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     return {
@@ -1333,14 +1348,14 @@ function validateLeadPayload(payload) {
   }
 
   const center = sanitizeText(payload.center, 120);
-  if (!Object.prototype.hasOwnProperty.call(STUDIO_CLASS_OPTIONS, center)) {
+  if (!Object.prototype.hasOwnProperty.call(studioClassOptions, center)) {
     fieldErrors.center = 'Choose a valid studio location.';
   }
 
-  const type = sanitizeText(payload.type, 80);
+  const type = sanitizeText(payload.type, 80) || defaultType;
   if (!type) {
     fieldErrors.type = 'Choose a class format.';
-  } else if (center && Array.isArray(STUDIO_CLASS_OPTIONS[center]) && !STUDIO_CLASS_OPTIONS[center].includes(type)) {
+  } else if (center && Array.isArray(studioClassOptions[center]) && !studioClassOptions[center].includes(type)) {
     fieldErrors.type = 'Choose a class format available at that studio.';
   }
 
@@ -1383,6 +1398,66 @@ function validateLeadPayload(payload) {
     isValid: true,
     fieldErrors: {},
     data: sanitizedPayload
+  };
+}
+
+function validateKidsLeadPayload(payload) {
+  const validation = validateLeadPayload(payload, {
+    studioClassOptions: {
+      'Supreme Headquarters, Bandra': [KIDS_CLASS_TYPE],
+      'Kwality House, Kemps Corner': [KIDS_CLASS_TYPE]
+    },
+    defaultType: KIDS_CLASS_TYPE
+  });
+
+  if (validation.isBot || !validation.isValid) {
+    return validation;
+  }
+
+  const fieldErrors = {};
+  const childName = sanitizeText(payload.childName, 120);
+  if (!childName) {
+    fieldErrors.childName = 'Child name is required.';
+  }
+
+  const rawAge = sanitizeText(payload.childAge, 8);
+  const parsedAge = Number.parseInt(rawAge, 10);
+  const hasWholeAge = /^\d+$/.test(rawAge);
+
+  if (!rawAge) {
+    fieldErrors.childAge = 'Child age is required.';
+  } else if (!hasWholeAge || !Number.isInteger(parsedAge)) {
+    fieldErrors.childAge = 'Child age must be a whole number.';
+  } else if (parsedAge < 9 || parsedAge > 13) {
+    fieldErrors.childAge = 'Child age must be between 9 and 13.';
+  }
+
+  const batch = sanitizeText(payload.batch || payload.batchPreference, 160);
+  const availableBatches = KIDS_BATCH_OPTIONS[validation.data.center] || [];
+  if (!batch) {
+    fieldErrors.batch = 'Batch preference is required.';
+  } else if (!availableBatches.includes(batch)) {
+    fieldErrors.batch = 'Choose an available Juniors batch for the selected studio.';
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return {
+      isValid: false,
+      fieldErrors
+    };
+  }
+
+  return {
+    isValid: true,
+    fieldErrors: {},
+    data: {
+      ...validation.data,
+      type: KIDS_CLASS_TYPE,
+      source_form: KIDS_SOURCE_FORM,
+      childName,
+      childAge: parsedAge,
+      batch
+    }
   };
 }
 
@@ -1489,6 +1564,19 @@ function buildMomencePayload(leadData) {
     event_id: leadData.event_id
   };
 
+  if (leadData.childAge !== undefined && leadData.childAge !== null && leadData.childAge !== '') {
+    momencePayload.childAge = leadData.childAge;
+  }
+
+  if (leadData.childName) {
+    momencePayload.childName = leadData.childName;
+  }
+
+  const batch = leadData.batch || leadData.batchPreference;
+  if (batch) {
+    momencePayload.batch = batch;
+  }
+
   TRACKING_FIELDS.forEach((fieldName) => {
     if (leadData[fieldName]) {
       momencePayload[fieldName] = leadData[fieldName];
@@ -1576,7 +1664,7 @@ async function sendMetaLeadEvent(leadData, req) {
 
 function buildMomenceLeadRequestPayload(leadData, options = {}) {
   const momenceToken = options.token || process.env.MOMENCE_API_TOKEN || process.env.MOMENCE_TOKEN;
-  const momenceSourceId = options.sourceId || process.env.MOMENCE_SOURCE_ID;
+  const momenceSourceId = options.sourceId || process.env.MOMENCE_SOURCE_ID || DEFAULT_MOMENCE_SOURCE_ID;
 
   return {
     token: momenceToken,
@@ -1587,7 +1675,7 @@ function buildMomenceLeadRequestPayload(leadData, options = {}) {
 
 async function submitToMomence(leadData, options = {}) {
   const momenceToken = options.token || process.env.MOMENCE_API_TOKEN || process.env.MOMENCE_TOKEN;
-  const momenceSourceId = options.sourceId || process.env.MOMENCE_SOURCE_ID;
+  const momenceSourceId = options.sourceId || process.env.MOMENCE_SOURCE_ID || DEFAULT_MOMENCE_SOURCE_ID;
   const momenceEndpoint = process.env.MOMENCE_LEAD_ENDPOINT;
 
   if (!momenceToken || !momenceSourceId || !momenceEndpoint) {
@@ -1895,6 +1983,13 @@ app.get(['/barre', '/barre/*'], (req, res) => {
 });
 
 app.get(['/influencers', '/influencers/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(res);
+});
+
+app.get(['/kids', '/kids/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
@@ -2250,6 +2345,43 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
   }
 });
 
+app.post('/api/submit-kids-lead', applySubmissionRateLimit, async (req, res) => {
+  try {
+    const validation = validateKidsLeadPayload(req.body);
+
+    if (validation.isBot) {
+      return res.status(202).json({
+        success: true,
+        id: 'filtered',
+        redirectUrl: getPublicClientConfig().redirectUrl
+      });
+    }
+
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed.',
+        fieldErrors: validation.fieldErrors
+      });
+    }
+
+    const leadData = buildLeadRecord({
+      ...validation.data,
+      source_form: KIDS_SOURCE_FORM,
+      class_format: KIDS_CLASS_TYPE
+    });
+
+    const submissionResult = await processLeadSubmission(leadData, req);
+    return res.status(200).json(submissionResult);
+  } catch (error) {
+    console.error('Error submitting kids lead:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'An unexpected error occurred.'
+    });
+  }
+});
+
 app.post('/api/sheets/setup', requireAdmin, async (req, res) => {
   try {
     await googleSheets.setupHeaders();
@@ -2301,6 +2433,7 @@ if (require.main === module) {
 module.exports = app;
 module.exports.app = app;
 module.exports.validateLeadPayload = validateLeadPayload;
+module.exports.validateKidsLeadPayload = validateKidsLeadPayload;
 module.exports.MomencePublicApiClient = MomencePublicApiClient;
 module.exports.buildOpenBarreMembershipConfig = buildOpenBarreMembershipConfig;
 module.exports.buildStudioComplimentaryClassMembershipConfig = buildStudioComplimentaryClassMembershipConfig;

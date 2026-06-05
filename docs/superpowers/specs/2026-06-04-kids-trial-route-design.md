@@ -49,7 +49,7 @@ The backend validates:
 
 The server builds a normal lead record with:
 
-- `type: "Kids 57"`
+- `type: "Physique 57 - Juniors"`
 - `source_form: "kids-trial-form"`
 - `childAge`
 - `batchPreference`

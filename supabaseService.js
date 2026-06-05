@@ -99,7 +99,7 @@ class SupabaseLeadStore {
     const record = {
       event_id: leadData.event_id || null,
       external_lead_id: leadData.id,
-      source_form: 'trial-form',
+      source_form: leadData.source_form || 'trial-form',
       status: 'submitted',
       first_name: leadData.firstName || '',
       last_name: leadData.lastName || '',
@@ -132,7 +132,10 @@ class SupabaseLeadStore {
       raw_payload: leadData,
       metadata: {
         draft_id: leadData.draft_id || null,
-        session_id: leadData.session_id || null
+        session_id: leadData.session_id || null,
+        child_name: leadData.childName || null,
+        child_age: leadData.childAge ?? null,
+        batch: leadData.batch || leadData.batchPreference || null
       }
     };
 
@@ -294,7 +297,10 @@ class SupabaseLeadStore {
       raw_payload: leadData,
       metadata: {
         draft_id: leadData.draft_id || null,
-        session_id: leadData.session_id || null
+        session_id: leadData.session_id || null,
+        child_name: leadData.childName || null,
+        child_age: leadData.childAge ?? null,
+        batch: leadData.batch || leadData.batchPreference || null
       }
     };
 

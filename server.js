@@ -40,7 +40,8 @@ const STUDIO_CLASS_OPTIONS = {
 
 const KIDS_CLASS_TYPE = 'Physique 57 - Juniors';
 const KIDS_SOURCE_FORM = 'kids-trial-form';
-const DEFAULT_MOMENCE_SOURCE_ID = '212426';
+const DEFAULT_REGULAR_MOMENCE_SOURCE_ID = '8082';
+const DEFAULT_KIDS_MOMENCE_SOURCE_ID = '212426';
 const KIDS_BATCH_OPTIONS = {
   'Supreme Headquarters, Bandra': [
     'Tuesday & Friday - 4:30 PM - Simonelle & Cauveri'
@@ -1657,6 +1658,24 @@ function buildMomencePayload(leadData) {
   return momencePayload;
 }
 
+function isKidsLead(leadData = {}) {
+  return String(leadData.source_form || leadData.sourceForm || '') === KIDS_SOURCE_FORM
+    || String(leadData.type || leadData.class_format || '') === KIDS_CLASS_TYPE
+    || Boolean(leadData.childName || leadData.childAge || leadData.batch || leadData.batchPreference);
+}
+
+function resolveMomenceSourceId(leadData = {}, options = {}) {
+  if (options.sourceId) {
+    return options.sourceId;
+  }
+
+  if (isKidsLead(leadData)) {
+    return process.env.MOMENCE_KIDS_SOURCE_ID || process.env.MOMENCE_SOURCE_ID || DEFAULT_KIDS_MOMENCE_SOURCE_ID;
+  }
+
+  return process.env.MOMENCE_REGULAR_SOURCE_ID || DEFAULT_REGULAR_MOMENCE_SOURCE_ID;
+}
+
 async function sendMetaLeadEvent(leadData, req) {
   const pixelId = process.env.META_PIXEL_ID;
   const accessToken = process.env.META_CONVERSIONS_ACCESS_TOKEN;
@@ -1729,7 +1748,7 @@ async function sendMetaLeadEvent(leadData, req) {
 
 function buildMomenceLeadRequestPayload(leadData, options = {}) {
   const momenceToken = options.token || process.env.MOMENCE_API_TOKEN || process.env.MOMENCE_TOKEN;
-  const momenceSourceId = options.sourceId || process.env.MOMENCE_SOURCE_ID || DEFAULT_MOMENCE_SOURCE_ID;
+  const momenceSourceId = resolveMomenceSourceId(leadData, options);
 
   return {
     token: momenceToken,
@@ -1740,7 +1759,7 @@ function buildMomenceLeadRequestPayload(leadData, options = {}) {
 
 async function submitToMomence(leadData, options = {}) {
   const momenceToken = options.token || process.env.MOMENCE_API_TOKEN || process.env.MOMENCE_TOKEN;
-  const momenceSourceId = options.sourceId || process.env.MOMENCE_SOURCE_ID || DEFAULT_MOMENCE_SOURCE_ID;
+  const momenceSourceId = resolveMomenceSourceId(leadData, options);
   const momenceEndpoint = process.env.MOMENCE_LEAD_ENDPOINT;
 
   if (!momenceToken || !momenceSourceId || !momenceEndpoint) {

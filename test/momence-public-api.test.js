@@ -188,6 +188,53 @@ test('buildMomenceLeadRequestPayload can override sourceId for influencer leads'
   assert.equal(payload.email, 'influencer@example.com');
 });
 
+test('buildMomenceLeadRequestPayload keeps the env Momence source for kids but uses 8082 for regular and Barre leads', () => {
+  const previousSourceId = process.env.MOMENCE_SOURCE_ID;
+  const previousRegularSourceId = process.env.MOMENCE_REGULAR_SOURCE_ID;
+
+  process.env.MOMENCE_SOURCE_ID = 'kids-source-only';
+  delete process.env.MOMENCE_REGULAR_SOURCE_ID;
+
+  try {
+    const regularPayload = buildMomenceLeadRequestPayload({
+      firstName: 'Regular',
+      lastName: 'Lead',
+      email: 'regular@example.com',
+      source_form: 'paid-trial-form'
+    });
+
+    const barrePayload = buildMomenceLeadRequestPayload({
+      firstName: 'Barre',
+      lastName: 'Lead',
+      email: 'barre@example.com',
+      source_form: 'barre-trial-form'
+    });
+
+    const kidsPayload = buildMomenceLeadRequestPayload({
+      firstName: 'Kids',
+      lastName: 'Lead',
+      email: 'kids@example.com',
+      source_form: 'kids-trial-form'
+    });
+
+    assert.equal(regularPayload.sourceId, '8082');
+    assert.equal(barrePayload.sourceId, '8082');
+    assert.equal(kidsPayload.sourceId, 'kids-source-only');
+  } finally {
+    if (previousSourceId === undefined) {
+      delete process.env.MOMENCE_SOURCE_ID;
+    } else {
+      process.env.MOMENCE_SOURCE_ID = previousSourceId;
+    }
+
+    if (previousRegularSourceId === undefined) {
+      delete process.env.MOMENCE_REGULAR_SOURCE_ID;
+    } else {
+      process.env.MOMENCE_REGULAR_SOURCE_ID = previousRegularSourceId;
+    }
+  }
+});
+
 test('processLeadSubmission only sends Meta after Momence sync succeeds', async () => {
   let metaSendCount = 0;
 

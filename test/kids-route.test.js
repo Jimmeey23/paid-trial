@@ -21,8 +21,11 @@ function validKidsPayload(overrides = {}) {
     center: 'Supreme Headquarters, Bandra',
     childName: 'Riya Shah',
     childAge: '10',
-    batch: 'Tuesday & Friday - 4:30 PM - Simonelle & Cauveri',
+    childDateOfBirth: '2015-06-01',
+    batch: 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri',
     waiverAccepted: 'accepted',
+    signatureName: 'Asha Shah',
+    signatureRealSignature: '[[12,18,24,30]]',
     event_id: 'lead_kids_test_123',
     ...overrides
   };
@@ -95,13 +98,18 @@ test('React app routes /kids to the Kids Juniors form', () => {
   const source = readProjectFile('client/src/App.tsx');
 
   assert.match(source, /import \{ KidsTrialForm \} from "@\/components\/kids-trial-form"/);
+  assert.match(source, /import \{ KidsConsentPage \} from "@\/components\/kids-consent-page"/);
   assert.match(source, /currentPath === "\/kids"/);
+  assert.match(source, /currentPath === "\/kids-consent"/);
   assert.match(source, /isKidsRoute/);
+  assert.match(source, /isKidsConsentRoute/);
   assert.match(source, /routeMeta\.kids/);
+  assert.match(source, /routeMeta\.kidsConsent/);
   assert.match(source, /<KidsTrialForm \/>/);
+  assert.match(source, /<KidsConsentPage \/>/);
 });
 
-test('Juniors form contains child name, child age, conditional batch options, brand content, and supplied media', () => {
+test('Juniors form contains child name, date of birth, age, conditional batch options, brand content, and supplied media', () => {
   const source = readProjectFile('client/src/components/kids-trial-form.tsx');
 
   assert.match(source, /p57-juniors-hero-2026-1\.png/);
@@ -131,15 +139,72 @@ test('Juniors form contains child name, child age, conditional batch options, br
   assert.doesNotMatch(source, /Kids 57/);
   assert.match(source, /childName/);
   assert.match(source, /Child name/);
+  assert.match(source, /childDateOfBirth/);
+  assert.match(source, /Child date of birth/);
   assert.match(source, /childAge/);
   assert.match(source, /Child age/);
   assert.match(source, /batch/);
   assert.match(source, /Batch preference/);
   assert.match(source, /id="batch"/);
-  assert.match(source, /Tuesday & Friday - 4:30 PM - Simonelle & Cauveri/);
-  assert.match(source, /Batch 1 - Monday & Wednesday - 4:30 PM - Cauveri & Karan/);
-  assert.match(source, /Batch 2 - Tuesday & Thursday - 11:30 AM - Karan & Cauveri/);
+  assert.match(source, /Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri/);
+  assert.match(source, /Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir/);
+  assert.match(source, /Batch B - Monday & Wednesday - 4:30 PM - Mon: Cauveri, Wed: Pranjali/);
+  assert.match(source, /signatureName/);
+  assert.match(source, /SignaturePad/);
+  assert.match(source, /signatureRealSignature/);
+  assert.match(source, /showConsentModal/);
+  assert.match(source, /LegalConsentModal/);
+  assert.match(source, /role="dialog"/);
+  assert.match(source, /aria-modal="true"/);
+  assert.match(source, /data-consent-modal-trigger/);
+  assert.doesNotMatch(source, /target="_blank"/);
+  assert.doesNotMatch(source, /href="\/kids-consent"/);
+  assert.match(source, /Juniors consent form/);
   assert.match(source, /\/api\/submit-kids-lead/);
+});
+
+test('Juniors consent opens as a legal modal from the form', () => {
+  const source = readProjectFile('client/src/components/kids-trial-form.tsx');
+
+  assert.match(source, /Child Booking Waiver/);
+  assert.match(source, /Document Review Copy/);
+  assert.match(source, /setShowConsentModal\(true\)/);
+  assert.match(source, /setShowConsentModal\(false\)/);
+  assert.match(source, /I have reviewed this waiver/);
+  assert.match(source, /KidsConsentDocument/);
+  assert.doesNotMatch(source, /window\.open/);
+});
+
+test('Juniors consent page displays the attached waiver and class policy content', () => {
+  const source = readProjectFile('client/src/components/kids-consent-page.tsx');
+
+  assert.match(source, /physique57-logo\.jpg/);
+  assert.match(source, /KidsConsentDocument/);
+  assert.match(source, /Release and Indemnity Agreement/);
+  assert.match(source, /executed freely and voluntarily/);
+  assert.match(source, /AMP Fitness LLP/);
+  assert.match(source, /Cancellations, transfers & refunds are not possible under this program/);
+  assert.match(source, /By signing below/);
+  assert.match(source, /This Agreement shall be governed by and construed in accordance with the laws of India/);
+});
+
+test('Thank you page has a kids-only Juniors layout for kids submissions', () => {
+  const source = readProjectFile('client/src/components/thank-you-page.tsx');
+
+  assert.match(source, /isKidsSubmission/);
+  assert.match(source, /KIDS_THANK_YOU_HERO_IMAGES/);
+  assert.match(source, /KIDS_THANK_YOU_GALLERY_IMAGES/);
+  assert.match(source, /KIDS_THANK_YOU_GALLERY_IMAGES = KIDS_THANK_YOU_HERO_IMAGES\.slice\(1\)/);
+  assert.match(source, /function KidsHeroImage/);
+  assert.match(source, /sourceForm === "kids-trial-form"/);
+  assert.match(source, /p57-juniors-hero-2026-1\.png/);
+  assert.match(source, /p57-juniors-hero-2026-2\.png/);
+  assert.match(source, /p57-juniors-hero-2026-3\.png/);
+  assert.match(source, /p57-juniors-hero-2026-4\.png/);
+  assert.match(source, /Your Juniors request is in/);
+  assert.match(source, /What happens next for your child/);
+  assert.doesNotMatch(source, /KidsImageMosaic/);
+  assert.doesNotMatch(source, /supportingImages/);
 });
 
 test('Juniors form uses elevated copy, batch cards, and expanded method sections', () => {
@@ -199,7 +264,10 @@ test('validateKidsLeadPayload accepts a valid Bandra kids payload', () => {
   assert.equal(validation.data.center, 'Supreme Headquarters, Bandra');
   assert.equal(validation.data.childName, 'Riya Shah');
   assert.equal(validation.data.childAge, 10);
-  assert.equal(validation.data.batch, 'Tuesday & Friday - 4:30 PM - Simonelle & Cauveri');
+  assert.equal(validation.data.childDateOfBirth, '2015-06-01');
+  assert.equal(validation.data.batch, 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri');
+  assert.equal(validation.data.signatureName, 'Asha Shah');
+  assert.equal(validation.data.signatureRealSignature, '[[12,18,24,30]]');
 });
 
 test('validateKidsLeadPayload rejects missing child name', () => {
@@ -223,16 +291,40 @@ test('validateKidsLeadPayload rejects missing or out-of-range child age', () => 
   assert.equal(outOfRangeAge.fieldErrors.childAge, 'Child age must be between 9 and 13.');
 });
 
+test('validateKidsLeadPayload rejects missing or invalid child date of birth', () => {
+  assert.equal(typeof app.validateKidsLeadPayload, 'function');
+
+  const missingDateOfBirth = app.validateKidsLeadPayload(validKidsPayload({ childDateOfBirth: '' }));
+  assert.equal(missingDateOfBirth.isValid, false);
+  assert.equal(missingDateOfBirth.fieldErrors.childDateOfBirth, 'Child date of birth is required.');
+
+  const invalidDateOfBirth = app.validateKidsLeadPayload(validKidsPayload({ childDateOfBirth: '06/01/2015' }));
+  assert.equal(invalidDateOfBirth.isValid, false);
+  assert.equal(invalidDateOfBirth.fieldErrors.childDateOfBirth, 'Child date of birth must use YYYY-MM-DD.');
+});
+
 test('validateKidsLeadPayload rejects a batch preference that does not match the center', () => {
   assert.equal(typeof app.validateKidsLeadPayload, 'function');
 
   const validation = app.validateKidsLeadPayload(validKidsPayload({
     center: 'Supreme Headquarters, Bandra',
-    batch: 'Batch 1 - Monday & Wednesday - 4:30 PM - Cauveri & Karan'
+    batch: 'Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir'
   }));
 
   assert.equal(validation.isValid, false);
   assert.equal(validation.fieldErrors.batch, 'Choose an available Juniors batch for the selected studio.');
+});
+
+test('validateKidsLeadPayload rejects missing consent signature details', () => {
+  assert.equal(typeof app.validateKidsLeadPayload, 'function');
+
+  const missingTypedSignature = app.validateKidsLeadPayload(validKidsPayload({ signatureName: '' }));
+  assert.equal(missingTypedSignature.isValid, false);
+  assert.equal(missingTypedSignature.fieldErrors.signatureName, 'Parent/guardian signature name is required.');
+
+  const missingDrawnSignature = app.validateKidsLeadPayload(validKidsPayload({ signatureRealSignature: '' }));
+  assert.equal(missingDrawnSignature.isValid, false);
+  assert.equal(missingDrawnSignature.fieldErrors.signatureRealSignature, 'Parent/guardian signature is required.');
 });
 
 test('buildMomenceLeadRequestPayload includes kids-specific fields with Momence selectors', () => {
@@ -246,7 +338,8 @@ test('buildMomenceLeadRequestPayload includes kids-specific fields with Momence 
       type: 'Physique 57 - Juniors',
       childName: 'Riya Shah',
       childAge: 10,
-      batch: 'Tuesday & Friday - 4:30 PM - Simonelle & Cauveri'
+      childDateOfBirth: '2015-06-01',
+      batch: 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri'
     },
     {
       token: 'token'
@@ -262,6 +355,7 @@ test('buildMomenceLeadRequestPayload includes kids-specific fields with Momence 
   assert.equal(payload.sourceId, '212426');
   assert.equal(payload.childName, 'Riya Shah');
   assert.equal(payload.childAge, 10);
-  assert.equal(payload.batch, 'Tuesday & Friday - 4:30 PM - Simonelle & Cauveri');
+  assert.equal(payload.childDateOfBirth, '2015-06-01');
+  assert.equal(payload.batch, 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri');
   assert.equal(Object.prototype.hasOwnProperty.call(payload, 'batchPreference'), false);
 });

@@ -1,4 +1,7 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
 
 const {
@@ -9,6 +12,7 @@ const {
   buildInfluencerSubmissionSuccessPayload,
   normalizePhoneDigits,
   processLeadSubmission,
+  provisionKidsConsent,
   provisionInfluencerMembership,
   resolveScheduleLocationIds,
   buildStudioSchedulePageUrl
@@ -149,6 +153,417 @@ test('addMembershipToMember performs a free checkout for the Open Barre membersh
   assert.equal(result.success, true);
   assert.equal(result.memberId, 123);
   assert.equal(result.purchaseId, 789);
+});
+
+test('signKidsConsentWaivers uses the Momence dashboard primary API base by default', async () => {
+  const calls = [];
+  const client = new MomencePublicApiClient({
+    dashboardCookies: 'ribbon.connect.sid=session-token',
+    hostId: 13752,
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+
+      if (String(url) === 'https://momence.com/_api/primary/host/13752/members/123/waivers') {
+        return jsonResponse({
+          waivers: [
+            {
+              type: 'predefined',
+              id: 'child-waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'child-key'
+            }
+          ]
+        });
+      }
+
+      if (String(url) === 'https://momence.com/_api/primary/public/hosts/13752/members/123/waivers/child-waiver/sign?signatureKey=child-key') {
+        return jsonResponse({ success: true });
+      }
+
+      throw new Error(`Unexpected request ${url}`);
+    }
+  });
+
+  const result = await client.signKidsConsentWaivers(123, '[[12,18,24,30]]', {
+    predefinedWaiverIds: ['child-waiver']
+  });
+
+  assert.equal(result.signedCount, 1);
+  assert.equal(calls.length, 2);
+});
+
+test('signKidsConsentWaivers signs only the requested predefined waiver ids through the dashboard API', async () => {
+  const calls = [];
+  const client = new MomencePublicApiClient({
+    dashboardBaseUrl: 'https://momence-dashboard.test',
+    dashboardCookies: 'csrf_token=csrf-token; session=session-token',
+    hostId: 13752,
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+
+      if (String(url).endsWith('/host/13752/members/123/waivers')) {
+        assert.equal(options.method, 'GET');
+        assert.equal(options.headers.Cookie, 'csrf_token=csrf-token; session=session-token');
+        assert.equal(options.headers['X-CSRF-Token'], 'csrf-token');
+        return jsonResponse({
+          waivers: [
+            {
+              type: 'predefined',
+              id: 'child-waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'child-key'
+            },
+            {
+              type: 'predefined',
+              id: 'membership-waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'membership-key'
+            },
+            {
+              type: 'predefined',
+              id: 'waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'waiver-key'
+            },
+            {
+              type: 'predefined',
+              id: 'privacy-policy',
+              signatureStatus: 'unsigned',
+              signatureKey: 'privacy-key'
+            }
+          ]
+        });
+      }
+
+      if (String(url).includes('/public/hosts/13752/members/123/waivers/')) {
+        assert.equal(options.method, 'POST');
+        assert.deepEqual(JSON.parse(options.body), {
+          realSignature: '[[12,18,24,30]]'
+        });
+        return jsonResponse({ success: true });
+      }
+
+      throw new Error(`Unexpected request ${url}`);
+    }
+  });
+
+  const result = await client.signKidsConsentWaivers(123, '[[12,18,24,30]]', {
+    predefinedWaiverIds: ['waiver', 'membership-waiver']
+  });
+
+  assert.equal(result.signedCount, 2);
+  assert.equal(result.availableCount, 4);
+  assert.equal(calls.some((call) => String(call.url).endsWith('/host/checkout')), false);
+  assert.deepEqual(
+    calls
+      .filter((call) => String(call.url).includes('/public/hosts/13752/members/123/waivers/'))
+      .map((call) => String(call.url).replace('https://momence-dashboard.test', '')),
+    [
+      '/public/hosts/13752/members/123/waivers/waiver/sign?signatureKey=waiver-key',
+      '/public/hosts/13752/members/123/waivers/membership-waiver/sign?signatureKey=membership-key'
+    ]
+  );
+  assert.equal(
+    calls.some((call) => String(call.url).includes('/waivers/waiver/')),
+    true
+  );
+});
+
+test('signKidsConsentWaivers honors explicit kids waiver env ids without replacing waiver', async () => {
+  const previousWaiverIds = process.env.MOMENCE_KIDS_CONSENT_PREDEFINED_WAIVER_IDS;
+  process.env.MOMENCE_KIDS_CONSENT_PREDEFINED_WAIVER_IDS = 'waiver,membership-waiver';
+
+  const calls = [];
+  const client = new MomencePublicApiClient({
+    dashboardBaseUrl: 'https://momence-dashboard.test',
+    dashboardCookies: 'session=session-token',
+    hostId: 13752,
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+
+      if (String(url).endsWith('/host/13752/members/123/waivers')) {
+        return jsonResponse({
+          waivers: [
+            {
+              type: 'predefined',
+              id: 'child-waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'child-key'
+            },
+            {
+              type: 'predefined',
+              id: 'membership-waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'membership-key'
+            },
+            {
+              type: 'predefined',
+              id: 'waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'waiver-key'
+            }
+          ]
+        });
+      }
+
+      if (String(url).includes('/public/hosts/13752/members/123/waivers/')) {
+        return jsonResponse({ success: true });
+      }
+
+      throw new Error(`Unexpected request ${url}`);
+    }
+  });
+
+  try {
+    const result = await client.signKidsConsentWaivers(123, '[[12,18,24,30]]');
+
+    assert.equal(result.signedCount, 2);
+    assert.equal(calls.some((call) => String(call.url).includes('/child-waiver/')), false);
+    assert.equal(calls.some((call) => String(call.url).includes('/membership-waiver/')), true);
+    assert.equal(calls.some((call) => String(call.url).includes('/waivers/waiver/')), true);
+  } finally {
+    if (previousWaiverIds === undefined) {
+      delete process.env.MOMENCE_KIDS_CONSENT_PREDEFINED_WAIVER_IDS;
+    } else {
+      process.env.MOMENCE_KIDS_CONSENT_PREDEFINED_WAIVER_IDS = previousWaiverIds;
+    }
+  }
+});
+
+test('signKidsConsentWaivers refreshes dashboard cookies after an auth failure and retries once', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'momence-cookie-refresh-'));
+  const envFilePath = path.join(tempDir, '.env');
+  fs.writeFileSync(envFilePath, [
+    'MOMENCE_ALL_COOKIES="momence.device.id=old-device; ribbon.connect.sid=old-session"',
+    'MOMENCE_LOGIN_EMAIL="parent@example.com"',
+    'MOMENCE_LOGIN_PASSWORD="secret"',
+    'MOMENCE_TOTP_SECRET="JBSWY3DPEHPK3PXP"',
+    ''
+  ].join('\n'));
+
+  const calls = [];
+  const client = new MomencePublicApiClient({
+    dashboardCookies: 'momence.device.id=old-device; ribbon.connect.sid=old-session',
+    envFilePath,
+    hostId: 13752,
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+
+      if (String(url).endsWith('/host/13752/members/123/waivers')) {
+        if (options.headers.Cookie.includes('old-session')) {
+          return jsonResponse({ error: 'expired session' }, { status: 403 });
+        }
+
+        assert.match(options.headers.Cookie, /ribbon\.connect\.sid=fresh-session/);
+        return jsonResponse({
+          waivers: [
+            {
+              type: 'predefined',
+              id: 'child-waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'child-key'
+            },
+            {
+              type: 'predefined',
+              id: 'membership-waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'membership-key'
+            }
+          ]
+        });
+      }
+
+      if (String(url) === 'https://api.momence.com/auth/login') {
+        assert.equal(options.method, 'POST');
+        assert.equal(JSON.parse(options.body).email, 'parent@example.com');
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+            'set-cookie': 'momence.device.id=fresh-device; Path=/; HttpOnly'
+          }
+        });
+      }
+
+      if (String(url) === 'https://api.momence.com/auth/mfa/totp/verify') {
+        assert.equal(options.method, 'POST');
+        assert.match(options.headers.Cookie, /momence\.device\.id=fresh-device/);
+        assert.match(JSON.parse(options.body).token, /^\d{6}$/);
+        return new Response(JSON.stringify({
+          access_token: 'access-token',
+          refresh_token: 'refresh-token'
+        }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+            'set-cookie': 'ribbon.connect.sid=fresh-session; Path=/; HttpOnly'
+          }
+        });
+      }
+
+      if (String(url).includes('/public/hosts/13752/members/123/waivers/')) {
+        assert.match(options.headers.Cookie, /ribbon\.connect\.sid=fresh-session/);
+        return jsonResponse({ success: true });
+      }
+
+      throw new Error(`Unexpected request ${url}`);
+    }
+  });
+
+  const result = await client.signKidsConsentWaivers(123, '[[12,18,24,30]]');
+
+  assert.equal(result.signedCount, 2);
+  assert.equal(calls.filter((call) => String(call.url).endsWith('/host/13752/members/123/waivers')).length, 2);
+  assert.equal(calls.filter((call) => String(call.url) === 'https://api.momence.com/auth/login').length, 1);
+  assert.equal(calls.filter((call) => String(call.url) === 'https://api.momence.com/auth/mfa/totp/verify').length, 1);
+  const updatedEnv = fs.readFileSync(envFilePath, 'utf8');
+  assert.match(updatedEnv, /MOMENCE_ALL_COOKIES="momence\.device\.id=fresh-device; ribbon\.connect\.sid=fresh-session"/);
+});
+
+test('createChildAccountForMember posts child details with date of birth and captures child member id', async () => {
+  const calls = [];
+  const client = new MomencePublicApiClient({
+    dashboardBaseUrl: 'https://momence-dashboard.test',
+    dashboardCookies: 'session=session-token',
+    hostId: 13752,
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+
+      if (String(url).endsWith('/host/13752/customers/123/children')) {
+        assert.equal(options.method, 'POST');
+        assert.equal(options.headers.Referer, 'https://momence.com/dashboard/13752/crm/123');
+        assert.equal(options.headers['X-Origin'], 'https://momence.com/dashboard/13752/crm/123');
+        assert.deepEqual(JSON.parse(options.body), {
+          autoGenerateEmail: true,
+          email: '',
+          firstName: 'Riya',
+          lastName: 'Shah',
+          customerFields: [
+            {
+              id: 6592,
+              value: '2015-06-01'
+            }
+          ]
+        });
+        return jsonResponse({
+          customer: {
+            memberId: 456,
+            firstName: 'Riya',
+            lastName: 'Shah'
+          }
+        });
+      }
+
+      throw new Error(`Unexpected request ${url}`);
+    }
+  });
+
+  const child = await client.createChildAccountForMember(123, {
+    childName: 'Riya Shah',
+    childDateOfBirth: '2015-06-01'
+  });
+
+  assert.equal(child.memberId, 456);
+  assert.equal(calls.length, 1);
+});
+
+test('createChildAccountForMember accepts customer-wrapped child endpoint responses', async () => {
+  const client = new MomencePublicApiClient({
+    dashboardBaseUrl: 'https://momence-dashboard.test',
+    dashboardCookies: 'session=session-token',
+    hostId: 13752,
+    fetchImpl: async (url) => {
+      if (String(url).endsWith('/host/13752/customers/123/children')) {
+        return jsonResponse({
+          customers: [
+            {
+              id: 789,
+              firstName: 'Riya',
+              lastName: 'Shah'
+            }
+          ]
+        });
+      }
+
+      throw new Error(`Unexpected request ${url}`);
+    }
+  });
+
+  const child = await client.createChildAccountForMember(123, {
+    childName: 'Riya Shah',
+    childDateOfBirth: '2015-06-01'
+  });
+
+  assert.equal(child.memberId, 789);
+});
+
+test('provisionKidsConsent creates the child account and records consent for parent and child without adding membership', async () => {
+  const calls = [];
+  const result = await provisionKidsConsent(
+    {
+      firstName: 'Asha',
+      lastName: 'Shah',
+      email: 'asha@example.com',
+      phoneNumber: '+91 98765 43210',
+      center: 'Supreme Headquarters, Bandra',
+      childName: 'Riya Shah',
+      childDateOfBirth: '2015-06-01',
+      signatureRealSignature: '[[12,18,24,30]]'
+    },
+    {
+      client: {
+        async ensureMember(input) {
+          calls.push('ensureMember');
+          assert.equal(input.firstName, 'Asha');
+          assert.equal(input.email, 'asha@example.com');
+          return { memberId: 123, action: 'created_new' };
+        },
+        async createChildAccountForMember(parentMemberId, childInput) {
+          calls.push('createChildAccountForMember');
+          assert.equal(parentMemberId, 123);
+          assert.deepEqual(childInput, {
+            childName: 'Riya Shah',
+            childDateOfBirth: '2015-06-01',
+            parentLastName: 'Shah'
+          });
+          return { memberId: 456 };
+        },
+        async signKidsConsentWaivers(memberId, realSignature, consentOptions) {
+          calls.push(`signKidsConsentWaivers:${memberId}:${consentOptions.predefinedWaiverIds.join(',')}`);
+          assert.equal(realSignature, '[[12,18,24,30]]');
+          return {
+            signedCount: consentOptions.predefinedWaiverIds.length,
+            availableCount: consentOptions.predefinedWaiverIds.length
+          };
+        },
+        async ensureMemberAndAddMembership() {
+          throw new Error('Kids consent must not add a membership');
+        },
+        async addMembershipToMember() {
+          throw new Error('Kids consent must not add a membership');
+        }
+      }
+    }
+  );
+
+  assert.deepEqual(calls, [
+    'ensureMember',
+    'createChildAccountForMember',
+    'signKidsConsentWaivers:123:waiver,membership-waiver',
+    'signKidsConsentWaivers:456:child-waiver'
+  ]);
+  assert.deepEqual(result, {
+    success: true,
+    memberId: 123,
+    childMemberId: 456,
+    customerAction: 'created_new',
+    signedCount: 3,
+    parentSignedCount: 2,
+    childSignedCount: 1,
+    availableWaivers: 3,
+    parentAvailableWaivers: 2,
+    childAvailableWaivers: 1
+  });
 });
 
 test('buildStudioComplimentaryClassMembershipConfig uses the Studio Complimentary Class package', () => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Analytics } from "@vercel/analytics/react"
 import { Physique57SignUpForm } from "@/components/physique57-sign-up-form"
 import { Barre57TrialForm } from "@/components/barre57-trial-form"
+import { KidsConsentPage } from "@/components/kids-consent-page"
 import { KidsTrialForm } from "@/components/kids-trial-form"
 import { ScheduleEmbed } from "@/components/schedule-embed"
 import { ThankYouPage } from "@/components/thank-you-page"
@@ -41,6 +42,12 @@ const routeMeta = {
     description:
       "Register for Physique 57 Juniors at Physique 57 India and choose your preferred Bandra or Kemps Corner batch.",
     name: "Physique 57 Juniors Registration Form",
+  },
+  kidsConsent: {
+    title: "Physique 57 Juniors | Consent Form",
+    description:
+      "Review the Physique 57 Juniors release, indemnity, privacy consent, and class policy terms before signing.",
+    name: "Physique 57 Juniors Consent Form",
   },
   scheduleMum: {
     title: "Physique 57 India | Schedule Mum",
@@ -127,6 +134,7 @@ export default function App() {
   const isBarreRoute = currentPath === "/barre" || currentPath.startsWith("/barre/")
   const isInfluencersRoute = currentPath === "/influencers" || currentPath.startsWith("/influencers/")
   const isKidsRoute = currentPath === "/kids" || currentPath.startsWith("/kids/")
+  const isKidsConsentRoute = currentPath === "/kids-consent" || currentPath.startsWith("/kids-consent/")
   const isTestRoute = currentPath === "/test" || currentPath.startsWith("/test/")
   const isScheduleMumRoute = currentPath === "/schedule-mum" || currentPath.startsWith("/schedule-mum/")
   const isScheduleMumBeginRoute = currentPath === "/schedule-mum-begin" || currentPath.startsWith("/schedule-mum-begin/")
@@ -151,17 +159,19 @@ export default function App() {
         ? routeMeta.influencers
         : isKidsRoute
           ? routeMeta.kids
-          : isTestRoute
-            ? routeMeta.test
-            : isScheduleMumRoute
-              ? routeMeta.scheduleMum
-              : isScheduleMumBeginRoute
-                ? routeMeta.scheduleMumBegin
-                : isScheduleBlrRoute
-                  ? routeMeta.scheduleBlr
-                  : isThankYouRoute
-                    ? routeMeta.thankYou
-                    : routeMeta.default
+          : isKidsConsentRoute
+            ? routeMeta.kidsConsent
+            : isTestRoute
+              ? routeMeta.test
+              : isScheduleMumRoute
+                ? routeMeta.scheduleMum
+                : isScheduleMumBeginRoute
+                  ? routeMeta.scheduleMumBegin
+                  : isScheduleBlrRoute
+                    ? routeMeta.scheduleBlr
+                    : isThankYouRoute
+                      ? routeMeta.thankYou
+                      : routeMeta.default
     const pageUrl = typeof window !== "undefined" ? window.location.href : BRAND_SITE_URL
 
     document.title = meta.title
@@ -204,7 +214,7 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isBarreRoute, isInfluencersRoute, isKidsRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isThankYouRoute])
+  }, [currentPath, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isThankYouRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
@@ -212,29 +222,31 @@ export default function App() {
       ? <Barre57TrialForm variant="influencer" />
       : isKidsRoute
         ? <KidsTrialForm />
-        : isTestRoute
-          ? <Physique57SignUpForm testMode />
-          : isScheduleMumRoute
-            ? <ScheduleEmbed hostId="13752" locationIds={scheduleLocationId ? [scheduleLocationId] : []} />
-            : isScheduleMumBeginRoute
-              ? (
-                <ScheduleEmbed
-                  hostId="13752"
-                  locationIds={scheduleLocationId ? [scheduleLocationId] : []}
-                  teacherIds={EMPTY_SCHEDULE_FILTER_IDS}
-                  tagIds={BEGINNER_SCHEDULE_TAG_IDS}
-                  sessionType="class"
-                  hideTags
-                  defaultFilter="show-all"
-                  locale="en"
-                  lockTimezone="Asia/Kolkata"
-                />
-              )
-              : isScheduleBlrRoute
-                ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
-                : isThankYouRoute
-                  ? <ThankYouPage />
-                  : <Physique57SignUpForm />
+        : isKidsConsentRoute
+          ? <KidsConsentPage />
+          : isTestRoute
+            ? <Physique57SignUpForm testMode />
+            : isScheduleMumRoute
+              ? <ScheduleEmbed hostId="13752" locationIds={scheduleLocationId ? [scheduleLocationId] : []} />
+              : isScheduleMumBeginRoute
+                ? (
+                  <ScheduleEmbed
+                    hostId="13752"
+                    locationIds={scheduleLocationId ? [scheduleLocationId] : []}
+                    teacherIds={EMPTY_SCHEDULE_FILTER_IDS}
+                    tagIds={BEGINNER_SCHEDULE_TAG_IDS}
+                    sessionType="class"
+                    hideTags
+                    defaultFilter="show-all"
+                    locale="en"
+                    lockTimezone="Asia/Kolkata"
+                  />
+                )
+                : isScheduleBlrRoute
+                  ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
+                  : isThankYouRoute
+                    ? <ThankYouPage />
+                    : <Physique57SignUpForm />
 
   return (
     <>

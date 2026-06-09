@@ -10,10 +10,13 @@ import {
   CheckCircle2,
   Clock,
   Dumbbell,
+  FileText,
   Footprints,
   Heart,
   Loader2,
+  PenLine,
   PersonStanding,
+  Scale,
   Shield,
   Smile,
   Sparkles,
@@ -21,6 +24,7 @@ import {
   Target,
   UserRoundCheck,
   Users,
+  X,
   Zap,
 } from "lucide-react"
 
@@ -33,6 +37,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { KidsConsentDocument } from "@/components/kids-consent-page"
+import { SignaturePad, type SignaturePadHandle } from "@/components/signature-pad"
 
 const JUNIORS_HERO_IMAGES = [
   "/p57-assets/p57-juniors-hero-2026-1.png",
@@ -86,10 +92,10 @@ const JUNIORS_BATCH_DETAILS: Record<string, Array<{
 }>> = {
   "Supreme Headquarters, Bandra": [
     {
-      value: "Tuesday & Friday - 4:30 PM - Simonelle & Cauveri",
+      value: "Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri",
       days: "Tuesday & Friday",
       time: "4:30 PM",
-      instructors: "Simonelle & Cauveri",
+      instructors: "Tue: Simonelle, Fri: Cauveri",
       studio: "Bandra",
       note: "A twice-weekly class for posture, alignment, and confidence.",
       accent: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
@@ -98,22 +104,22 @@ const JUNIORS_BATCH_DETAILS: Record<string, Array<{
   ],
   "Kwality House, Kemps Corner": [
     {
-      value: "Batch 1 - Monday & Wednesday - 4:30 PM - Cauveri & Karan",
-      days: "Monday & Wednesday",
-      time: "4:30 PM",
-      instructors: "Cauveri & Karan",
+      value: "Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir",
+      days: "Batch A - Monday & Thursday",
+      time: "11:30 AM",
+      instructors: "Mon: Simonelle, Thu: Karanvir",
       studio: "Kemps Corner",
-      note: "An after-school class with guided technique and balance work.",
+      note: "A late-morning class with guided technique and balance work.",
       accent: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
       metaAccent: "text-sky-700",
     },
     {
-      value: "Batch 2 - Tuesday & Thursday - 11:30 AM - Karan & Cauveri",
-      days: "Tuesday & Thursday",
-      time: "11:30 AM",
-      instructors: "Karan & Cauveri",
+      value: "Batch B - Monday & Wednesday - 4:30 PM - Mon: Cauveri, Wed: Pranjali",
+      days: "Batch B - Monday & Wednesday",
+      time: "4:30 PM",
+      instructors: "Mon: Cauveri, Wed: Pranjali",
       studio: "Kemps Corner",
-      note: "A late-morning class for young movers who prefer an easy start.",
+      note: "An after-school class for young movers who prefer a later start.",
       accent: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
       metaAccent: "text-emerald-700",
     },
@@ -202,11 +208,11 @@ const SECTION_BADGE_CLASS =
 
 const KIDS_BATCH_OPTIONS: Record<string, string[]> = {
   "Supreme Headquarters, Bandra": [
-    "Tuesday & Friday - 4:30 PM - Simonelle & Cauveri",
+    "Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri",
   ],
   "Kwality House, Kemps Corner": [
-    "Batch 1 - Monday & Wednesday - 4:30 PM - Cauveri & Karan",
-    "Batch 2 - Tuesday & Thursday - 11:30 AM - Karan & Cauveri",
+    "Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir",
+    "Batch B - Monday & Wednesday - 4:30 PM - Mon: Cauveri, Wed: Pranjali",
   ],
 }
 
@@ -240,14 +246,19 @@ export function KidsTrialForm() {
     studio: "",
     childName: "",
     childAge: "",
+    childDateOfBirth: "",
     batch: "",
+    signatureName: "",
     acceptedTerms: false,
   })
+  const [hasSignature, setHasSignature] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [statusMessage, setStatusMessage] = useState<{ text: string; tone: "success" | "error" } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showConsentModal, setShowConsentModal] = useState(false)
   const [currentHeroImage, setCurrentHeroImage] = useState(0)
+  const signaturePadRef = useRef<SignaturePadHandle | null>(null)
   const eventIdRef = useRef(createEventId())
   const redirectTimeoutRef = useRef<number | null>(null)
 
@@ -267,6 +278,27 @@ export function KidsTrialForm() {
 
     return () => window.clearInterval(imageInterval)
   }, [])
+
+  useEffect(() => {
+    if (!showConsentModal) {
+      return
+    }
+
+    const originalOverflow = document.body.style.overflow
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowConsentModal(false)
+      }
+    }
+
+    document.body.style.overflow = "hidden"
+    window.addEventListener("keydown", handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = originalOverflow
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [showConsentModal])
 
   useEffect(() => {
     return () => {
@@ -293,6 +325,7 @@ export function KidsTrialForm() {
   function validateForm() {
     const nextErrors: Record<string, string> = {}
     const parsedAge = Number.parseInt(formData.childAge, 10)
+    const signatureRealSignature = signaturePadRef.current?.toRealSignature()
 
     if (!formData.firstName.trim()) {
       nextErrors.firstName = "First name is required"
@@ -321,8 +354,19 @@ export function KidsTrialForm() {
     } else if (parsedAge < 9 || parsedAge > 13) {
       nextErrors.childAge = "Child age must be between 9 and 13"
     }
+    if (!formData.childDateOfBirth.trim()) {
+      nextErrors.childDateOfBirth = "Child date of birth is required"
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.childDateOfBirth.trim())) {
+      nextErrors.childDateOfBirth = "Use YYYY-MM-DD"
+    }
     if (!formData.batch) {
       nextErrors.batch = selectedStudio ? "Select a batch preference" : "Select a center first"
+    }
+    if (formData.signatureName.trim().length < 2) {
+      nextErrors.signatureName = "Enter the parent/guardian signature name"
+    }
+    if (!signatureRealSignature) {
+      nextErrors.signatureRealSignature = "Add the parent/guardian signature"
     }
     if (!formData.acceptedTerms) {
       nextErrors.acceptedTerms = "Accept the waiver and terms"
@@ -350,6 +394,13 @@ export function KidsTrialForm() {
     setIsSubmitting(true)
     setStatusMessage(null)
 
+    const signatureRealSignature = signaturePadRef.current?.toRealSignature()
+    if (!signatureRealSignature) {
+      setErrors((current) => ({ ...current, signatureRealSignature: "Add the parent/guardian signature" }))
+      setIsSubmitting(false)
+      return
+    }
+
     const trackingPayload = getSubmissionTrackingPayload() as Record<string, string>
     const payload = {
       firstName: formData.firstName.trim(),
@@ -361,7 +412,10 @@ export function KidsTrialForm() {
       type: JUNIORS_PROGRAM_NAME,
       childName: formData.childName.trim(),
       childAge: formData.childAge.trim(),
+      childDateOfBirth: formData.childDateOfBirth.trim(),
       batch: formData.batch,
+      signatureName: formData.signatureName.trim(),
+      signatureRealSignature,
       waiverAccepted: formData.acceptedTerms ? "accepted" : "",
       event_id: eventIdRef.current,
       source_form: "kids-trial-form",
@@ -401,6 +455,8 @@ export function KidsTrialForm() {
         studioLocationId: selectedStudio?.scheduleLocationId,
         formatName: JUNIORS_PROGRAM_NAME,
         classType: JUNIORS_PROGRAM_NAME,
+        childName: payload.childName,
+        batch: payload.batch,
         sourceForm: "kids-trial-form",
         statusMessage: result.warning || `Your ${JUNIORS_PROGRAM_NAME} request has been received.`,
         redirectUrl: getThankYouUrl(),
@@ -422,9 +478,13 @@ export function KidsTrialForm() {
         studio: "",
         childName: "",
         childAge: "",
+        childDateOfBirth: "",
         batch: "",
+        signatureName: "",
         acceptedTerms: false,
       })
+      signaturePadRef.current?.clear()
+      setHasSignature(false)
       eventIdRef.current = createEventId()
       redirectTimeoutRef.current = window.setTimeout(() => {
         window.location.assign(getThankYouUrl())
@@ -448,7 +508,10 @@ export function KidsTrialForm() {
     && formData.studio
     && formData.childName.trim()
     && formData.childAge.trim()
+    && formData.childDateOfBirth.trim()
     && formData.batch
+    && formData.signatureName.trim().length >= 2
+    && hasSignature
     && formData.acceptedTerms
   )
 
@@ -472,10 +535,11 @@ export function KidsTrialForm() {
   }
 
   return (
-    <main
-      data-layout="juniors-page-shell"
-      className="min-h-screen overflow-x-hidden bg-slate-50 lg:fixed lg:inset-0 lg:h-[100dvh] lg:overflow-hidden"
-    >
+    <>
+      <main
+        data-layout="juniors-page-shell"
+        className="min-h-screen overflow-x-hidden bg-slate-50 lg:fixed lg:inset-0 lg:h-[100dvh] lg:overflow-hidden"
+      >
       <div className="min-h-screen lg:min-h-0">
         <aside
           data-layout="juniors-fixed-hero"
@@ -720,6 +784,19 @@ export function KidsTrialForm() {
                     />
                     {errors.childAge ? <p className={FIELD_ERROR_CLASS}>{errors.childAge}</p> : null}
                   </div>
+
+                  <div className={FIELD_GROUP_CLASS}>
+                    <Label htmlFor="childDateOfBirth" className={FIELD_LABEL_CLASS}>Child date of birth <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="childDateOfBirth"
+                      name="childDateOfBirth"
+                      type="date"
+                      value={formData.childDateOfBirth}
+                      onChange={(event) => handleInputChange("childDateOfBirth", event.target.value)}
+                      className={cn(FIELD_CONTROL_CLASS, errors.childDateOfBirth && FIELD_INVALID_CLASS)}
+                    />
+                    {errors.childDateOfBirth ? <p className={FIELD_ERROR_CLASS}>{errors.childDateOfBirth}</p> : null}
+                  </div>
                   </div>
                 </div>
 
@@ -813,17 +890,98 @@ export function KidsTrialForm() {
                   </div>
                 </div>
 
-                  <div className="mt-6 border-t border-slate-200/80 pt-6">
-                    <div className="space-y-2">
-                      <label className="flex cursor-pointer items-start gap-3 rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-4 text-sm leading-6 text-slate-800 transition-all hover:border-slate-300 hover:bg-white">
-                        <Checkbox
-                          checked={formData.acceptedTerms}
-                          onCheckedChange={(checked) => handleInputChange("acceptedTerms", Boolean(checked))}
-                          className={cn("mt-0.5", errors.acceptedTerms && "border-destructive")}
-                        />
-                        <span>I accept the waiver and consent to be contacted about {JUNIORS_PROGRAM_NAME}. <span className="text-destructive">*</span></span>
-                      </label>
-                      {errors.acceptedTerms ? <p className={FIELD_ERROR_CLASS}>{errors.acceptedTerms}</p> : null}
+                  <div className="mt-6 space-y-5 border-t border-slate-200/80 pt-6">
+                    <div className={cn(SECTION_PANEL_CLASS, "bg-white")}>
+                      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className={cn(SECTION_ICON_CLASS, "border-amber-100 text-amber-700 ring-amber-50")}>
+                            <FileText className="h-5 w-5 stroke-[1.8]" />
+                          </div>
+                          <div>
+                            <h3 className={SECTION_TITLE_CLASS}>Consent and parent signature</h3>
+                            <p className="mt-1 text-sm leading-6 text-slate-600">
+                              Review the Juniors consent form, then sign so the consent can be recorded on the Momence member profile.
+                            </p>
+                          </div>
+                        </div>
+                        <p className={cn(SECTION_BADGE_CLASS, "border-amber-100 text-amber-700")}>Required</p>
+                      </div>
+
+                      <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
+                        <p>
+                          Parent/guardian confirms capacity to consent, health declaration, release and indemnity, personal information consent, and class policies for {JUNIORS_PROGRAM_NAME}.{" "}
+                          <button
+                            type="button"
+                            data-consent-modal-trigger
+                            onClick={() => setShowConsentModal(true)}
+                            className="font-bold text-slate-950 underline underline-offset-4"
+                          >
+                            Juniors consent form
+                          </button>
+                        </p>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-1 gap-4">
+                        <div className={FIELD_GROUP_CLASS}>
+                          <Label htmlFor="signatureName" className={FIELD_LABEL_CLASS}>
+                            Parent/guardian signature name <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="signatureName"
+                            name="signatureName"
+                            value={formData.signatureName}
+                            onChange={(event) => handleInputChange("signatureName", event.target.value)}
+                            placeholder="Asha Shah"
+                            className={cn(FIELD_CONTROL_CLASS, errors.signatureName && FIELD_INVALID_CLASS)}
+                          />
+                          {errors.signatureName ? <p className={FIELD_ERROR_CLASS}>{errors.signatureName}</p> : null}
+                        </div>
+
+                        <div className={FIELD_GROUP_CLASS}>
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <PenLine className="h-4 w-4" />
+                            <Label className={FIELD_LABEL_CLASS}>Parent/guardian drawn signature <span className="text-destructive">*</span></Label>
+                          </div>
+                          <SignaturePad
+                            ref={signaturePadRef}
+                            label="Signature"
+                            onChange={(signed) => {
+                              setHasSignature(signed)
+                              if (signed) {
+                                setErrors((current) => ({ ...current, signatureRealSignature: "" }))
+                              }
+                            }}
+                          />
+                          {errors.signatureRealSignature ? <p className={FIELD_ERROR_CLASS}>{errors.signatureRealSignature}</p> : null}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-start gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-4 text-sm leading-6 text-slate-800 transition-all hover:border-slate-300 hover:bg-slate-50">
+                          <Label htmlFor="kidsAcceptedTerms" className="sr-only">
+                            Accept Juniors consent form
+                          </Label>
+                          <Checkbox
+                            id="kidsAcceptedTerms"
+                            checked={formData.acceptedTerms}
+                            onCheckedChange={(checked) => handleInputChange("acceptedTerms", Boolean(checked))}
+                            className={cn("mt-0.5", errors.acceptedTerms && "border-destructive")}
+                          />
+                          <span>
+                            I have read, signed, and accept the{" "}
+                            <button
+                              type="button"
+                              data-consent-modal-trigger
+                              onClick={() => setShowConsentModal(true)}
+                              className="font-bold text-slate-950 underline underline-offset-4"
+                            >
+                              Juniors consent form
+                            </button>{" "}
+                            and consent to be contacted about {JUNIORS_PROGRAM_NAME}. <span className="text-destructive">*</span>
+                          </span>
+                        </div>
+                        {errors.acceptedTerms ? <p className={FIELD_ERROR_CLASS}>{errors.acceptedTerms}</p> : null}
+                      </div>
                     </div>
 
                     {statusMessage ? (
@@ -962,6 +1120,86 @@ export function KidsTrialForm() {
           </div>
         </section>
       </div>
-    </main>
+      </main>
+      <LegalConsentModal
+        open={showConsentModal}
+        onClose={() => setShowConsentModal(false)}
+        customerName={(formData.signatureName || `${formData.firstName} ${formData.lastName}`).trim()}
+        customerEmail={formData.email}
+      />
+    </>
+  )
+}
+
+function LegalConsentModal({
+  open,
+  onClose,
+  customerName,
+  customerEmail,
+}: {
+  open: boolean
+  onClose: () => void
+  customerName?: string
+  customerEmail?: string
+}) {
+  if (!open) {
+    return null
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 px-3 py-5 backdrop-blur-sm sm:px-5"
+      onClick={onClose}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="kids-consent-modal-title"
+        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[10px] border border-slate-300 bg-white shadow-[0_36px_110px_rgba(15,23,42,0.42)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="border-b border-slate-200 bg-slate-950 px-5 py-5 text-white sm:px-7">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10">
+                <Scale className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">Document Review Copy</p>
+                <h2 id="kids-consent-modal-title" className="mt-1 text-2xl font-bold tracking-normal text-white">
+                  Child Booking Waiver
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-white/72">
+                  Physique 57 Juniors parent/guardian waiver, privacy consent, and class policy terms.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Close consent form"
+              onClick={onClose}
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white hover:text-slate-950"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100 px-3 py-4 sm:px-5">
+          <KidsConsentDocument customerName={customerName} customerEmail={customerEmail} />
+        </div>
+
+        <footer className="border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-5 text-slate-500">
+              The parent/guardian signature entered on the registration form will be submitted to Momence against this waiver.
+            </p>
+            <Button type="button" onClick={onClose} className="h-11 bg-slate-950 px-5 text-white hover:bg-slate-800">
+              I have reviewed this waiver
+            </Button>
+          </div>
+        </footer>
+      </section>
+    </div>
   )
 }

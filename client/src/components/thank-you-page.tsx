@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import {
+  CalendarCheck2,
   CheckCircle2,
   ExternalLink,
   MapPin,
   Phone,
+  Shield,
+  Sparkles,
 } from "lucide-react"
 
 import { studios } from "@/data/physique57"
@@ -21,6 +24,25 @@ import { Button } from "@/components/ui/button"
 
 const BRAND_LOGO_URL = new URL("../assets/physique57-logo.jpg", import.meta.url).href
 const FALLBACK_SCHEDULE_URL = "https://momence.com/u/physique-57-india-fffoSp"
+const KIDS_THANK_YOU_HERO_IMAGES = [
+  {
+    src: "/p57-assets/p57-juniors-hero-2026-1.png",
+    alt: "Physique 57 Juniors class moment",
+  },
+  {
+    src: "/p57-assets/p57-juniors-hero-2026-2.png",
+    alt: "Young movers practicing at Physique 57 Juniors",
+  },
+  {
+    src: "/p57-assets/p57-juniors-hero-2026-3.png",
+    alt: "Physique 57 Juniors studio practice",
+  },
+  {
+    src: "/p57-assets/p57-juniors-hero-2026-4.png",
+    alt: "Physique 57 Juniors movement session",
+  },
+]
+const KIDS_THANK_YOU_GALLERY_IMAGES = KIDS_THANK_YOU_HERO_IMAGES.slice(1)
 const THANK_YOU_HERO_IMAGE = "/p57-assets/p57-barre-group.jpg"
 const THANK_YOU_GALLERY_IMAGES = [
   {
@@ -124,6 +146,156 @@ function StudioMap({
   )
 }
 
+function KidsHeroImage() {
+  const [primaryImage] = KIDS_THANK_YOU_HERO_IMAGES
+
+  return (
+    <div className="relative min-h-[420px] overflow-hidden rounded-[8px] bg-slate-900 shadow-[0_28px_80px_rgba(15,23,42,0.28)] sm:min-h-[560px] lg:min-h-[calc(100vh-4rem)]">
+      <img src={primaryImage.src} alt={primaryImage.alt} className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/72 to-transparent p-5 text-white">
+        <p className="max-w-xs text-sm font-semibold leading-6">A confident first step into the Physique 57 Juniors practice.</p>
+      </div>
+    </div>
+  )
+}
+
+function KidsThankYouPage({
+  successPayload,
+  selectedStudio,
+  scheduleUrl,
+  studioName,
+}: {
+  successPayload: TrialSuccessPayload | null
+  selectedStudio: typeof studios[number] | undefined
+  scheduleUrl: string
+  studioName: string
+}) {
+  const childName = successPayload?.childName?.trim()
+  const batch = successPayload?.batch?.trim()
+  const nextSteps = [
+    {
+      title: "Studio team follow-up",
+      text: "We will confirm the selected Juniors batch and help with any first-session details.",
+      icon: Phone,
+    },
+    {
+      title: "Consent recorded",
+      text: "The parent/guardian signature is submitted against the Juniors waiver on the member profile.",
+      icon: Shield,
+    },
+    {
+      title: "First session prep",
+      text: "Arrive a little early so your child can settle in and meet the instructor before class.",
+      icon: CalendarCheck2,
+    },
+  ]
+
+  return (
+    <main className="min-h-screen bg-slate-50 text-slate-950">
+      <section className="overflow-hidden bg-white">
+        <div className="mx-auto grid min-h-screen max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-8">
+          <div className="flex flex-col justify-between gap-10 py-2 lg:py-4">
+            <img src={BRAND_LOGO_URL} alt="Physique 57 India" className="h-auto w-24 object-contain sm:w-32" />
+
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                Your Juniors request is in
+              </div>
+              <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-normal text-slate-950 sm:text-5xl lg:text-6xl">
+                Thank you{successPayload?.firstName ? `, ${successPayload.firstName}` : ""}. We are preparing your child's first Juniors session.
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+                Our team will contact you shortly to confirm the best class timing and make the first studio visit feel clear, calm, and confident.
+              </p>
+
+              <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Studio</p>
+                  <p className="mt-2 text-base font-bold leading-6 text-slate-950">{studioName}</p>
+                  {selectedStudio?.neighborhood ? (
+                    <p className="mt-1 text-sm text-slate-600">{selectedStudio.neighborhood}</p>
+                  ) : null}
+                </div>
+                <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Juniors class</p>
+                  <p className="mt-2 text-base font-bold leading-6 text-slate-950">{batch || successPayload?.classType || "Physique 57 - Juniors"}</p>
+                  {childName ? <p className="mt-1 text-sm text-slate-600">For {childName}</p> : null}
+                </div>
+              </div>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Button asChild className="h-12 rounded-[8px] bg-slate-950 px-5 text-white hover:bg-slate-800">
+                  <a href={scheduleUrl}>
+                    View schedule <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+                <Button asChild variant="outline" className="h-12 rounded-[8px] border-slate-300 px-5 text-slate-950 hover:bg-slate-100">
+                  <a href="/kids">
+                    Back to Juniors
+                  </a>
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 border-t border-slate-200 pt-5 text-sm text-slate-600 sm:grid-cols-3">
+              <div className="flex items-center gap-2 font-semibold text-slate-800">
+                <Sparkles className="h-4 w-4 text-rose-600" />
+                Ages 9-13
+              </div>
+              <div className="flex items-center gap-2 font-semibold text-slate-800">
+                <Shield className="h-4 w-4 text-emerald-600" />
+                Low impact
+              </div>
+              <div className="flex items-center gap-2 font-semibold text-slate-800">
+                <CalendarCheck2 className="h-4 w-4 text-sky-600" />
+                Instructor led
+              </div>
+            </div>
+          </div>
+
+          <KidsHeroImage />
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-16">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">What happens next for your child</p>
+          <h2 className="mt-3 text-3xl font-bold leading-tight text-slate-950">A simple path from request to first class.</h2>
+        </div>
+        <div className="grid gap-3">
+          {nextSteps.map((step, index) => {
+            const Icon = step.icon
+
+            return (
+              <div key={step.title} className="grid gap-4 rounded-[8px] border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-[auto_1fr] sm:p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Step {index + 1}</p>
+                  <h3 className="mt-1 text-lg font-bold text-slate-950">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{step.text}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
+        <div className="grid gap-3 border-t border-slate-200 pt-6 sm:grid-cols-3">
+          {KIDS_THANK_YOU_GALLERY_IMAGES.map((image) => (
+            <div key={image.src} className="overflow-hidden rounded-[8px] bg-slate-900">
+              <img src={image.src} alt={image.alt} className="h-64 w-full object-cover sm:h-72" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </main>
+  )
+}
+
 export function ThankYouPage() {
   const [successPayload] = useState<TrialSuccessPayload | null>(() => readTrialSuccessPayload())
 
@@ -138,6 +310,7 @@ export function ThankYouPage() {
   const scheduleUrl = getScheduleUrl(successPayload)
   const classType = successPayload?.classType || successPayload?.formatName || "Signature Experience"
   const studioName = successPayload?.studioName || selectedStudio?.name || "Physique 57 India"
+  const isKidsSubmission = successPayload?.sourceForm === "kids-trial-form"
 
   useEffect(() => {
     if (!successPayload?.leadTracking?.event_id && !successPayload?.eventId) {
@@ -166,6 +339,17 @@ export function ThankYouPage() {
       }
     })()
   }, [successPayload])
+
+  if (isKidsSubmission) {
+    return (
+      <KidsThankYouPage
+        successPayload={successPayload}
+        selectedStudio={selectedStudio}
+        scheduleUrl={scheduleUrl}
+        studioName={studioName}
+      />
+    )
+  }
 
   return (
     <main className="min-h-screen bg-white text-zinc-950">

@@ -39,6 +39,8 @@ export interface TrialSuccessPayload {
   studioLocationId?: string
   formatName?: string
   classType?: string
+  childName?: string
+  batch?: string
   sourceForm?: string
   statusMessage?: string
   redirectUrl?: string

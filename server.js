@@ -29,6 +29,12 @@ const KIDS_ROUTE_META = {
   image: '/p57-assets/p57-juniors-hero-2026-1.png',
   imageAlt: 'Young movers at a Physique 57 Juniors barre session'
 };
+const KIDS_CONSENT_ROUTE_META = {
+  title: 'Physique 57 Juniors | Consent Form',
+  description: 'Review the Physique 57 Juniors release, indemnity, privacy consent, and class policy terms before signing.',
+  image: '/p57-assets/p57-juniors-hero-2026-1.png',
+  imageAlt: 'Physique 57 Juniors consent form'
+};
 const googleSheets = new GoogleSheetsService();
 const supabaseLeadStore = new SupabaseLeadStore();
 const scheduleService = new ScheduleService();
@@ -42,13 +48,23 @@ const KIDS_CLASS_TYPE = 'Physique 57 - Juniors';
 const KIDS_SOURCE_FORM = 'kids-trial-form';
 const DEFAULT_REGULAR_MOMENCE_SOURCE_ID = '8082';
 const DEFAULT_KIDS_MOMENCE_SOURCE_ID = '212426';
+const DEFAULT_MOMENCE_HOST_ID = 13752;
+const MOMENCE_DASHBOARD_ORIGIN = 'https://momence.com';
+const DEFAULT_MOMENCE_DASHBOARD_BASE_URL = `${MOMENCE_DASHBOARD_ORIGIN}/_api/primary`;
+const DEFAULT_KIDS_PARENT_CONSENT_PREDEFINED_WAIVER_IDS = ['waiver', 'membership-waiver'];
+const DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS = ['child-waiver'];
+const DEFAULT_KIDS_CONSENT_PREDEFINED_WAIVER_IDS = [
+  ...DEFAULT_KIDS_PARENT_CONSENT_PREDEFINED_WAIVER_IDS,
+  ...DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS
+];
+const DEFAULT_MOMENCE_CHILD_DOB_CUSTOMER_FIELD_ID = 6592;
 const KIDS_BATCH_OPTIONS = {
   'Supreme Headquarters, Bandra': [
-    'Tuesday & Friday - 4:30 PM - Simonelle & Cauveri'
+    'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri'
   ],
   'Kwality House, Kemps Corner': [
-    'Batch 1 - Monday & Wednesday - 4:30 PM - Cauveri & Karan',
-    'Batch 2 - Tuesday & Thursday - 11:30 AM - Karan & Cauveri'
+    'Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir',
+    'Batch B - Monday & Wednesday - 4:30 PM - Mon: Cauveri, Wed: Pranjali'
   ]
 };
 
@@ -297,6 +313,404 @@ function parseList(value, fallback = []) {
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function splitSetCookieHeader(value) {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+
+  return String(value)
+    .split(/,(?=\s*[A-Za-z0-9!#$%&'*+\-.^_`|~]+=)/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function getResponseSetCookieHeaders(headers) {
+  if (!headers) {
+    return [];
+  }
+
+  if (typeof headers.getSetCookie === 'function') {
+    return headers.getSetCookie();
+  }
+
+  if (typeof headers.raw === 'function') {
+    const rawHeaders = headers.raw();
+    return rawHeaders?.['set-cookie'] || rawHeaders?.['Set-Cookie'] || [];
+  }
+
+  if (typeof headers.get === 'function') {
+    return splitSetCookieHeader(headers.get('set-cookie'));
+  }
+
+  return splitSetCookieHeader(headers['set-cookie'] || headers['Set-Cookie']);
+}
+
+function normalizeCookiePairs(cookieValues) {
+  const pairsByName = new Map();
+
+  splitSetCookieHeader(cookieValues).forEach((rawCookie) => {
+    const pair = String(rawCookie || '').split(';')[0].trim();
+    if (!pair || !pair.includes('=')) {
+      return;
+    }
+
+    const name = pair.slice(0, pair.indexOf('=')).trim();
+    if (name) {
+      pairsByName.set(name, pair);
+    }
+  });
+
+  return [...pairsByName.values()].join('; ');
+}
+
+function mergeCookieStrings(...cookieStrings) {
+  const pairsByName = new Map();
+
+  cookieStrings.filter(Boolean).forEach((cookieString) => {
+    String(cookieString)
+      .split(';')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry && entry.includes('='))
+      .forEach((pair) => {
+        const name = pair.slice(0, pair.indexOf('=')).trim();
+        if (name) {
+          pairsByName.set(name, pair);
+        }
+      });
+  });
+
+  return [...pairsByName.values()].join('; ');
+}
+
+function readEnvFileProperties(envFilePath) {
+  if (!envFilePath || !fs.existsSync(envFilePath)) {
+    return {};
+  }
+
+  return fs.readFileSync(envFilePath, 'utf8')
+    .split(/\r?\n/)
+    .reduce((values, line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) {
+        return values;
+      }
+
+      const index = trimmed.indexOf('=');
+      const key = trimmed.slice(0, index).trim();
+      const value = trimmed.slice(index + 1).trim().replace(/^["']|["']$/g, '');
+      if (key) {
+        values[key] = value;
+      }
+      return values;
+    }, {});
+}
+
+function escapeEnvValue(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function updateEnvFileProperties(envFilePath, properties) {
+  if (!envFilePath) {
+    return;
+  }
+
+  const existingContent = fs.existsSync(envFilePath) ? fs.readFileSync(envFilePath, 'utf8') : '';
+  const pendingKeys = new Set(Object.keys(properties));
+  const lines = existingContent.split(/\r?\n/).map((line) => {
+    const match = line.match(/^(\s*([A-Za-z_][A-Za-z0-9_]*)\s*=).*/);
+    if (!match || !pendingKeys.has(match[2])) {
+      return line;
+    }
+
+    pendingKeys.delete(match[2]);
+    return `${match[2]}="${escapeEnvValue(properties[match[2]])}"`;
+  });
+
+  pendingKeys.forEach((key) => {
+    lines.push(`${key}="${escapeEnvValue(properties[key])}"`);
+  });
+
+  const cleanedLines = lines.filter((line, index) => index < lines.length - 1 || line.trim());
+  fs.writeFileSync(envFilePath, `${cleanedLines.join('\n')}\n`, 'utf8');
+}
+
+function decodeBase32(value) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const normalized = String(value || '').toUpperCase().replace(/=+$/g, '').replace(/[^A-Z2-7]/g, '');
+  let bits = '';
+
+  normalized.split('').forEach((character) => {
+    const index = alphabet.indexOf(character);
+    if (index >= 0) {
+      bits += index.toString(2).padStart(5, '0');
+    }
+  });
+
+  const bytes = [];
+  for (let index = 0; index + 8 <= bits.length; index += 8) {
+    bytes.push(Number.parseInt(bits.slice(index, index + 8), 2));
+  }
+
+  return Buffer.from(bytes);
+}
+
+function generateTotp(secret, timestamp = Date.now()) {
+  const key = decodeBase32(secret);
+  if (!key.length) {
+    throw new Error('Momence TOTP secret is invalid.');
+  }
+
+  const counter = Math.floor(timestamp / 30000);
+  const counterBuffer = Buffer.alloc(8);
+  counterBuffer.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
+  counterBuffer.writeUInt32BE(counter >>> 0, 4);
+
+  const hmac = crypto.createHmac('sha1', key).update(counterBuffer).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code = ((hmac[offset] & 0x7f) << 24)
+    | ((hmac[offset + 1] & 0xff) << 16)
+    | ((hmac[offset + 2] & 0xff) << 8)
+    | (hmac[offset + 3] & 0xff);
+
+  return String(code % 1000000).padStart(6, '0');
+}
+
+function getCookieValue(cookies = '', name = '') {
+  return String(cookies || '')
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+}
+
+function normalizeKidsConsentPredefinedWaiverIds(
+  waiverIds,
+  fallback = DEFAULT_KIDS_CONSENT_PREDEFINED_WAIVER_IDS
+) {
+  const normalizedWaiverIds = [];
+  const seenWaiverIds = new Set();
+
+  parseList(waiverIds, fallback)
+    .forEach((waiverId) => {
+      if (waiverId && !seenWaiverIds.has(waiverId)) {
+        seenWaiverIds.add(waiverId);
+        normalizedWaiverIds.push(waiverId);
+      }
+    });
+
+  return normalizedWaiverIds;
+}
+
+function resolveKidsConsentPredefinedWaiverIds() {
+  return normalizeKidsConsentPredefinedWaiverIds(process.env.MOMENCE_KIDS_CONSENT_PREDEFINED_WAIVER_IDS);
+}
+
+function resolveKidsParentConsentPredefinedWaiverIds() {
+  const configuredWaiverIds = process.env.MOMENCE_KIDS_PARENT_CONSENT_PREDEFINED_WAIVER_IDS
+    || process.env.MOMENCE_KIDS_CONSENT_PREDEFINED_WAIVER_IDS;
+  const parentWaiverIds = normalizeKidsConsentPredefinedWaiverIds(
+    configuredWaiverIds,
+    DEFAULT_KIDS_PARENT_CONSENT_PREDEFINED_WAIVER_IDS
+  ).filter((waiverId) => !DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS.includes(waiverId));
+
+  return parentWaiverIds.length
+    ? parentWaiverIds
+    : [...DEFAULT_KIDS_PARENT_CONSENT_PREDEFINED_WAIVER_IDS];
+}
+
+function resolveKidsChildConsentPredefinedWaiverIds() {
+  const configuredWaiverIds = process.env.MOMENCE_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS
+    || process.env.MOMENCE_KIDS_CONSENT_PREDEFINED_WAIVER_IDS;
+  const childWaiverIds = normalizeKidsConsentPredefinedWaiverIds(
+    configuredWaiverIds,
+    DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS
+  ).filter((waiverId) => DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS.includes(waiverId));
+
+  return childWaiverIds.length
+    ? childWaiverIds
+    : [...DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS];
+}
+
+function resolveMomenceAuthConfig(options = {}) {
+  const envFilePath = options.envFilePath || process.env.MOMENCE_ENV_FILE || path.join(__dirname, '.env');
+  const envFileValues = readEnvFileProperties(envFilePath);
+  const preferEnvFile = Boolean(options.envFilePath);
+  const readValue = (optionKey, envKey = optionKey, fallback = '') => String(
+    options[optionKey]
+    || options[envKey]
+    || (preferEnvFile ? envFileValues[envKey] : process.env[envKey])
+    || (preferEnvFile ? process.env[envKey] : envFileValues[envKey])
+    || fallback
+  ).trim();
+
+  return {
+    envFilePath,
+    loginUrl: readValue('loginUrl', 'MOMENCE_DASHBOARD_LOGIN_URL', 'https://api.momence.com/auth/login'),
+    mfaUrl: readValue('mfaUrl', 'MOMENCE_DASHBOARD_MFA_URL', 'https://api.momence.com/auth/mfa/totp/verify'),
+    loginEmail: readValue('loginEmail', 'MOMENCE_LOGIN_EMAIL'),
+    loginPassword: readValue('loginPassword', 'MOMENCE_LOGIN_PASSWORD'),
+    totpSecret: readValue('totpSecret', 'MOMENCE_TOTP_SECRET'),
+    existingCookies: String(options.existingCookies || process.env.MOMENCE_ALL_COOKIES || envFileValues.MOMENCE_ALL_COOKIES || '').trim()
+  };
+}
+
+async function readJsonResponse(response) {
+  const responseText = await response.text();
+  if (!responseText) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch (error) {
+    return {};
+  }
+}
+
+function extractMomenceAuthTokens(body = {}, headers = {}) {
+  const authHeader = typeof headers.get === 'function'
+    ? headers.get('authorization')
+    : headers.authorization || headers.Authorization;
+  const bearerMatch = authHeader ? String(authHeader).match(/Bearer\s+(.+)/i) : null;
+
+  return {
+    access_token: String(
+      body.access_token
+      || body.token
+      || body?.tokens?.access_token
+      || body?.auth?.access_token
+      || body?.data?.access_token
+      || body?.data?.token
+      || bearerMatch?.[1]
+      || ''
+    ).trim(),
+    refresh_token: String(
+      body.refresh_token
+      || body?.tokens?.refresh_token
+      || body?.auth?.refresh_token
+      || body?.data?.refresh_token
+      || ''
+    ).trim()
+  };
+}
+
+function isDashboardCookieFailureStatus(status) {
+  return [401, 403, 419, 440].includes(Number(status));
+}
+
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function authenticateMomenceDashboard(options = {}) {
+  const fetchImpl = options.fetchImpl || fetch;
+  const config = resolveMomenceAuthConfig(options);
+
+  if (!config.loginEmail || !config.loginPassword || !config.totpSecret) {
+    throw new Error('Momence dashboard login refresh is not configured. Set MOMENCE_LOGIN_EMAIL, MOMENCE_LOGIN_PASSWORD, and MOMENCE_TOTP_SECRET.');
+  }
+
+  const loginResponse = await fetchImpl(config.loginUrl, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      email: config.loginEmail,
+      password: config.loginPassword,
+      deviceData: {
+        browser: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        screen: { width: 1470, height: 956 }
+      }
+    })
+  });
+
+  const loginBody = await readJsonResponse(loginResponse);
+  if (!loginResponse.ok) {
+    throw new Error(`Momence dashboard login failed: ${loginResponse.status}`);
+  }
+
+  const loginCookies = normalizeCookiePairs(getResponseSetCookieHeaders(loginResponse.headers));
+  const loginCookieHeader = mergeCookieStrings(config.existingCookies, loginCookies);
+  let mfaResponse = null;
+  let mfaBody = {};
+  let tokens = { access_token: '', refresh_token: '' };
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const token = generateTotp(config.totpSecret);
+    mfaResponse = await fetchImpl(config.mfaUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...(loginCookieHeader ? { Cookie: loginCookieHeader } : {})
+      },
+      body: JSON.stringify({
+        token,
+        deviceData: {
+          browser: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0',
+          screen: { width: 1470, height: 956 }
+        },
+        trustDevice: true
+      })
+    });
+    mfaBody = await readJsonResponse(mfaResponse);
+
+    if (!mfaResponse.ok) {
+      if (attempt === 3) {
+        throw new Error(`Momence dashboard MFA failed: ${mfaResponse.status}`);
+      }
+      await sleep(1200);
+      continue;
+    }
+
+    tokens = extractMomenceAuthTokens(mfaBody, mfaResponse.headers);
+    break;
+  }
+
+  if (!mfaResponse?.ok) {
+    throw new Error('Momence dashboard MFA did not complete.');
+  }
+
+  const mfaCookies = normalizeCookiePairs(getResponseSetCookieHeaders(mfaResponse.headers));
+  const cookies = mergeCookieStrings(config.existingCookies, loginCookies, mfaCookies);
+  if (!cookies) {
+    throw new Error('Momence dashboard login did not return cookies.');
+  }
+
+  const properties = {
+    MOMENCE_ALL_COOKIES: cookies,
+    MOMENCE_SET_COOKIE: mergeCookieStrings(loginCookies, mfaCookies),
+    MOMENCE_ACCESS_TOKEN: tokens.access_token,
+    MOMENCE_REFRESH_TOKEN: tokens.refresh_token,
+    MOMENCE_RESPONSE: JSON.stringify(mfaBody || {})
+  };
+  Object.entries(properties).forEach(([key, value]) => {
+    process.env[key] = value;
+  });
+  updateEnvFileProperties(config.envFilePath, properties);
+
+  if (process.env.MOMENCE_AUTH_BACKUP_PATH) {
+    fs.writeFileSync(process.env.MOMENCE_AUTH_BACKUP_PATH, JSON.stringify({
+      savedAt: new Date().toISOString(),
+      cookies,
+      tokens,
+      loginResponse: loginBody,
+      mfaResponse: mfaBody
+    }, null, 2), 'utf8');
+  }
+
+  return {
+    cookies,
+    tokens
+  };
 }
 
 function parseJson(value, fallback) {
@@ -586,6 +1000,57 @@ function buildStudioComplimentaryClassMembershipConfig(overrides = {}) {
   return deepMerge(membership, overrides);
 }
 
+function dashboardWaiverSignPageUrl({ hostId, memberId, waiverId, signatureKey }) {
+  return `${MOMENCE_DASHBOARD_ORIGIN}/dashboard/${hostId}/crm/${memberId}/waivers/${encodeURIComponent(waiverId)}/sign?signature=${encodeURIComponent(signatureKey)}&returnTo=/dashboard/${hostId}/crm/${memberId}`;
+}
+
+function buildDashboardPublicWaiverSignRequests({
+  hostId,
+  memberId,
+  realSignature,
+  waivers,
+  predefinedWaiverIds = new Set(DEFAULT_KIDS_CONSENT_PREDEFINED_WAIVER_IDS)
+}) {
+  const availableWaiversById = new Map(
+    (Array.isArray(waivers) ? waivers : [])
+      .filter((waiver) => typeof waiver?.id === 'string')
+      .map((waiver) => [waiver.id, waiver])
+  );
+
+  return [...predefinedWaiverIds].flatMap((waiverId) => {
+    const waiver = availableWaiversById.get(waiverId);
+    if (
+      waiver?.type !== 'predefined'
+      || typeof waiver.id !== 'string'
+      || waiver.signatureStatus === 'signed'
+      || !waiver.signatureKey
+      || !predefinedWaiverIds.has(waiver.id)
+    ) {
+      return [];
+    }
+
+    const signatureKey = String(waiver.signatureKey);
+    const signPageUrl = dashboardWaiverSignPageUrl({
+      hostId,
+      memberId,
+      waiverId,
+      signatureKey
+    });
+
+    return [
+      {
+        path: `/public/hosts/${hostId}/members/${memberId}/waivers/${encodeURIComponent(waiverId)}/sign?signatureKey=${encodeURIComponent(signatureKey)}`,
+        method: 'POST',
+        body: { realSignature },
+        headers: {
+          Referer: signPageUrl,
+          'X-Origin': signPageUrl
+        }
+      }
+    ];
+  });
+}
+
 class MomencePublicApiClient {
   constructor(config = {}) {
     this.apiBaseUrl = String(config.apiBaseUrl || process.env.MOMENCE_API_V2_BASE_URL || 'https://api.momence.com/api/v2').replace(/\/$/, '');
@@ -597,6 +1062,12 @@ class MomencePublicApiClient {
     this.kwalityHomeLocationId = parseInteger(config.kwalityHomeLocationId ?? process.env.MOMENCE_KWALITY_HOME_LOCATION_ID, this.homeLocationId);
     this.fetchImpl = config.fetchImpl || fetch;
     this.accessToken = String(config.accessToken || '').trim();
+    this.hostId = parseInteger(config.hostId ?? process.env.MOMENCE_HOST_ID, DEFAULT_MOMENCE_HOST_ID);
+    this.dashboardBaseUrl = String(config.dashboardBaseUrl || process.env.MOMENCE_DASHBOARD_BASE_URL || DEFAULT_MOMENCE_DASHBOARD_BASE_URL).replace(/\/$/, '');
+    this.dashboardCookies = String(config.dashboardCookies || process.env.MOMENCE_ALL_COOKIES || '').trim();
+    this.envFilePath = String(config.envFilePath || process.env.MOMENCE_ENV_FILE || path.join(__dirname, '.env'));
+    this.dashboardCookieRefreshEnabled = config.dashboardCookieRefreshEnabled !== false
+      && !parseBoolean(process.env.MOMENCE_DISABLE_COOKIE_REFRESH, false);
   }
 
   assertConfigured() {
@@ -674,6 +1145,92 @@ class MomencePublicApiClient {
     return data;
   }
 
+  assertDashboardConfigured() {
+    if (!this.dashboardCookies) {
+      throw new Error('Momence dashboard consent signing is not configured. Set MOMENCE_ALL_COOKIES.');
+    }
+
+    if (!this.hostId) {
+      throw new Error('Momence host id is missing for consent signing.');
+    }
+  }
+
+  async executeDashboardRequest(pathname, options = {}) {
+    this.assertDashboardConfigured();
+
+    const csrfToken = getCookieValue(this.dashboardCookies, 'csrf_token');
+    const response = await this.fetchImpl(`${this.dashboardBaseUrl}${pathname}`, {
+      ...options,
+      method: options.method || 'GET',
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        'Content-Type': 'application/json',
+        Cookie: this.dashboardCookies,
+        Origin: MOMENCE_DASHBOARD_ORIGIN,
+        'X-App': 'dashboard',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        ...(options.headers || {})
+      }
+    });
+
+    const responseText = await response.text();
+    let data = {};
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText);
+      } catch (error) {
+        data = {};
+      }
+    }
+
+    return {
+      data,
+      ok: response.ok,
+      responseText,
+      status: response.status,
+      statusText: response.statusText
+    };
+  }
+
+  async refreshDashboardCookies() {
+    const authResult = await authenticateMomenceDashboard({
+      fetchImpl: this.fetchImpl,
+      envFilePath: this.envFilePath,
+      existingCookies: this.dashboardCookies
+    });
+    this.dashboardCookies = authResult.cookies;
+    return authResult;
+  }
+
+  async dashboardRequest(pathname, options = {}) {
+    const firstAttempt = await this.executeDashboardRequest(pathname, options);
+    if (firstAttempt.ok) {
+      return firstAttempt.data;
+    }
+
+    if (
+      this.dashboardCookieRefreshEnabled
+      && !options.skipCookieRefresh
+      && isDashboardCookieFailureStatus(firstAttempt.status)
+    ) {
+      try {
+        await this.refreshDashboardCookies();
+        const retryAttempt = await this.executeDashboardRequest(pathname, {
+          ...options,
+          skipCookieRefresh: true
+        });
+        if (retryAttempt.ok) {
+          return retryAttempt.data;
+        }
+        throw new Error(`Momence dashboard request failed after cookie refresh: ${retryAttempt.status} ${retryAttempt.responseText || retryAttempt.statusText}`.trim());
+      } catch (refreshError) {
+        throw new Error(`Momence dashboard request failed: ${firstAttempt.status} ${firstAttempt.responseText || firstAttempt.statusText}; cookie refresh failed: ${refreshError.message || refreshError}`.trim());
+      }
+    }
+
+    throw new Error(`Momence dashboard request failed: ${firstAttempt.status} ${firstAttempt.responseText || firstAttempt.statusText}`.trim());
+  }
+
   parseMember(member, action = 'found_existing') {
     return {
       memberId: Number(member.memberId || member.id || 0),
@@ -703,6 +1260,66 @@ class MomencePublicApiClient {
     }
 
     return [];
+  }
+
+  getChildAccountsFromResponse(data) {
+    const collect = (value) => {
+      if (!value) {
+        return [];
+      }
+
+      if (Array.isArray(value)) {
+        return value.flatMap((item) => collect(item));
+      }
+
+      if (!isPlainObject(value)) {
+        return [];
+      }
+
+      for (const key of [
+        'children',
+        'child',
+        'customers',
+        'customer',
+        'members',
+        'member',
+        'payload',
+        'data',
+        'items',
+        'results',
+        'rows',
+        'records'
+      ]) {
+        const nestedChildren = collect(value[key]);
+        if (nestedChildren.length) {
+          return nestedChildren;
+        }
+      }
+
+      if (
+        value.memberId
+        || value.member_id
+        || value.customerId
+        || value.customer_id
+        || value.id
+      ) {
+        return [value];
+      }
+
+      return [];
+    };
+
+    return collect(data);
+  }
+
+  parseChildAccount(child, action = 'created_or_found_child') {
+    return {
+      memberId: Number(child.memberId || child.member_id || child.customerId || child.customer_id || child.id || 0),
+      email: String(child.email || ''),
+      firstName: String(child.firstName || child.first_name || ''),
+      lastName: String(child.lastName || child.last_name || ''),
+      action
+    };
   }
 
   async listMembers(query) {
@@ -771,6 +1388,36 @@ class MomencePublicApiClient {
     return this.createMember(input);
   }
 
+  async createChildAccountForMember(parentMemberId, childInput = {}) {
+    const memberId = Number(parentMemberId);
+    if (!memberId) {
+      throw new Error('Parent Momence member id is required before creating a child account.');
+    }
+
+    const crmUrl = `${MOMENCE_DASHBOARD_ORIGIN}/dashboard/${this.hostId}/crm/${memberId}`;
+    const payload = buildMomenceChildAccountPayload(childInput);
+    const data = await this.dashboardRequest(`/host/${this.hostId}/customers/${memberId}/children`, {
+      method: 'POST',
+      headers: {
+        Referer: crmUrl,
+        'X-Origin': crmUrl
+      },
+      body: JSON.stringify(payload)
+    });
+    const childAccount = this.getChildAccountsFromResponse(data)
+      .map((child) => this.parseChildAccount(child))
+      .find((child) => child.memberId);
+
+    if (!childAccount?.memberId) {
+      throw new Error('Momence child account response did not include a child member id.');
+    }
+
+    return {
+      ...childAccount,
+      data
+    };
+  }
+
   async addMembershipToMember(memberId, membershipConfig = buildOpenBarreMembershipConfig()) {
     const membershipId = Number(membershipConfig.id || membershipConfig.membershipId || 0);
     if (!membershipId) {
@@ -824,6 +1471,54 @@ class MomencePublicApiClient {
       customerAction: member.action
     };
   }
+
+  async listMemberWaivers(memberId) {
+    const data = await this.dashboardRequest(`/host/${this.hostId}/members/${Number(memberId)}/waivers`, {
+      method: 'GET'
+    });
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    if (Array.isArray(data?.waivers)) {
+      return data.waivers;
+    }
+
+    return [];
+  }
+
+  async signKidsConsentWaivers(memberId, realSignature, options = {}) {
+    const signature = sanitizeText(realSignature, 300000);
+    if (!signature) {
+      throw new Error('A drawn signature is required before recording consent.');
+    }
+
+    const waivers = await this.listMemberWaivers(memberId);
+    if (!waivers.length) {
+      throw new Error('No Momence waiver records were available for this member.');
+    }
+
+    const predefinedWaiverIds = new Set(options.predefinedWaiverIds || resolveKidsConsentPredefinedWaiverIds());
+    const signRequests = buildDashboardPublicWaiverSignRequests({
+      hostId: this.hostId,
+      memberId: Number(memberId),
+      realSignature: signature,
+      waivers,
+      predefinedWaiverIds
+    });
+
+    await Promise.all(signRequests.map((request) => this.dashboardRequest(request.path, {
+      method: request.method,
+      headers: request.headers,
+      body: JSON.stringify(request.body)
+    })));
+
+    return {
+      signedCount: signRequests.length,
+      availableCount: waivers.length
+    };
+  }
 }
 
 function getOpenBarreSyncConfig(overrides = {}) {
@@ -854,6 +1549,94 @@ function buildMomenceMemberInput(leadData) {
     phoneNumber: leadData.phoneNumber,
     center: leadData.center,
     homeLocationId: leadData.homeLocationId
+  };
+}
+
+function buildMomenceChildAccountPayload(childInput = {}) {
+  const childDateOfBirth = normalizeDateOnly(childInput.childDateOfBirth || childInput.dateOfBirth || childInput.dob);
+  if (!childDateOfBirth) {
+    throw new Error('Child date of birth is required before creating the Momence child account.');
+  }
+
+  const { firstName, lastName } = splitFullName(
+    childInput.childName || `${childInput.firstName || ''} ${childInput.lastName || ''}`,
+    childInput.parentLastName || childInput.lastName
+  );
+
+  if (!firstName) {
+    throw new Error('Child name is required before creating the Momence child account.');
+  }
+
+  return {
+    autoGenerateEmail: true,
+    email: '',
+    firstName,
+    lastName,
+    customerFields: [
+      {
+        id: parseInteger(
+          childInput.childDateOfBirthFieldId ?? process.env.MOMENCE_CHILD_DOB_CUSTOMER_FIELD_ID,
+          DEFAULT_MOMENCE_CHILD_DOB_CUSTOMER_FIELD_ID
+        ),
+        value: childDateOfBirth
+      }
+    ]
+  };
+}
+
+async function provisionKidsConsent(leadData, options = {}) {
+  const client = options.client || new MomencePublicApiClient(options.clientConfig || {});
+  const signatureRealSignature = sanitizeText(leadData.signatureRealSignature, 300000);
+  const {
+    parentPredefinedWaiverIds,
+    childPredefinedWaiverIds,
+    ...sharedConsentOptions
+  } = options.consentOptions || {};
+
+  if (!signatureRealSignature) {
+    throw new Error('Parent/guardian signature is required before recording consent.');
+  }
+
+  const member = await client.ensureMember(buildMomenceMemberInput(leadData));
+  const childAccount = await client.createChildAccountForMember(member.memberId, {
+    childName: leadData.childName,
+    childDateOfBirth: leadData.childDateOfBirth,
+    parentLastName: leadData.lastName
+  });
+  const parentConsent = await client.signKidsConsentWaivers(
+    member.memberId,
+    signatureRealSignature,
+    {
+      ...sharedConsentOptions,
+      ...(options.parentConsentOptions || {}),
+      predefinedWaiverIds: options.parentConsentOptions?.predefinedWaiverIds
+        || parentPredefinedWaiverIds
+        || resolveKidsParentConsentPredefinedWaiverIds()
+    }
+  );
+  const childConsent = await client.signKidsConsentWaivers(
+    childAccount.memberId,
+    signatureRealSignature,
+    {
+      ...sharedConsentOptions,
+      ...(options.childConsentOptions || {}),
+      predefinedWaiverIds: options.childConsentOptions?.predefinedWaiverIds
+        || childPredefinedWaiverIds
+        || resolveKidsChildConsentPredefinedWaiverIds()
+    }
+  );
+
+  return {
+    success: true,
+    memberId: member.memberId,
+    childMemberId: childAccount.memberId,
+    customerAction: member.action || '',
+    signedCount: parentConsent.signedCount + childConsent.signedCount,
+    parentSignedCount: parentConsent.signedCount,
+    childSignedCount: childConsent.signedCount,
+    availableWaivers: parentConsent.availableCount + childConsent.availableCount,
+    parentAvailableWaivers: parentConsent.availableCount,
+    childAvailableWaivers: childConsent.availableCount
   };
 }
 
@@ -1286,6 +2069,31 @@ function sanitizeEmail(value) {
   return sanitizeText(value, 254).toLowerCase();
 }
 
+function normalizeDateOnly(value) {
+  const rawValue = sanitizeText(value, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(rawValue)) {
+    return '';
+  }
+
+  const date = new Date(`${rawValue}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toISOString().slice(0, 10) === rawValue ? rawValue : '';
+}
+
+function splitFullName(fullName, fallbackLastName = '') {
+  const nameParts = sanitizeText(fullName, 160).split(' ').filter(Boolean);
+  const firstName = sanitizeText(nameParts.shift(), 80);
+  const lastName = sanitizeText(nameParts.join(' ') || fallbackLastName || firstName, 80);
+
+  return {
+    firstName,
+    lastName
+  };
+}
+
 function sanitizePhone(value) {
   const rawValue = String(value || '').trim();
   const digits = rawValue.replace(/\D/g, '');
@@ -1498,12 +2306,30 @@ function validateKidsLeadPayload(payload) {
     fieldErrors.childAge = 'Child age must be between 9 and 13.';
   }
 
+  const rawChildDateOfBirth = sanitizeText(payload.childDateOfBirth || payload.childDob || payload.dateOfBirth, 10);
+  const childDateOfBirth = normalizeDateOnly(rawChildDateOfBirth);
+  if (!rawChildDateOfBirth) {
+    fieldErrors.childDateOfBirth = 'Child date of birth is required.';
+  } else if (!childDateOfBirth) {
+    fieldErrors.childDateOfBirth = 'Child date of birth must use YYYY-MM-DD.';
+  }
+
   const batch = sanitizeText(payload.batch || payload.batchPreference, 160);
   const availableBatches = KIDS_BATCH_OPTIONS[validation.data.center] || [];
   if (!batch) {
     fieldErrors.batch = 'Batch preference is required.';
   } else if (!availableBatches.includes(batch)) {
     fieldErrors.batch = 'Choose an available Juniors batch for the selected studio.';
+  }
+
+  const signatureName = sanitizeText(payload.signatureName, 120);
+  if (!signatureName) {
+    fieldErrors.signatureName = 'Parent/guardian signature name is required.';
+  }
+
+  const signatureRealSignature = sanitizeText(payload.signatureRealSignature, 300000);
+  if (!signatureRealSignature) {
+    fieldErrors.signatureRealSignature = 'Parent/guardian signature is required.';
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -1522,7 +2348,10 @@ function validateKidsLeadPayload(payload) {
       source_form: KIDS_SOURCE_FORM,
       childName,
       childAge: parsedAge,
-      batch
+      childDateOfBirth,
+      batch,
+      signatureName,
+      signatureRealSignature
     }
   };
 }
@@ -1638,6 +2467,10 @@ function buildMomencePayload(leadData) {
     momencePayload.childName = leadData.childName;
   }
 
+  if (leadData.childDateOfBirth) {
+    momencePayload.childDateOfBirth = leadData.childDateOfBirth;
+  }
+
   const batch = leadData.batch || leadData.batchPreference;
   if (batch) {
     momencePayload.batch = batch;
@@ -1661,7 +2494,7 @@ function buildMomencePayload(leadData) {
 function isKidsLead(leadData = {}) {
   return String(leadData.source_form || leadData.sourceForm || '') === KIDS_SOURCE_FORM
     || String(leadData.type || leadData.class_format || '') === KIDS_CLASS_TYPE
-    || Boolean(leadData.childName || leadData.childAge || leadData.batch || leadData.batchPreference);
+    || Boolean(leadData.childName || leadData.childAge || leadData.childDateOfBirth || leadData.batch || leadData.batchPreference);
 }
 
 function resolveMomenceSourceId(leadData = {}, options = {}) {
@@ -2080,6 +2913,13 @@ app.get(['/kids', '/kids/*'], (req, res) => {
   return sendAppIndex(req, res, KIDS_ROUTE_META);
 });
 
+app.get(['/kids-consent', '/kids-consent/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(req, res, KIDS_CONSENT_ROUTE_META);
+});
+
 app.get(['/schedule-mum', '/schedule-mum/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
@@ -2456,7 +3296,26 @@ app.post('/api/submit-kids-lead', applySubmissionRateLimit, async (req, res) => 
     });
 
     const submissionResult = await processLeadSubmission(leadData, req);
-    return res.status(200).json(submissionResult);
+
+    let consentResult = null;
+    try {
+      consentResult = await provisionKidsConsent(leadData);
+    } catch (error) {
+      console.error('Kids consent recording failed:', error.message);
+      return res.status(502).json({
+        success: false,
+        stored: true,
+        id: leadData.id,
+        event_id: leadData.event_id,
+        error: 'Consent could not be recorded on the Momence member profile. Please contact the studio team.',
+        detail: error.message || 'Unable to record kids consent.'
+      });
+    }
+
+    return res.status(200).json({
+      ...submissionResult,
+      momenceConsent: consentResult
+    });
   } catch (error) {
     console.error('Error submitting kids lead:', error);
     return res.status(500).json({
@@ -2525,6 +3384,7 @@ module.exports.buildMomenceLeadRequestPayload = buildMomenceLeadRequestPayload;
 module.exports.buildInfluencerSubmissionSuccessPayload = buildInfluencerSubmissionSuccessPayload;
 module.exports.normalizePhoneDigits = normalizePhoneDigits;
 module.exports.processLeadSubmission = processLeadSubmission;
+module.exports.provisionKidsConsent = provisionKidsConsent;
 module.exports.provisionOpenBarreMembership = provisionOpenBarreMembership;
 module.exports.provisionInfluencerMembership = provisionInfluencerMembership;
 module.exports.provisionOpenBarreViaSupabase = provisionOpenBarreViaSupabase;

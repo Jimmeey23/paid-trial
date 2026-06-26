@@ -244,6 +244,11 @@ interface KidsTrialFormProps {
   formTitle?: string
   formDescription?: string
   formBadge?: string
+  heroEyebrow?: string
+  heroTitle?: string
+  heroDescription?: string
+  heroHighlights?: string[]
+  mobileHeroDescription?: string
   successSourceForm?: string
   eventTitle?: string
   eventDescription?: string
@@ -260,6 +265,11 @@ export function KidsTrialForm({
   formTitle = "Plan your child's first session",
   formDescription = "Tell us where you would like to visit and which Juniors class works best for your child.",
   formBadge = "P57 Juniors",
+  heroEyebrow = "For ages 9-13",
+  heroTitle = "Strong Foundations Start Here",
+  heroDescription = "Led by experts, the Physique 57 Kids Strength & Agility Program builds strength, balance, mobility, coordination, and athletic power.",
+  heroHighlights = ["Posture", "Strength", "Confidence"],
+  mobileHeroDescription = "Build strength. Improve balance. Boost confidence.",
   successSourceForm = "kids-trial-form",
   eventTitle = "",
   eventDescription = "",
@@ -616,15 +626,15 @@ export function KidsTrialForm({
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-950 shadow-lg">
               <Sparkles className="h-6 w-6" />
             </div>
-            <p className="mt-6 text-sm font-semibold uppercase tracking-[0.18em] text-sky-100">For ages 9-13</p>
-            <h1 className="mt-2 max-w-md text-5xl font-bold leading-tight">Strong Foundations Start Here</h1>
+            <p className="mt-6 text-sm font-semibold uppercase tracking-[0.18em] text-sky-100">{heroEyebrow}</p>
+            <h1 className="mt-2 max-w-md text-5xl font-bold leading-tight">{heroTitle}</h1>
             <p className="mt-4 max-w-md text-base leading-7 text-white/84">
-              Led by experts, the Physique 57 Kids Strength & Agility Program builds strength, balance, mobility, coordination, and athletic power.
+              {heroDescription}
             </p>
             <div className="mt-8 grid max-w-md grid-cols-3 gap-3 text-xs font-semibold uppercase tracking-wide text-white/82">
-              <div className="border-l border-white/30 pl-3">Posture</div>
-              <div className="border-l border-white/30 pl-3">Strength</div>
-              <div className="border-l border-white/30 pl-3">Confidence</div>
+              {heroHighlights.slice(0, 3).map((highlight) => (
+                <div key={highlight} className="border-l border-white/30 pl-3">{highlight}</div>
+              ))}
             </div>
           </div>
         </aside>
@@ -642,10 +652,10 @@ export function KidsTrialForm({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/88 via-slate-950/10 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100">For ages 9-13</p>
-                <h1 className="mt-2 max-w-full text-3xl font-bold leading-tight [overflow-wrap:anywhere]">Strong Foundations Start Here</h1>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100">{heroEyebrow}</p>
+                <h1 className="mt-2 max-w-full text-3xl font-bold leading-tight [overflow-wrap:anywhere]">{heroTitle}</h1>
                 <p className="mt-2 max-w-full break-words text-sm leading-6 text-white/82 [overflow-wrap:anywhere]">
-                  Build strength. Improve balance. Boost confidence.
+                  {mobileHeroDescription}
                 </p>
               </div>
             </div>

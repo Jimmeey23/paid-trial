@@ -241,6 +241,11 @@ export default function App() {
               formTitle="Physique 57 X The Mum Tribe"
               formDescription="Tuesday, 14 July, 2026 at 4:30pm. Taught by Simonelle De Vitre."
               formBadge="The Mum Tribe"
+              heroEyebrow="Tuesday, 14 July, 2026"
+              heroTitle="Physique 57 X The Mum Tribe"
+              heroDescription="Join The Mum Tribe for a Physique 57 Juniors session at 4:30pm, taught by Simonelle De Vitre at Physique 57, Bandra."
+              heroHighlights={["4:30pm", "Simonelle", "Bandra"]}
+              mobileHeroDescription="4:30pm. Taught by Simonelle De Vitre. Venue: Physique 57, Bandra."
               successSourceForm="kids-mum-tribe-form"
               eventTitle="Physique 57 X The Mum Tribe"
               eventDescription="Tuesday, 14 July, 2026 at 4:30pm. Taught by Simonelle De Vitre."

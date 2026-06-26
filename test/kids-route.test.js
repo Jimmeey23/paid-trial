@@ -132,6 +132,11 @@ test('React app routes /kids-themumtribe to the Kids Juniors Mum Tribe submissio
   assert.match(source, /lockedStudioDisplayName="Physique 57, Bandra"/);
   assert.match(source, /formTitle="Physique 57 X The Mum Tribe"/);
   assert.match(source, /formDescription="Tuesday, 14 July, 2026 at 4:30pm\. Taught by Simonelle De Vitre\."/);
+  assert.match(source, /heroEyebrow="Tuesday, 14 July, 2026"/);
+  assert.match(source, /heroTitle="Physique 57 X The Mum Tribe"/);
+  assert.match(source, /heroDescription="Join The Mum Tribe for a Physique 57 Juniors session at 4:30pm, taught by Simonelle De Vitre at Physique 57, Bandra\."/);
+  assert.match(source, /heroHighlights=\{\["4:30pm", "Simonelle", "Bandra"\]\}/);
+  assert.match(source, /mobileHeroDescription="4:30pm\. Taught by Simonelle De Vitre\. Venue: Physique 57, Bandra\."/);
   assert.match(source, /successSourceForm="kids-mum-tribe-form"/);
   assert.match(source, /eventVenue="Physique 57, Bandra"/);
 });

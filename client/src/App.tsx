@@ -43,6 +43,12 @@ const routeMeta = {
       "Register for Physique 57 Juniors at Physique 57 India and choose your preferred Bandra or Kemps Corner batch.",
     name: "Physique 57 Juniors Registration Form",
   },
+  kidsMumTribe: {
+    title: "Physique 57 Juniors | The Mum Tribe",
+    description:
+      "Register for The Mum Tribe Physique 57 Juniors experience and complete the parent and child consent flow.",
+    name: "Physique 57 Juniors The Mum Tribe Form",
+  },
   kidsConsent: {
     title: "Physique 57 Juniors | Consent Form",
     description:
@@ -134,6 +140,7 @@ export default function App() {
   const isBarreRoute = currentPath === "/barre" || currentPath.startsWith("/barre/")
   const isInfluencersRoute = currentPath === "/influencers" || currentPath.startsWith("/influencers/")
   const isKidsRoute = currentPath === "/kids" || currentPath.startsWith("/kids/")
+  const isKidsMumTribeRoute = currentPath === "/kids-themumtribe" || currentPath.startsWith("/kids-themumtribe/")
   const isKidsConsentRoute = currentPath === "/kids-consent" || currentPath.startsWith("/kids-consent/")
   const isTestRoute = currentPath === "/test" || currentPath.startsWith("/test/")
   const isScheduleMumRoute = currentPath === "/schedule-mum" || currentPath.startsWith("/schedule-mum/")
@@ -159,19 +166,21 @@ export default function App() {
         ? routeMeta.influencers
         : isKidsRoute
           ? routeMeta.kids
-          : isKidsConsentRoute
-            ? routeMeta.kidsConsent
-            : isTestRoute
-              ? routeMeta.test
-              : isScheduleMumRoute
-                ? routeMeta.scheduleMum
-                : isScheduleMumBeginRoute
-                  ? routeMeta.scheduleMumBegin
-                  : isScheduleBlrRoute
-                    ? routeMeta.scheduleBlr
-                    : isThankYouRoute
-                      ? routeMeta.thankYou
-                      : routeMeta.default
+          : isKidsMumTribeRoute
+            ? routeMeta.kidsMumTribe
+            : isKidsConsentRoute
+              ? routeMeta.kidsConsent
+              : isTestRoute
+                ? routeMeta.test
+                : isScheduleMumRoute
+                  ? routeMeta.scheduleMum
+                  : isScheduleMumBeginRoute
+                    ? routeMeta.scheduleMumBegin
+                    : isScheduleBlrRoute
+                      ? routeMeta.scheduleBlr
+                      : isThankYouRoute
+                        ? routeMeta.thankYou
+                        : routeMeta.default
     const pageUrl = typeof window !== "undefined" ? window.location.href : BRAND_SITE_URL
 
     document.title = meta.title
@@ -214,7 +223,7 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isThankYouRoute])
+  }, [currentPath, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isThankYouRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
@@ -222,31 +231,33 @@ export default function App() {
       ? <Barre57TrialForm variant="influencer" />
       : isKidsRoute
         ? <KidsTrialForm />
-        : isKidsConsentRoute
-          ? <KidsConsentPage />
-          : isTestRoute
-            ? <Physique57SignUpForm testMode />
-            : isScheduleMumRoute
-              ? <ScheduleEmbed hostId="13752" locationIds={scheduleLocationId ? [scheduleLocationId] : []} />
-              : isScheduleMumBeginRoute
-                ? (
-                  <ScheduleEmbed
-                    hostId="13752"
-                    locationIds={scheduleLocationId ? [scheduleLocationId] : []}
-                    teacherIds={EMPTY_SCHEDULE_FILTER_IDS}
-                    tagIds={BEGINNER_SCHEDULE_TAG_IDS}
-                    sessionType="class"
-                    hideTags
-                    defaultFilter="show-all"
-                    locale="en"
-                    lockTimezone="Asia/Kolkata"
-                  />
-                )
-                : isScheduleBlrRoute
-                  ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
-                  : isThankYouRoute
-                    ? <ThankYouPage />
-                    : <Physique57SignUpForm />
+        : isKidsMumTribeRoute
+          ? <KidsTrialForm submitEndpoint="/api/submit-kids-mum-tribe-lead" />
+          : isKidsConsentRoute
+            ? <KidsConsentPage />
+            : isTestRoute
+              ? <Physique57SignUpForm testMode />
+              : isScheduleMumRoute
+                ? <ScheduleEmbed hostId="13752" locationIds={scheduleLocationId ? [scheduleLocationId] : []} />
+                : isScheduleMumBeginRoute
+                  ? (
+                    <ScheduleEmbed
+                      hostId="13752"
+                      locationIds={scheduleLocationId ? [scheduleLocationId] : []}
+                      teacherIds={EMPTY_SCHEDULE_FILTER_IDS}
+                      tagIds={BEGINNER_SCHEDULE_TAG_IDS}
+                      sessionType="class"
+                      hideTags
+                      defaultFilter="show-all"
+                      locale="en"
+                      lockTimezone="Asia/Kolkata"
+                    />
+                  )
+                  : isScheduleBlrRoute
+                    ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
+                    : isThankYouRoute
+                      ? <ThankYouPage />
+                      : <Physique57SignUpForm />
 
   return (
     <>

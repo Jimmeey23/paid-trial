@@ -236,7 +236,11 @@ function getCountryOption(countrySelection: string) {
   )
 }
 
-export function KidsTrialForm() {
+interface KidsTrialFormProps {
+  submitEndpoint?: string
+}
+
+export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead" }: KidsTrialFormProps) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -423,7 +427,7 @@ export function KidsTrialForm() {
     }
 
     try {
-      const response = await fetch(sameOriginApiUrl("/api/submit-kids-lead"), {
+      const response = await fetch(sameOriginApiUrl(submitEndpoint), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

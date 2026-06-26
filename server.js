@@ -35,6 +35,12 @@ const KIDS_CONSENT_ROUTE_META = {
   image: '/p57-assets/p57-juniors-hero-2026-1.png',
   imageAlt: 'Physique 57 Juniors consent form'
 };
+const KIDS_MUM_TRIBE_ROUTE_META = {
+  title: 'Physique 57 Juniors | The Mum Tribe',
+  description: 'Register for The Mum Tribe Physique 57 Juniors experience and complete the parent and child consent flow.',
+  image: '/p57-assets/p57-juniors-hero-2026-1.png',
+  imageAlt: 'Young movers at a Physique 57 Juniors barre session'
+};
 const googleSheets = new GoogleSheetsService();
 const supabaseLeadStore = new SupabaseLeadStore();
 const scheduleService = new ScheduleService();
@@ -48,9 +54,12 @@ const KIDS_CLASS_TYPE = 'Physique 57 - Juniors';
 const KIDS_SOURCE_FORM = 'kids-trial-form';
 const DEFAULT_REGULAR_MOMENCE_SOURCE_ID = '8082';
 const DEFAULT_KIDS_MOMENCE_SOURCE_ID = '212426';
+const KIDS_MUM_TRIBE_MOMENCE_SOURCE_ID = '160856';
 const DEFAULT_MOMENCE_HOST_ID = 13752;
 const MOMENCE_DASHBOARD_ORIGIN = 'https://momence.com';
 const DEFAULT_MOMENCE_DASHBOARD_BASE_URL = `${MOMENCE_DASHBOARD_ORIGIN}/_api/primary`;
+const DEFAULT_KIDS_MUM_TRIBE_CLASS_SESSION_ID = 138939271;
+const DEFAULT_KIDS_MUM_TRIBE_CLASS_HOME_LOCATION_ID = 29821;
 const DEFAULT_KIDS_PARENT_CONSENT_PREDEFINED_WAIVER_IDS = ['waiver', 'membership-waiver'];
 const DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS = ['child-waiver'];
 const DEFAULT_KIDS_CONSENT_PREDEFINED_WAIVER_IDS = [
@@ -1519,6 +1528,67 @@ class MomencePublicApiClient {
       availableCount: waivers.length
     };
   }
+
+  async addFreeSessionToMember(memberId, sessionConfig = {}) {
+    const sessionId = parseInteger(sessionConfig.sessionId, 0);
+    const targetMemberId = Number(memberId);
+    const hostId = parseInteger(sessionConfig.hostId, this.hostId);
+    const homeLocationId = parseInteger(sessionConfig.homeLocationId, this.defaultHomeLocationId);
+
+    if (!targetMemberId) {
+      throw new Error('Momence member id is required before adding the class session.');
+    }
+
+    if (!sessionId) {
+      throw new Error('Momence session id is required before adding the class session.');
+    }
+
+    const sessionUrl = `${MOMENCE_DASHBOARD_ORIGIN}/dashboard/${hostId}/sessions/${sessionId}`;
+    const payload = {
+      hostId,
+      payingMemberId: targetMemberId,
+      targetMemberId,
+      items: [
+        {
+          guid: generateLeadId(),
+          type: 'session',
+          quantity: 1,
+          priceInCurrency: Number(sessionConfig.priceInCurrency ?? 0),
+          sessionId,
+          isPaymentPlanUsed: false,
+          appliedPriceRuleIds: [],
+          isOverrideCapacity: Boolean(sessionConfig.isOverrideCapacity)
+        }
+      ],
+      paymentMethods: [
+        {
+          type: 'free',
+          weightRelative: 1,
+          guid: generateLeadId()
+        }
+      ],
+      isEmailSent: Boolean(sessionConfig.isEmailSent),
+      homeLocationId
+    };
+
+    const data = await this.dashboardRequest(`/host/${hostId}/pos/payments/pay-cart`, {
+      method: 'POST',
+      headers: {
+        Referer: sessionUrl,
+        'X-Origin': sessionUrl,
+        'X-Idempotence-Key': generateLeadId()
+      },
+      body: JSON.stringify(payload)
+    });
+
+    return {
+      success: true,
+      memberId: targetMemberId,
+      sessionId,
+      homeLocationId,
+      data
+    };
+  }
 }
 
 function getOpenBarreSyncConfig(overrides = {}) {
@@ -1549,6 +1619,23 @@ function buildMomenceMemberInput(leadData) {
     phoneNumber: leadData.phoneNumber,
     center: leadData.center,
     homeLocationId: leadData.homeLocationId
+  };
+}
+
+function buildKidsMumTribeClassBookingConfig(overrides = {}) {
+  return {
+    hostId: parseInteger(overrides.hostId ?? process.env.MOMENCE_HOST_ID, DEFAULT_MOMENCE_HOST_ID),
+    sessionId: parseInteger(
+      overrides.sessionId ?? process.env.MOMENCE_KIDS_MUM_TRIBE_SESSION_ID,
+      DEFAULT_KIDS_MUM_TRIBE_CLASS_SESSION_ID
+    ),
+    homeLocationId: parseInteger(
+      overrides.homeLocationId ?? process.env.MOMENCE_KIDS_MUM_TRIBE_HOME_LOCATION_ID,
+      DEFAULT_KIDS_MUM_TRIBE_CLASS_HOME_LOCATION_ID
+    ),
+    priceInCurrency: Number(overrides.priceInCurrency ?? process.env.MOMENCE_KIDS_MUM_TRIBE_PRICE_IN_CURRENCY ?? 0),
+    isEmailSent: parseBoolean(overrides.isEmailSent ?? process.env.MOMENCE_KIDS_MUM_TRIBE_SEND_EMAIL, false),
+    isOverrideCapacity: parseBoolean(overrides.isOverrideCapacity ?? process.env.MOMENCE_KIDS_MUM_TRIBE_OVERRIDE_CAPACITY, false)
   };
 }
 
@@ -1638,6 +1725,13 @@ async function provisionKidsConsent(leadData, options = {}) {
     parentAvailableWaivers: parentConsent.availableCount,
     childAvailableWaivers: childConsent.availableCount
   };
+}
+
+async function provisionKidsMumTribeClass(childMemberId, options = {}) {
+  const client = options.client || new MomencePublicApiClient(options.clientConfig || {});
+  const bookingConfig = buildKidsMumTribeClassBookingConfig(options.bookingConfig || {});
+
+  return client.addFreeSessionToMember(childMemberId, bookingConfig);
 }
 
 async function provisionMembershipViaSupabase(leadData, options = {}) {
@@ -2913,6 +3007,13 @@ app.get(['/kids', '/kids/*'], (req, res) => {
   return sendAppIndex(req, res, KIDS_ROUTE_META);
 });
 
+app.get(['/kids-themumtribe', '/kids-themumtribe/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(req, res, KIDS_MUM_TRIBE_ROUTE_META);
+});
+
 app.get(['/kids-consent', '/kids-consent/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
@@ -3269,7 +3370,7 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
   }
 });
 
-app.post('/api/submit-kids-lead', applySubmissionRateLimit, async (req, res) => {
+async function handleKidsLeadSubmission(req, res, options = {}) {
   try {
     const validation = validateKidsLeadPayload(req.body);
 
@@ -3295,7 +3396,17 @@ app.post('/api/submit-kids-lead', applySubmissionRateLimit, async (req, res) => 
       class_format: KIDS_CLASS_TYPE
     });
 
-    const submissionResult = await processLeadSubmission(leadData, req);
+    const submissionResult = await processLeadSubmission(
+      leadData,
+      req,
+      options.momenceSourceId
+        ? {
+          submitToMomence: (leadPayload) => submitToMomence(leadPayload, {
+            sourceId: options.momenceSourceId
+          })
+        }
+        : {}
+    );
 
     let consentResult = null;
     try {
@@ -3312,6 +3423,28 @@ app.post('/api/submit-kids-lead', applySubmissionRateLimit, async (req, res) => 
       });
     }
 
+    if (options.bookMumTribeClass) {
+      try {
+        const classBookingResult = await provisionKidsMumTribeClass(consentResult.childMemberId);
+        return res.status(200).json({
+          ...submissionResult,
+          momenceConsent: consentResult,
+          momenceClassBooking: classBookingResult
+        });
+      } catch (error) {
+        console.error('Kids Mum Tribe class booking failed:', error.message);
+        return res.status(502).json({
+          success: false,
+          stored: true,
+          id: leadData.id,
+          event_id: leadData.event_id,
+          momenceConsent: consentResult,
+          error: 'The child account was created, but the Mum Tribe class could not be added. Please contact the studio team.',
+          detail: error.message || 'Unable to add the Mum Tribe class.'
+        });
+      }
+    }
+
     return res.status(200).json({
       ...submissionResult,
       momenceConsent: consentResult
@@ -3323,6 +3456,17 @@ app.post('/api/submit-kids-lead', applySubmissionRateLimit, async (req, res) => 
       error: error.message || 'An unexpected error occurred.'
     });
   }
+}
+
+app.post('/api/submit-kids-lead', applySubmissionRateLimit, async (req, res) => {
+  return handleKidsLeadSubmission(req, res);
+});
+
+app.post('/api/submit-kids-mum-tribe-lead', applySubmissionRateLimit, async (req, res) => {
+  return handleKidsLeadSubmission(req, res, {
+    momenceSourceId: KIDS_MUM_TRIBE_MOMENCE_SOURCE_ID,
+    bookMumTribeClass: true
+  });
 });
 
 app.post('/api/sheets/setup', requireAdmin, async (req, res) => {
@@ -3381,10 +3525,12 @@ module.exports.MomencePublicApiClient = MomencePublicApiClient;
 module.exports.buildOpenBarreMembershipConfig = buildOpenBarreMembershipConfig;
 module.exports.buildStudioComplimentaryClassMembershipConfig = buildStudioComplimentaryClassMembershipConfig;
 module.exports.buildMomenceLeadRequestPayload = buildMomenceLeadRequestPayload;
+module.exports.buildKidsMumTribeClassBookingConfig = buildKidsMumTribeClassBookingConfig;
 module.exports.buildInfluencerSubmissionSuccessPayload = buildInfluencerSubmissionSuccessPayload;
 module.exports.normalizePhoneDigits = normalizePhoneDigits;
 module.exports.processLeadSubmission = processLeadSubmission;
 module.exports.provisionKidsConsent = provisionKidsConsent;
+module.exports.provisionKidsMumTribeClass = provisionKidsMumTribeClass;
 module.exports.provisionOpenBarreMembership = provisionOpenBarreMembership;
 module.exports.provisionInfluencerMembership = provisionInfluencerMembership;
 module.exports.provisionOpenBarreViaSupabase = provisionOpenBarreViaSupabase;

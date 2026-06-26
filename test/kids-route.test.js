@@ -42,6 +42,17 @@ test('Express serves the kids route through the client app fallback', () => {
   );
 });
 
+test('Express serves the kids Mum Tribe route through the client app fallback', () => {
+  const routePaths = app._router.stack
+    .filter((layer) => layer.route)
+    .map((layer) => layer.route.path);
+
+  assert.deepEqual(
+    routePaths.find((entry) => Array.isArray(entry) && entry.includes('/kids-themumtribe')),
+    ['/kids-themumtribe', '/kids-themumtribe/*']
+  );
+});
+
 test('Express serves kids-specific link preview metadata in raw HTML', async () => {
   const distIndex = path.join(__dirname, '..', 'dist', 'index.html');
 
@@ -107,6 +118,15 @@ test('React app routes /kids to the Kids Juniors form', () => {
   assert.match(source, /routeMeta\.kidsConsent/);
   assert.match(source, /<KidsTrialForm \/>/);
   assert.match(source, /<KidsConsentPage \/>/);
+});
+
+test('React app routes /kids-themumtribe to the Kids Juniors Mum Tribe submission endpoint', () => {
+  const source = readProjectFile('client/src/App.tsx');
+
+  assert.match(source, /currentPath === "\/kids-themumtribe"/);
+  assert.match(source, /isKidsMumTribeRoute/);
+  assert.match(source, /routeMeta\.kidsMumTribe/);
+  assert.match(source, /<KidsTrialForm submitEndpoint="\/api\/submit-kids-mum-tribe-lead" \/>/);
 });
 
 test('Juniors form contains child name, date of birth, age, conditional batch options, brand content, and supplied media', () => {
@@ -358,4 +378,91 @@ test('buildMomenceLeadRequestPayload includes kids-specific fields with Momence 
   assert.equal(payload.childDateOfBirth, '2015-06-01');
   assert.equal(payload.batch, 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri');
   assert.equal(Object.prototype.hasOwnProperty.call(payload, 'batchPreference'), false);
+});
+
+test('buildMomenceLeadRequestPayload can override the Mum Tribe webhook source id', () => {
+  const payload = app.buildMomenceLeadRequestPayload(
+    {
+      ...validKidsPayload(),
+      type: 'Physique 57 - Juniors'
+    },
+    {
+      token: 'token',
+      sourceId: '160856'
+    }
+  );
+
+  assert.equal(payload.sourceId, '160856');
+});
+
+test('Momence dashboard client builds Mum Tribe free class pay-cart request for the child account', async () => {
+  assert.equal(typeof app.MomencePublicApiClient, 'function');
+
+  const requests = [];
+  const client = new app.MomencePublicApiClient({
+    dashboardBaseUrl: 'https://momence.test/_api/primary',
+    dashboardCookies: 'momence.device.id=device-1; ribbon.connect.sid=session-1',
+    dashboardCookieRefreshEnabled: false,
+    hostId: 13752,
+    fetchImpl: async (url, options) => {
+      requests.push({ url, options });
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify({ orderId: 'order_123' })
+      };
+    }
+  });
+
+  const result = await client.addFreeSessionToMember(32284768, {
+    hostId: 13752,
+    sessionId: 138939271,
+    homeLocationId: 29821
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.memberId, 32284768);
+  assert.equal(result.sessionId, 138939271);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, 'https://momence.test/_api/primary/host/13752/pos/payments/pay-cart');
+  assert.equal(requests[0].options.method, 'POST');
+  assert.equal(requests[0].options.headers.Referer, 'https://momence.com/dashboard/13752/sessions/138939271');
+  assert.equal(requests[0].options.headers['X-Origin'], 'https://momence.com/dashboard/13752/sessions/138939271');
+  assert.ok(requests[0].options.headers['X-Idempotence-Key']);
+
+  const body = JSON.parse(requests[0].options.body);
+  assert.equal(body.hostId, 13752);
+  assert.equal(body.payingMemberId, 32284768);
+  assert.equal(body.targetMemberId, 32284768);
+  assert.equal(body.homeLocationId, 29821);
+  assert.equal(body.isEmailSent, false);
+  assert.deepEqual(body.items.map((item) => ({
+    type: item.type,
+    quantity: item.quantity,
+    priceInCurrency: item.priceInCurrency,
+    sessionId: item.sessionId,
+    isPaymentPlanUsed: item.isPaymentPlanUsed,
+    appliedPriceRuleIds: item.appliedPriceRuleIds,
+    isOverrideCapacity: item.isOverrideCapacity
+  })), [
+    {
+      type: 'session',
+      quantity: 1,
+      priceInCurrency: 0,
+      sessionId: 138939271,
+      isPaymentPlanUsed: false,
+      appliedPriceRuleIds: [],
+      isOverrideCapacity: false
+    }
+  ]);
+  assert.deepEqual(body.paymentMethods.map((method) => ({
+    type: method.type,
+    weightRelative: method.weightRelative
+  })), [
+    {
+      type: 'free',
+      weightRelative: 1
+    }
+  ]);
 });

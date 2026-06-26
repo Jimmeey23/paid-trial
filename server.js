@@ -2369,7 +2369,7 @@ function validateLeadPayload(payload, options = {}) {
   };
 }
 
-function validateKidsLeadPayload(payload) {
+function validateKidsLeadPayload(payload, options = {}) {
   const validation = validateLeadPayload(payload, {
     studioClassOptions: {
       'Supreme Headquarters, Bandra': [KIDS_CLASS_TYPE],
@@ -2410,9 +2410,9 @@ function validateKidsLeadPayload(payload) {
 
   const batch = sanitizeText(payload.batch || payload.batchPreference, 160);
   const availableBatches = KIDS_BATCH_OPTIONS[validation.data.center] || [];
-  if (!batch) {
+  if (!batch && !options.allowMissingBatch) {
     fieldErrors.batch = 'Batch preference is required.';
-  } else if (!availableBatches.includes(batch)) {
+  } else if (batch && !availableBatches.includes(batch)) {
     fieldErrors.batch = 'Choose an available Juniors batch for the selected studio.';
   }
 
@@ -2443,7 +2443,7 @@ function validateKidsLeadPayload(payload) {
       childName,
       childAge: parsedAge,
       childDateOfBirth,
-      batch,
+      ...(batch ? { batch } : {}),
       signatureName,
       signatureRealSignature
     }
@@ -3372,7 +3372,9 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
 
 async function handleKidsLeadSubmission(req, res, options = {}) {
   try {
-    const validation = validateKidsLeadPayload(req.body);
+    const validation = validateKidsLeadPayload(req.body, {
+      allowMissingBatch: Boolean(options.allowMissingBatch)
+    });
 
     if (validation.isBot) {
       return res.status(202).json({
@@ -3465,6 +3467,7 @@ app.post('/api/submit-kids-lead', applySubmissionRateLimit, async (req, res) => 
 app.post('/api/submit-kids-mum-tribe-lead', applySubmissionRateLimit, async (req, res) => {
   return handleKidsLeadSubmission(req, res, {
     momenceSourceId: KIDS_MUM_TRIBE_MOMENCE_SOURCE_ID,
+    allowMissingBatch: true,
     bookMumTribeClass: true
   });
 });

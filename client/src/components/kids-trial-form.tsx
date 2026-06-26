@@ -238,9 +238,10 @@ function getCountryOption(countrySelection: string) {
 
 interface KidsTrialFormProps {
   submitEndpoint?: string
+  hideBatchSelection?: boolean
 }
 
-export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead" }: KidsTrialFormProps) {
+export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead", hideBatchSelection = false }: KidsTrialFormProps) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -363,7 +364,7 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead" }: Kids
     } else if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.childDateOfBirth.trim())) {
       nextErrors.childDateOfBirth = "Use YYYY-MM-DD"
     }
-    if (!formData.batch) {
+    if (!hideBatchSelection && !formData.batch) {
       nextErrors.batch = selectedStudio ? "Select a batch preference" : "Select a center first"
     }
     if (formData.signatureName.trim().length < 2) {
@@ -417,7 +418,7 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead" }: Kids
       childName: formData.childName.trim(),
       childAge: formData.childAge.trim(),
       childDateOfBirth: formData.childDateOfBirth.trim(),
-      batch: formData.batch,
+      batch: hideBatchSelection ? "" : formData.batch,
       signatureName: formData.signatureName.trim(),
       signatureRealSignature,
       waiverAccepted: formData.acceptedTerms ? "accepted" : "",
@@ -513,7 +514,7 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead" }: Kids
     && formData.childName.trim()
     && formData.childAge.trim()
     && formData.childDateOfBirth.trim()
-    && formData.batch
+    && (hideBatchSelection || formData.batch)
     && formData.signatureName.trim().length >= 2
     && hasSignature
     && formData.acceptedTerms
@@ -804,95 +805,97 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead" }: Kids
                   </div>
                 </div>
 
-                <div className={cn(SECTION_PANEL_CLASS, "mt-4")}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className={cn(SECTION_ICON_CLASS, "border-emerald-100 text-emerald-700 ring-emerald-50")}>
-                        <CalendarCheck2 className="h-5 w-5 stroke-[1.8]" />
+                {!hideBatchSelection ? (
+                  <div className={cn(SECTION_PANEL_CLASS, "mt-4")}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className={cn(SECTION_ICON_CLASS, "border-emerald-100 text-emerald-700 ring-emerald-50")}>
+                          <CalendarCheck2 className="h-5 w-5 stroke-[1.8]" />
+                        </div>
+                        <div>
+                          <h3 className={SECTION_TITLE_CLASS}>Select a class batch</h3>
+                          <p className="mt-1 text-sm leading-6 text-slate-600">Choose a center to see the available Juniors classes.</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className={SECTION_TITLE_CLASS}>Select a class batch</h3>
-                        <p className="mt-1 text-sm leading-6 text-slate-600">Choose a center to see the available Juniors classes.</p>
-                      </div>
+                      <p className={cn(SECTION_BADGE_CLASS, "border-emerald-100 text-emerald-700")}>Batch Preference</p>
                     </div>
-                    <p className={cn(SECTION_BADGE_CLASS, "border-emerald-100 text-emerald-700")}>Batch Preference</p>
-                  </div>
-                  <Select
-                    value={formData.batch}
-                    onValueChange={(value) => handleInputChange("batch", value)}
-                    disabled={!selectedStudio}
-                  >
-                    <Label htmlFor="batch" className="sr-only">Batch preference <span className="text-destructive">*</span></Label>
-                    <SelectTrigger id="batch" size="lg" className={cn(FIELD_CONTROL_CLASS, "mt-3 min-h-12", errors.batch && FIELD_INVALID_CLASS)}>
-                      <SelectValue placeholder={selectedStudio ? "Select batch" : "Select center first"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {batchOptions.map((batch) => (
-                        <SelectItem key={batch} value={batch}>
-                          {batch}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.batch ? <p className={FIELD_ERROR_CLASS}>{errors.batch}</p> : null}
+                    <Select
+                      value={formData.batch}
+                      onValueChange={(value) => handleInputChange("batch", value)}
+                      disabled={!selectedStudio}
+                    >
+                      <Label htmlFor="batch" className="sr-only">Batch preference <span className="text-destructive">*</span></Label>
+                      <SelectTrigger id="batch" size="lg" className={cn(FIELD_CONTROL_CLASS, "mt-3 min-h-12", errors.batch && FIELD_INVALID_CLASS)}>
+                        <SelectValue placeholder={selectedStudio ? "Select batch" : "Select center first"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {batchOptions.map((batch) => (
+                          <SelectItem key={batch} value={batch}>
+                            {batch}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.batch ? <p className={FIELD_ERROR_CLASS}>{errors.batch}</p> : null}
 
-                  <div data-section="batch-card-grid" className="grid gap-2 pt-1">
-                    {batchDetails.length ? (
-                      batchDetails.map((batch) => {
-                        const isSelected = formData.batch === batch.value
+                    <div data-section="batch-card-grid" className="grid gap-2 pt-1">
+                      {batchDetails.length ? (
+                        batchDetails.map((batch) => {
+                          const isSelected = formData.batch === batch.value
 
-                        return (
-                          <button
-                            key={batch.value}
-                            type="button"
-                            data-batch-card
-                            aria-pressed={isSelected}
-                            onClick={() => handleInputChange("batch", batch.value)}
-                            className={cn(
-                              "group min-w-0 rounded-[16px] border bg-white px-3.5 py-3 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50/80 sm:px-4",
-                              isSelected
-                                ? "border-slate-950 bg-slate-50/70 ring-2 ring-slate-950/10"
-                                : "border-slate-200/90"
-                            )}
-                          >
-                            <div className="flex min-w-0 items-start gap-3">
-                              <div className={cn("flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl shadow-sm", batch.accent)}>
-                                <Calendar className="h-4 w-4" />
+                          return (
+                            <button
+                              key={batch.value}
+                              type="button"
+                              data-batch-card
+                              aria-pressed={isSelected}
+                              onClick={() => handleInputChange("batch", batch.value)}
+                              className={cn(
+                                "group min-w-0 rounded-[16px] border bg-white px-3.5 py-3 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50/80 sm:px-4",
+                                isSelected
+                                  ? "border-slate-950 bg-slate-50/70 ring-2 ring-slate-950/10"
+                                  : "border-slate-200/90"
+                              )}
+                            >
+                              <div className="flex min-w-0 items-start gap-3">
+                                <div className={cn("flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl shadow-sm", batch.accent)}>
+                                  <Calendar className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-700">{batch.studio}</span>
+                                    {isSelected ? (
+                                      <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white">Selected</span>
+                                    ) : null}
+                                  </div>
+                                  <div className="mt-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                    <h3 className="break-words text-sm font-semibold leading-snug text-slate-950 [overflow-wrap:anywhere] sm:text-base">{batch.days}</h3>
+                                    <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200">
+                                      <Clock className={cn("h-3.5 w-3.5", batch.metaAccent)} />
+                                      {batch.time}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-600 sm:text-sm">
+                                    <span className="inline-flex min-w-0 items-center gap-1.5">
+                                      <Users className={cn("h-3.5 w-3.5 flex-shrink-0", batch.metaAccent)} />
+                                      {batch.instructors}
+                                    </span>
+                                    <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" />
+                                    <span className="min-w-0 text-slate-500">{batch.note}</span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-700">{batch.studio}</span>
-                                  {isSelected ? (
-                                    <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white">Selected</span>
-                                  ) : null}
-                                </div>
-                                <div className="mt-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                  <h3 className="break-words text-sm font-semibold leading-snug text-slate-950 [overflow-wrap:anywhere] sm:text-base">{batch.days}</h3>
-                                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200">
-                                    <Clock className={cn("h-3.5 w-3.5", batch.metaAccent)} />
-                                    {batch.time}
-                                  </span>
-                                </div>
-                                <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-600 sm:text-sm">
-                                  <span className="inline-flex min-w-0 items-center gap-1.5">
-                                    <Users className={cn("h-3.5 w-3.5 flex-shrink-0", batch.metaAccent)} />
-                                    {batch.instructors}
-                                  </span>
-                                  <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" />
-                                  <span className="min-w-0 text-slate-500">{batch.note}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </button>
-                        )
-                      })
-                    ) : (
-                      <div className="rounded-[18px] border border-dashed border-slate-300 bg-white/70 p-4 text-sm leading-6 text-slate-600 md:col-span-2">
-                        Select a center and we will show the available Juniors classes.
-                      </div>
-                    )}
+                            </button>
+                          )
+                        })
+                      ) : (
+                        <div className="rounded-[18px] border border-dashed border-slate-300 bg-white/70 p-4 text-sm leading-6 text-slate-600 md:col-span-2">
+                          Select a center and we will show the available Juniors classes.
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : null}
 
                   <div className="mt-6 space-y-5 border-t border-slate-200/80 pt-6">
                     <div className={cn(SECTION_PANEL_CLASS, "bg-white")}>

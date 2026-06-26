@@ -126,7 +126,7 @@ test('React app routes /kids-themumtribe to the Kids Juniors Mum Tribe submissio
   assert.match(source, /currentPath === "\/kids-themumtribe"/);
   assert.match(source, /isKidsMumTribeRoute/);
   assert.match(source, /routeMeta\.kidsMumTribe/);
-  assert.match(source, /<KidsTrialForm submitEndpoint="\/api\/submit-kids-mum-tribe-lead" \/>/);
+  assert.match(source, /<KidsTrialForm submitEndpoint="\/api\/submit-kids-mum-tribe-lead" hideBatchSelection \/>/);
 });
 
 test('Juniors form contains child name, date of birth, age, conditional batch options, brand content, and supplied media', () => {
@@ -333,6 +333,17 @@ test('validateKidsLeadPayload rejects a batch preference that does not match the
 
   assert.equal(validation.isValid, false);
   assert.equal(validation.fieldErrors.batch, 'Choose an available Juniors batch for the selected studio.');
+});
+
+test('validateKidsLeadPayload allows missing batch for the Mum Tribe route option', () => {
+  assert.equal(typeof app.validateKidsLeadPayload, 'function');
+
+  const validation = app.validateKidsLeadPayload(validKidsPayload({ batch: '' }), {
+    allowMissingBatch: true
+  });
+
+  assert.equal(validation.isValid, true);
+  assert.equal(Object.prototype.hasOwnProperty.call(validation.data, 'batch'), false);
 });
 
 test('validateKidsLeadPayload rejects missing consent signature details', () => {

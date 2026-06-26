@@ -232,7 +232,7 @@ export default function App() {
       : isKidsRoute
         ? <KidsTrialForm />
         : isKidsMumTribeRoute
-          ? <KidsTrialForm submitEndpoint="/api/submit-kids-mum-tribe-lead" />
+          ? <KidsTrialForm submitEndpoint="/api/submit-kids-mum-tribe-lead" hideBatchSelection />
           : isKidsConsentRoute
             ? <KidsConsentPage />
             : isTestRoute

@@ -42,6 +42,11 @@ export interface TrialSuccessPayload {
   childName?: string
   batch?: string
   sourceForm?: string
+  eventTitle?: string
+  eventDescription?: string
+  eventDateTime?: string
+  eventInstructor?: string
+  eventVenue?: string
   statusMessage?: string
   redirectUrl?: string
   schedulePageUrl?: string

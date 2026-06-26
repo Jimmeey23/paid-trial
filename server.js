@@ -36,8 +36,8 @@ const KIDS_CONSENT_ROUTE_META = {
   imageAlt: 'Physique 57 Juniors consent form'
 };
 const KIDS_MUM_TRIBE_ROUTE_META = {
-  title: 'Physique 57 Juniors | The Mum Tribe',
-  description: 'Register for The Mum Tribe Physique 57 Juniors experience and complete the parent and child consent flow.',
+  title: 'Physique 57 X The Mum Tribe',
+  description: 'Tuesday, 14 July, 2026 at 4:30pm. Taught by Simonelle De Vitre. Venue: Physique 57, Bandra.',
   image: '/p57-assets/p57-juniors-hero-2026-1.png',
   imageAlt: 'Young movers at a Physique 57 Juniors barre session'
 };
@@ -54,7 +54,6 @@ const KIDS_CLASS_TYPE = 'Physique 57 - Juniors';
 const KIDS_SOURCE_FORM = 'kids-trial-form';
 const DEFAULT_REGULAR_MOMENCE_SOURCE_ID = '8082';
 const DEFAULT_KIDS_MOMENCE_SOURCE_ID = '212426';
-const KIDS_MUM_TRIBE_MOMENCE_SOURCE_ID = '160856';
 const DEFAULT_MOMENCE_HOST_ID = 13752;
 const MOMENCE_DASHBOARD_ORIGIN = 'https://momence.com';
 const DEFAULT_MOMENCE_DASHBOARD_BASE_URL = `${MOMENCE_DASHBOARD_ORIGIN}/_api/primary`;
@@ -2744,6 +2743,7 @@ async function processLeadSubmission(leadData, req, dependencies = {}) {
   const persistLead = dependencies.storeLeadData || storeLeadData;
   const sendMetaEvent = dependencies.sendMetaLeadEvent || sendMetaLeadEvent;
   const syncToMomence = dependencies.submitToMomence || submitToMomence;
+  const skipMomenceLeadWebhook = Boolean(dependencies.skipMomenceLeadWebhook);
   let momenceSyncResult = { success: true, error: '' };
 
   await persistLead(leadData, {
@@ -2751,14 +2751,16 @@ async function processLeadSubmission(leadData, req, dependencies = {}) {
     user_agent: req.get('user-agent') || ''
   });
 
-  try {
-    await syncToMomence(leadData);
-  } catch (error) {
-    momenceSyncResult = {
-      success: false,
-      error: error.message || 'Unable to submit to Momence.'
-    };
-    console.error('Momence sync failed:', momenceSyncResult.error);
+  if (!skipMomenceLeadWebhook) {
+    try {
+      await syncToMomence(leadData);
+    } catch (error) {
+      momenceSyncResult = {
+        success: false,
+        error: error.message || 'Unable to submit to Momence.'
+      };
+      console.error('Momence sync failed:', momenceSyncResult.error);
+    }
   }
 
   if (!momenceSyncResult.success) {
@@ -2790,7 +2792,8 @@ async function processLeadSubmission(leadData, req, dependencies = {}) {
     success: true,
     id: leadData.id,
     event_id: leadData.event_id,
-    momenceSynced: true,
+    momenceSynced: !skipMomenceLeadWebhook,
+    momenceLeadWebhookSkipped: skipMomenceLeadWebhook,
     redirectUrl: getPublicClientConfig().redirectUrl
   };
 }
@@ -3372,7 +3375,11 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
 
 async function handleKidsLeadSubmission(req, res, options = {}) {
   try {
-    const validation = validateKidsLeadPayload(req.body, {
+    const requestPayload = {
+      ...req.body,
+      ...(options.fixedCenter ? { center: options.fixedCenter } : {})
+    };
+    const validation = validateKidsLeadPayload(requestPayload, {
       allowMissingBatch: Boolean(options.allowMissingBatch)
     });
 
@@ -3401,13 +3408,16 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
     const submissionResult = await processLeadSubmission(
       leadData,
       req,
-      options.momenceSourceId
-        ? {
-          submitToMomence: (leadPayload) => submitToMomence(leadPayload, {
-            sourceId: options.momenceSourceId
-          })
-        }
-        : {}
+      {
+        skipMomenceLeadWebhook: Boolean(options.skipMomenceLeadWebhook),
+        ...(options.momenceSourceId
+          ? {
+            submitToMomence: (leadPayload) => submitToMomence(leadPayload, {
+              sourceId: options.momenceSourceId
+            })
+          }
+          : {})
+      }
     );
 
     let consentResult = null;
@@ -3466,8 +3476,9 @@ app.post('/api/submit-kids-lead', applySubmissionRateLimit, async (req, res) => 
 
 app.post('/api/submit-kids-mum-tribe-lead', applySubmissionRateLimit, async (req, res) => {
   return handleKidsLeadSubmission(req, res, {
-    momenceSourceId: KIDS_MUM_TRIBE_MOMENCE_SOURCE_ID,
+    fixedCenter: 'Supreme Headquarters, Bandra',
     allowMissingBatch: true,
+    skipMomenceLeadWebhook: true,
     bookMumTribeClass: true
   });
 });

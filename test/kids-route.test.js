@@ -126,7 +126,14 @@ test('React app routes /kids-themumtribe to the Kids Juniors Mum Tribe submissio
   assert.match(source, /currentPath === "\/kids-themumtribe"/);
   assert.match(source, /isKidsMumTribeRoute/);
   assert.match(source, /routeMeta\.kidsMumTribe/);
-  assert.match(source, /<KidsTrialForm submitEndpoint="\/api\/submit-kids-mum-tribe-lead" hideBatchSelection \/>/);
+  assert.match(source, /submitEndpoint="\/api\/submit-kids-mum-tribe-lead"/);
+  assert.match(source, /hideBatchSelection/);
+  assert.match(source, /lockedStudioName="Supreme HQ, Bandra"/);
+  assert.match(source, /lockedStudioDisplayName="Physique 57, Bandra"/);
+  assert.match(source, /formTitle="Physique 57 X The Mum Tribe"/);
+  assert.match(source, /formDescription="Tuesday, 14 July, 2026 at 4:30pm\. Taught by Simonelle De Vitre\."/);
+  assert.match(source, /successSourceForm="kids-mum-tribe-form"/);
+  assert.match(source, /eventVenue="Physique 57, Bandra"/);
 });
 
 test('Juniors form contains child name, date of birth, age, conditional batch options, brand content, and supplied media', () => {
@@ -225,6 +232,20 @@ test('Thank you page has a kids-only Juniors layout for kids submissions', () =>
   assert.match(source, /What happens next for your child/);
   assert.doesNotMatch(source, /KidsImageMosaic/);
   assert.doesNotMatch(source, /supportingImages/);
+});
+
+test('Thank you page renders Mum Tribe specific event details without generic batch CTA', () => {
+  const source = readProjectFile('client/src/components/thank-you-page.tsx');
+
+  assert.match(source, /isMumTribeSubmission/);
+  assert.match(source, /kids-mum-tribe-form/);
+  assert.match(source, /Physique 57 X The Mum Tribe/);
+  assert.match(source, /Tuesday, 14 July, 2026 at 4:30pm/);
+  assert.match(source, /Simonelle De Vitre/);
+  assert.match(source, /Physique 57, Bandra/);
+  assert.match(source, /Your Mum Tribe spot is in/);
+  assert.match(source, /Everything needed for this Mum Tribe class is captured/);
+  assert.match(source, /!isMumTribeSubmission/);
 });
 
 test('Juniors form uses elevated copy, batch cards, and expanded method sections', () => {
@@ -391,19 +412,39 @@ test('buildMomenceLeadRequestPayload includes kids-specific fields with Momence 
   assert.equal(Object.prototype.hasOwnProperty.call(payload, 'batchPreference'), false);
 });
 
-test('buildMomenceLeadRequestPayload can override the Mum Tribe webhook source id', () => {
-  const payload = app.buildMomenceLeadRequestPayload(
+test('processLeadSubmission can skip the Momence lead webhook for route-specific flows', async () => {
+  let submitCalled = false;
+  let metaCalled = false;
+
+  const result = await app.processLeadSubmission(
     {
       ...validKidsPayload(),
-      type: 'Physique 57 - Juniors'
+      id: 'lead_123',
+      event_id: 'lead_event_123'
     },
     {
-      token: 'token',
-      sourceId: '160856'
+      get: () => 'test-agent',
+      headers: {},
+      ip: '127.0.0.1'
+    },
+    {
+      skipMomenceLeadWebhook: true,
+      storeLeadData: async () => ({ success: true }),
+      submitToMomence: async () => {
+        submitCalled = true;
+      },
+      sendMetaLeadEvent: async () => {
+        metaCalled = true;
+        return { sent: false, reason: 'test' };
+      }
     }
   );
 
-  assert.equal(payload.sourceId, '160856');
+  assert.equal(submitCalled, false);
+  assert.equal(metaCalled, true);
+  assert.equal(result.success, true);
+  assert.equal(result.momenceSynced, false);
+  assert.equal(result.momenceLeadWebhookSkipped, true);
 });
 
 test('Momence dashboard client builds Mum Tribe free class pay-cart request for the child account', async () => {

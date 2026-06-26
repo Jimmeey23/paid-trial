@@ -239,16 +239,41 @@ function getCountryOption(countrySelection: string) {
 interface KidsTrialFormProps {
   submitEndpoint?: string
   hideBatchSelection?: boolean
+  lockedStudioName?: string
+  lockedStudioDisplayName?: string
+  formTitle?: string
+  formDescription?: string
+  formBadge?: string
+  successSourceForm?: string
+  eventTitle?: string
+  eventDescription?: string
+  eventDateTime?: string
+  eventInstructor?: string
+  eventVenue?: string
 }
 
-export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead", hideBatchSelection = false }: KidsTrialFormProps) {
+export function KidsTrialForm({
+  submitEndpoint = "/api/submit-kids-lead",
+  hideBatchSelection = false,
+  lockedStudioName = "",
+  lockedStudioDisplayName = "",
+  formTitle = "Plan your child's first session",
+  formDescription = "Tell us where you would like to visit and which Juniors class works best for your child.",
+  formBadge = "P57 Juniors",
+  successSourceForm = "kids-trial-form",
+  eventTitle = "",
+  eventDescription = "",
+  eventDateTime = "",
+  eventInstructor = "",
+  eventVenue = "",
+}: KidsTrialFormProps) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     countryCode: "IN",
     phone: "",
-    studio: "",
+    studio: lockedStudioName,
     childName: "",
     childAge: "",
     childDateOfBirth: "",
@@ -275,6 +300,9 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead", hideBa
   const batchOptions = selectedStudioBackendName ? KIDS_BATCH_OPTIONS[selectedStudioBackendName] || [] : []
   const batchDetails = selectedStudioBackendName ? JUNIORS_BATCH_DETAILS[selectedStudioBackendName] || [] : []
   const selectedCountry = getCountryOption(formData.countryCode)
+  const lockedStudio = lockedStudioName
+    ? studios.find((studio) => studio.name === lockedStudioName)
+    : null
 
   useEffect(() => {
     const imageInterval = window.setInterval(() => {
@@ -283,6 +311,23 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead", hideBa
 
     return () => window.clearInterval(imageInterval)
   }, [])
+
+  useEffect(() => {
+    if (!lockedStudioName || formData.studio === lockedStudioName) {
+      return
+    }
+
+    setFormData((current) => ({
+      ...current,
+      studio: lockedStudioName,
+      batch: "",
+    }))
+    setErrors((current) => ({
+      ...current,
+      studio: "",
+      batch: "",
+    }))
+  }, [formData.studio, lockedStudioName])
 
   useEffect(() => {
     if (!showConsentModal) {
@@ -455,15 +500,20 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead", hideBa
       saveTrialSuccessPayload({
         eventId: typeof result.event_id === "string" ? result.event_id : payload.event_id,
         firstName: payload.firstName,
-        studioName: selectedStudio?.name || formData.studio,
+        studioName: eventVenue || lockedStudioDisplayName || selectedStudio?.name || formData.studio,
         studioBackendName: selectedStudioBackendName,
         studioLocationId: selectedStudio?.scheduleLocationId,
-        formatName: JUNIORS_PROGRAM_NAME,
-        classType: JUNIORS_PROGRAM_NAME,
+        formatName: eventTitle || JUNIORS_PROGRAM_NAME,
+        classType: eventTitle || JUNIORS_PROGRAM_NAME,
         childName: payload.childName,
         batch: payload.batch,
-        sourceForm: "kids-trial-form",
-        statusMessage: result.warning || `Your ${JUNIORS_PROGRAM_NAME} request has been received.`,
+        sourceForm: successSourceForm,
+        eventTitle,
+        eventDescription,
+        eventDateTime,
+        eventInstructor,
+        eventVenue: eventVenue || lockedStudioDisplayName,
+        statusMessage: result.warning || `Your ${eventTitle || JUNIORS_PROGRAM_NAME} request has been received.`,
         redirectUrl: getThankYouUrl(),
         leadTracking: {
           event_id: typeof result.event_id === "string" ? result.event_id : payload.event_id,
@@ -480,7 +530,7 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead", hideBa
         email: "",
         countryCode: "IN",
         phone: "",
-        studio: "",
+        studio: lockedStudioName,
         childName: "",
         childAge: "",
         childDateOfBirth: "",
@@ -606,14 +656,14 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead", hideBa
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200 sm:text-xs">P57 Juniors</p>
                     <h2 className="mt-2 max-w-xl text-[1.7rem] font-bold leading-[1.08] tracking-normal text-white sm:text-3xl sm:leading-[1.12]">
-                      Plan your child's first session
+                      {formTitle}
                     </h2>
                     <p className="mt-2 max-w-2xl text-sm leading-5 text-white/70 sm:mt-3 sm:text-sm sm:leading-6">
-                      Tell us where you would like to visit and which Juniors class works best for your child.
+                      {formDescription}
                     </p>
                   </div>
                   <div className="w-fit rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-white shadow-sm backdrop-blur sm:px-4 sm:py-2 sm:text-[11px]">
-                    P57 Juniors
+                    {formBadge}
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-px bg-slate-800 sm:grid-cols-5">
@@ -743,21 +793,32 @@ export function KidsTrialForm({ submitEndpoint = "/api/submit-kids-lead", hideBa
                   <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
                   <div className={FIELD_GROUP_CLASS}>
                     <Label htmlFor="studio" className={FIELD_LABEL_CLASS}>Center <span className="text-destructive">*</span></Label>
-                    <Select value={formData.studio} onValueChange={(value) => handleInputChange("studio", value)}>
-                      <SelectTrigger id="studio" size="lg" className={cn(FIELD_CONTROL_CLASS, errors.studio && FIELD_INVALID_CLASS)}>
-                        <SelectValue placeholder="Select center" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {studios.map((studio) => (
-                          <SelectItem key={studio.name} value={studio.name}>
-                            <div>
-                              <div className="font-medium">{studio.name}</div>
-                              <div className="text-xs text-muted-foreground">{studio.location}</div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {lockedStudio ? (
+                      <Input
+                        id="studio"
+                        name="studio"
+                        value={lockedStudioDisplayName || `${lockedStudio.name} - ${lockedStudio.location}`}
+                        readOnly
+                        aria-readonly="true"
+                        className={cn(FIELD_CONTROL_CLASS, "cursor-default bg-slate-100 text-slate-700", errors.studio && FIELD_INVALID_CLASS)}
+                      />
+                    ) : (
+                      <Select value={formData.studio} onValueChange={(value) => handleInputChange("studio", value)}>
+                        <SelectTrigger id="studio" size="lg" className={cn(FIELD_CONTROL_CLASS, errors.studio && FIELD_INVALID_CLASS)}>
+                          <SelectValue placeholder="Select center" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {studios.map((studio) => (
+                            <SelectItem key={studio.name} value={studio.name}>
+                              <div>
+                                <div className="font-medium">{studio.name}</div>
+                                <div className="text-xs text-muted-foreground">{studio.location}</div>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     {errors.studio ? <p className={FIELD_ERROR_CLASS}>{errors.studio}</p> : null}
                   </div>
 

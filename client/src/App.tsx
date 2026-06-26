@@ -44,10 +44,10 @@ const routeMeta = {
     name: "Physique 57 Juniors Registration Form",
   },
   kidsMumTribe: {
-    title: "Physique 57 Juniors | The Mum Tribe",
+    title: "Physique 57 X The Mum Tribe",
     description:
-      "Register for The Mum Tribe Physique 57 Juniors experience and complete the parent and child consent flow.",
-    name: "Physique 57 Juniors The Mum Tribe Form",
+      "Tuesday, 14 July, 2026 at 4:30pm. Taught by Simonelle De Vitre. Venue: Physique 57, Bandra.",
+    name: "Physique 57 X The Mum Tribe",
   },
   kidsConsent: {
     title: "Physique 57 Juniors | Consent Form",
@@ -232,7 +232,23 @@ export default function App() {
       : isKidsRoute
         ? <KidsTrialForm />
         : isKidsMumTribeRoute
-          ? <KidsTrialForm submitEndpoint="/api/submit-kids-mum-tribe-lead" hideBatchSelection />
+          ? (
+            <KidsTrialForm
+              submitEndpoint="/api/submit-kids-mum-tribe-lead"
+              hideBatchSelection
+              lockedStudioName="Supreme HQ, Bandra"
+              lockedStudioDisplayName="Physique 57, Bandra"
+              formTitle="Physique 57 X The Mum Tribe"
+              formDescription="Tuesday, 14 July, 2026 at 4:30pm. Taught by Simonelle De Vitre."
+              formBadge="The Mum Tribe"
+              successSourceForm="kids-mum-tribe-form"
+              eventTitle="Physique 57 X The Mum Tribe"
+              eventDescription="Tuesday, 14 July, 2026 at 4:30pm. Taught by Simonelle De Vitre."
+              eventDateTime="Tuesday, 14 July, 2026 at 4:30pm"
+              eventInstructor="Simonelle De Vitre"
+              eventVenue="Physique 57, Bandra"
+            />
+          )
           : isKidsConsentRoute
             ? <KidsConsentPage />
             : isTestRoute

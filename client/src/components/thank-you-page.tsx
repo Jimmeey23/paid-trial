@@ -228,12 +228,12 @@ function KidsThankYouPage({
               </div>
               <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-normal text-slate-950 sm:text-5xl lg:text-6xl">
                 {isMumTribeSubmission
-                  ? <>Thank you{successPayload?.firstName ? `, ${successPayload.firstName}` : ""}. Your child is registered for {eventTitle}.</>
+                  ? <>Thank you{successPayload?.firstName ? `, ${successPayload.firstName}` : ""}. Your request is in for {eventTitle}.</>
                   : <>Thank you{successPayload?.firstName ? `, ${successPayload.firstName}` : ""}. We are preparing your child's first Juniors session.</>}
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
                 {isMumTribeSubmission
-                  ? `${eventDateTime}. Taught by ${eventInstructor}.`
+                  ? successPayload?.statusMessage || `${eventDateTime}. Taught by ${eventInstructor}.`
                   : "Our team will contact you shortly to confirm the best class timing and make the first studio visit feel clear, calm, and confident."}
               </p>
 

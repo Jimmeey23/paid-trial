@@ -59,6 +59,8 @@ const MOMENCE_DASHBOARD_ORIGIN = 'https://momence.com';
 const DEFAULT_MOMENCE_DASHBOARD_BASE_URL = `${MOMENCE_DASHBOARD_ORIGIN}/_api/primary`;
 const DEFAULT_KIDS_MUM_TRIBE_CLASS_SESSION_ID = 138939271;
 const DEFAULT_KIDS_MUM_TRIBE_CLASS_HOME_LOCATION_ID = 29821;
+const DEFAULT_MOMENCE_WAIVER_LOOKUP_ATTEMPTS = 5;
+const DEFAULT_MOMENCE_WAIVER_LOOKUP_DELAY_MS = 600;
 const DEFAULT_KIDS_PARENT_CONSENT_PREDEFINED_WAIVER_IDS = ['waiver', 'membership-waiver'];
 const DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS = ['child-waiver'];
 const DEFAULT_KIDS_CONSENT_PREDEFINED_WAIVER_IDS = [
@@ -1496,18 +1498,43 @@ class MomencePublicApiClient {
     return [];
   }
 
+  async listMemberWaiversWithRetry(memberId, options = {}) {
+    const attempts = Math.max(1, parseInteger(
+      options.attempts ?? process.env.MOMENCE_WAIVER_LOOKUP_ATTEMPTS,
+      DEFAULT_MOMENCE_WAIVER_LOOKUP_ATTEMPTS
+    ));
+    const delayMs = Math.max(0, parseInteger(
+      options.delayMs ?? process.env.MOMENCE_WAIVER_LOOKUP_DELAY_MS,
+      DEFAULT_MOMENCE_WAIVER_LOOKUP_DELAY_MS
+    ));
+    let waivers = [];
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      waivers = await this.listMemberWaivers(memberId);
+      if (waivers.length || attempt === attempts) {
+        return waivers;
+      }
+      await sleep(delayMs);
+    }
+
+    return waivers;
+  }
+
   async signKidsConsentWaivers(memberId, realSignature, options = {}) {
     const signature = sanitizeText(realSignature, 300000);
     if (!signature) {
       throw new Error('A drawn signature is required before recording consent.');
     }
 
-    const waivers = await this.listMemberWaivers(memberId);
+    const predefinedWaiverIds = new Set(options.predefinedWaiverIds || resolveKidsConsentPredefinedWaiverIds());
+    const waivers = await this.listMemberWaiversWithRetry(memberId, {
+      attempts: options.waiverLookupAttempts,
+      delayMs: options.waiverLookupDelayMs
+    });
     if (!waivers.length) {
-      throw new Error('No Momence waiver records were available for this member.');
+      throw new Error(`No Momence waiver records were available for member ${Number(memberId)} after retrying waiver lookup.`);
     }
 
-    const predefinedWaiverIds = new Set(options.predefinedWaiverIds || resolveKidsConsentPredefinedWaiverIds());
     const signRequests = buildDashboardPublicWaiverSignRequests({
       hostId: this.hostId,
       memberId: Number(memberId),
@@ -1515,6 +1542,16 @@ class MomencePublicApiClient {
       waivers,
       predefinedWaiverIds
     });
+
+    const availableWaiverIds = new Set(
+      waivers
+        .filter((waiver) => waiver?.type === 'predefined' && typeof waiver.id === 'string')
+        .map((waiver) => waiver.id)
+    );
+    const missingWaiverIds = [...predefinedWaiverIds].filter((waiverId) => !availableWaiverIds.has(waiverId));
+    if (missingWaiverIds.length === predefinedWaiverIds.size) {
+      throw new Error(`Momence waiver records were available for member ${Number(memberId)}, but none of the required waiver ids were present: ${missingWaiverIds.join(', ')}.`);
+    }
 
     await Promise.all(signRequests.map((request) => this.dashboardRequest(request.path, {
       method: request.method,
@@ -3375,6 +3412,9 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
 
 async function handleKidsLeadSubmission(req, res, options = {}) {
   try {
+    const submitLead = options.processLeadSubmission || processLeadSubmission;
+    const recordKidsConsent = options.provisionKidsConsent || provisionKidsConsent;
+    const bookKidsMumTribeClass = options.provisionKidsMumTribeClass || provisionKidsMumTribeClass;
     const requestPayload = {
       ...req.body,
       ...(options.fixedCenter ? { center: options.fixedCenter } : {})
@@ -3405,7 +3445,7 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
       class_format: KIDS_CLASS_TYPE
     });
 
-    const submissionResult = await processLeadSubmission(
+    const submissionResult = await submitLead(
       leadData,
       req,
       {
@@ -3422,9 +3462,26 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
 
     let consentResult = null;
     try {
-      consentResult = await provisionKidsConsent(leadData);
+      consentResult = await recordKidsConsent(leadData, options.kidsConsentOptions || {});
     } catch (error) {
       console.error('Kids consent recording failed:', error.message);
+      if (options.allowPostSubmitIntegrationFailure) {
+        return res.status(200).json({
+          ...submissionResult,
+          momenceConsent: {
+            success: false,
+            error: error.message || 'Unable to record kids consent.'
+          },
+          momenceClassBooking: {
+            success: false,
+            skipped: true,
+            reason: 'Consent recording failed before class booking.'
+          },
+          warning: 'Your request was received, but the studio team needs to manually finish the Momence setup.',
+          detail: error.message || 'Unable to record kids consent.',
+          requiresManualFollowUp: true
+        });
+      }
       return res.status(502).json({
         success: false,
         stored: true,
@@ -3437,7 +3494,7 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
 
     if (options.bookMumTribeClass) {
       try {
-        const classBookingResult = await provisionKidsMumTribeClass(consentResult.childMemberId);
+        const classBookingResult = await bookKidsMumTribeClass(consentResult.childMemberId);
         return res.status(200).json({
           ...submissionResult,
           momenceConsent: consentResult,
@@ -3445,6 +3502,19 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
         });
       } catch (error) {
         console.error('Kids Mum Tribe class booking failed:', error.message);
+        if (options.allowPostSubmitIntegrationFailure) {
+          return res.status(200).json({
+            ...submissionResult,
+            momenceConsent: consentResult,
+            momenceClassBooking: {
+              success: false,
+              error: error.message || 'Unable to add the Mum Tribe class.'
+            },
+            warning: 'Your request was received, but the studio team needs to manually add the Mum Tribe class in Momence.',
+            detail: error.message || 'Unable to add the Mum Tribe class.',
+            requiresManualFollowUp: true
+          });
+        }
         return res.status(502).json({
           success: false,
           stored: true,
@@ -3479,6 +3549,13 @@ app.post('/api/submit-kids-mum-tribe-lead', applySubmissionRateLimit, async (req
     fixedCenter: 'Supreme Headquarters, Bandra',
     allowMissingBatch: true,
     skipMomenceLeadWebhook: true,
+    allowPostSubmitIntegrationFailure: true,
+    kidsConsentOptions: {
+      consentOptions: {
+        waiverLookupAttempts: 8,
+        waiverLookupDelayMs: 1000
+      }
+    },
     bookMumTribeClass: true
   });
 });
@@ -3543,6 +3620,7 @@ module.exports.buildKidsMumTribeClassBookingConfig = buildKidsMumTribeClassBooki
 module.exports.buildInfluencerSubmissionSuccessPayload = buildInfluencerSubmissionSuccessPayload;
 module.exports.normalizePhoneDigits = normalizePhoneDigits;
 module.exports.processLeadSubmission = processLeadSubmission;
+module.exports.handleKidsLeadSubmission = handleKidsLeadSubmission;
 module.exports.provisionKidsConsent = provisionKidsConsent;
 module.exports.provisionKidsMumTribeClass = provisionKidsMumTribeClass;
 module.exports.provisionOpenBarreMembership = provisionOpenBarreMembership;

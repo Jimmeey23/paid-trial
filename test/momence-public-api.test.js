@@ -192,6 +192,51 @@ test('signKidsConsentWaivers uses the Momence dashboard primary API base by defa
   assert.equal(calls.length, 2);
 });
 
+test('signKidsConsentWaivers retries waiver lookup when records are not immediately available', async () => {
+  const calls = [];
+  let waiverLookupCount = 0;
+  const client = new MomencePublicApiClient({
+    dashboardCookies: 'ribbon.connect.sid=session-token',
+    hostId: 13752,
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+
+      if (String(url).endsWith('/host/13752/members/123/waivers')) {
+        waiverLookupCount += 1;
+        if (waiverLookupCount === 1) {
+          return jsonResponse({ waivers: [] });
+        }
+        return jsonResponse({
+          waivers: [
+            {
+              type: 'predefined',
+              id: 'child-waiver',
+              signatureStatus: 'unsigned',
+              signatureKey: 'child-key'
+            }
+          ]
+        });
+      }
+
+      if (String(url).includes('/public/hosts/13752/members/123/waivers/child-waiver/sign')) {
+        return jsonResponse({ success: true });
+      }
+
+      throw new Error(`Unexpected request ${url}`);
+    }
+  });
+
+  const result = await client.signKidsConsentWaivers(123, '[[12,18,24,30]]', {
+    predefinedWaiverIds: ['child-waiver'],
+    waiverLookupAttempts: 2,
+    waiverLookupDelayMs: 0
+  });
+
+  assert.equal(result.signedCount, 1);
+  assert.equal(waiverLookupCount, 2);
+  assert.equal(calls.filter((call) => String(call.url).endsWith('/host/13752/members/123/waivers')).length, 2);
+});
+
 test('signKidsConsentWaivers signs only the requested predefined waiver ids through the dashboard API', async () => {
   const calls = [];
   const client = new MomencePublicApiClient({

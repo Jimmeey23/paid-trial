@@ -31,6 +31,21 @@ function validKidsPayload(overrides = {}) {
   };
 }
 
+function createJsonResponseRecorder() {
+  return {
+    statusCode: 200,
+    body: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      this.body = payload;
+      return this;
+    }
+  };
+}
+
 test('Express serves the kids route through the client app fallback', () => {
   const routePaths = app._router.stack
     .filter((layer) => layer.route)
@@ -450,6 +465,90 @@ test('processLeadSubmission can skip the Momence lead webhook for route-specific
   assert.equal(result.success, true);
   assert.equal(result.momenceSynced, false);
   assert.equal(result.momenceLeadWebhookSkipped, true);
+});
+
+test('Mum Tribe kids handler returns success with warning when consent setup fails after storing lead', async () => {
+  assert.equal(typeof app.handleKidsLeadSubmission, 'function');
+
+  const response = createJsonResponseRecorder();
+  await app.handleKidsLeadSubmission(
+    {
+      body: validKidsPayload({ batch: '', center: 'Kwality House, Kemps Corner' }),
+      get: () => 'test-agent',
+      headers: {},
+      ip: '127.0.0.1'
+    },
+    response,
+    {
+      fixedCenter: 'Supreme Headquarters, Bandra',
+      allowMissingBatch: true,
+      skipMomenceLeadWebhook: true,
+      allowPostSubmitIntegrationFailure: true,
+      bookMumTribeClass: true,
+      processLeadSubmission: async (leadData) => ({
+        success: true,
+        id: leadData.id,
+        event_id: leadData.event_id,
+        momenceSynced: false,
+        momenceLeadWebhookSkipped: true
+      }),
+      provisionKidsConsent: async () => {
+        throw new Error('dashboard auth expired');
+      }
+    }
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.requiresManualFollowUp, true);
+  assert.equal(response.body.momenceConsent.success, false);
+  assert.equal(response.body.momenceClassBooking.skipped, true);
+  assert.match(response.body.warning, /manually finish the Momence setup/);
+});
+
+test('Mum Tribe kids handler returns success with warning when class booking fails after consent', async () => {
+  assert.equal(typeof app.handleKidsLeadSubmission, 'function');
+
+  const response = createJsonResponseRecorder();
+  await app.handleKidsLeadSubmission(
+    {
+      body: validKidsPayload({ batch: '' }),
+      get: () => 'test-agent',
+      headers: {},
+      ip: '127.0.0.1'
+    },
+    response,
+    {
+      fixedCenter: 'Supreme Headquarters, Bandra',
+      allowMissingBatch: true,
+      skipMomenceLeadWebhook: true,
+      allowPostSubmitIntegrationFailure: true,
+      bookMumTribeClass: true,
+      processLeadSubmission: async (leadData) => ({
+        success: true,
+        id: leadData.id,
+        event_id: leadData.event_id,
+        momenceSynced: false,
+        momenceLeadWebhookSkipped: true
+      }),
+      provisionKidsConsent: async () => ({
+        success: true,
+        memberId: 111,
+        childMemberId: 222,
+        signedCount: 2
+      }),
+      provisionKidsMumTribeClass: async () => {
+        throw new Error('pay-cart rejected');
+      }
+    }
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.requiresManualFollowUp, true);
+  assert.equal(response.body.momenceConsent.childMemberId, 222);
+  assert.equal(response.body.momenceClassBooking.success, false);
+  assert.match(response.body.warning, /manually add the Mum Tribe class/);
 });
 
 test('Momence dashboard client builds Mum Tribe free class pay-cart request for the child account', async () => {

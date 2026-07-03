@@ -2422,6 +2422,12 @@ function validateLeadPayload(payload, options = {}) {
   };
 }
 
+function resolveLeadClassFormat(leadData = {}) {
+  const requestedFormat = sanitizeText(leadData.type || leadData.class_format, 80);
+  const allowedFormats = new Set(Object.values(STUDIO_CLASS_OPTIONS).flat());
+  return allowedFormats.has(requestedFormat) ? requestedFormat : 'Barre 57';
+}
+
 function validateKidsLeadPayload(payload, options = {}) {
   const validation = validateLeadPayload(payload, {
     studioClassOptions: {
@@ -3517,7 +3523,7 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
     const leadData = buildLeadRecord({
       ...validation.data,
       source_form: 'barre-trial-form',
-      class_format: 'Barre 57'
+      class_format: resolveLeadClassFormat(validation.data)
     });
 
     let momenceSyncResult = { success: true, error: '' };
@@ -3609,7 +3615,7 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
     const leadData = buildLeadRecord({
       ...validation.data,
       source_form: 'influencer-barre-form',
-      class_format: 'Barre 57'
+      class_format: resolveLeadClassFormat(validation.data)
     });
 
     const storeResult = await supabaseLeadStore.saveBarreLeadData(leadData, {
@@ -3890,6 +3896,7 @@ module.exports.buildStudioComplimentaryClassMembershipConfig = buildStudioCompli
 module.exports.buildMomenceLeadRequestPayload = buildMomenceLeadRequestPayload;
 module.exports.buildKidsMumTribeClassBookingConfig = buildKidsMumTribeClassBookingConfig;
 module.exports.buildInfluencerSubmissionSuccessPayload = buildInfluencerSubmissionSuccessPayload;
+module.exports.resolveLeadClassFormat = resolveLeadClassFormat;
 module.exports.normalizePhoneDigits = normalizePhoneDigits;
 module.exports.processLeadSubmission = processLeadSubmission;
 module.exports.handleKidsLeadSubmission = handleKidsLeadSubmission;

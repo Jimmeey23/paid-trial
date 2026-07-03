@@ -444,6 +444,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
     countryCode: "+91",
     phone: "",
     studio: "",
+    classFormat: "Barre 57",
     acceptedTerms: false,
   })
 
@@ -472,6 +473,13 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
   const selectedStudio = studios.find((studio) => studio.name === formData.studio)
   const redirectUrl = resolvedRedirectUrl || publicConfig?.redirectUrl || DEFAULT_REDIRECT_URL
   const complimentaryClassProvisioned = (submissionMomence?.membershipProvisioned ?? submissionMomence?.openBarreProvisioned) === true
+  const searchParams = new URLSearchParams(window.location.search)
+  const isBarrePath = window.location.pathname === "/barre" || window.location.pathname.startsWith("/barre/")
+  const isMaiaBarreCampaign =
+    isBarrePath &&
+    searchParams.get("utm_source")?.trim().toLowerCase() === "influencer" &&
+    searchParams.get("utm_campaign")?.trim().toLowerCase() === "maia"
+  const selectedClassFormat = isMaiaBarreCampaign ? formData.classFormat : "Barre 57"
 
   function scheduleRedirectToMomence(url = redirectUrl, delay = 1400) {
     if (typeof window === "undefined") {
@@ -663,7 +671,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         phoneNumber: parsedPhone.formatInternational(),
         phoneCountry: getCountryOption(formData.countryCode)?.country || "IN",
         center: selectedStudio?.backendName ?? formData.studio,
-        type: "Barre 57",
+        type: selectedClassFormat,
         waiverAccepted: formData.acceptedTerms ? "accepted" : "",
         event_id: eventIdRef.current,
         source_form: isInfluencerFlow ? "influencer-barre-form" : "barre-trial-form",
@@ -704,6 +712,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         countryCode: "+91",
         phone: "",
         studio: "",
+        classFormat: "Barre 57",
         acceptedTerms: false,
       })
       eventIdRef.current = createEventId()
@@ -717,8 +726,8 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         studioName: selectedStudio?.name ?? formData.studio,
         studioBackendName: selectedStudio?.backendName ?? formData.studio,
         studioLocationId: selectedStudio?.scheduleLocationId,
-        formatName: "Barre 57",
-        classType: "Barre",
+        formatName: selectedClassFormat,
+        classType: selectedClassFormat === "powerCycle" ? "powerCycle" : "Barre",
         sourceForm: isInfluencerFlow ? "influencer-barre-form" : "barre-trial-form",
         statusMessage: result.error || result.warning || "Your details have been received.",
         redirectUrl: nextRedirectUrl,
@@ -1054,6 +1063,26 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                         </Select>
                         {errors.studio && <p className="text-sm text-destructive">{errors.studio}</p>}
                       </div>
+
+                      {isMaiaBarreCampaign ? (
+                        <div className="space-y-2">
+                          <Label htmlFor="classFormat" className="font-semibold">
+                            Preferred class format <span className="text-destructive">*</span>
+                          </Label>
+                          <Select value={formData.classFormat} onValueChange={(value) => handleInputChange("classFormat", value)}>
+                            <SelectTrigger
+                              size="lg"
+                              className="w-full border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15"
+                            >
+                              <SelectValue placeholder="Select a class format" />
+                            </SelectTrigger>
+                            <SelectContent className="border-slate-300 bg-white/95">
+                              <SelectItem value="Barre 57">Barre 57</SelectItem>
+                              <SelectItem value="powerCycle">powerCycle</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="relative space-y-3 rounded-2xl border border-slate-300/90 bg-white/55 p-4 pt-9 shadow-sm sm:p-6 sm:pt-10">

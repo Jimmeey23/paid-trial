@@ -13,6 +13,7 @@ const {
   buildInfluencerSubmissionSuccessPayload,
   normalizePhoneDigits,
   processLeadSubmission,
+  resolveLeadClassFormat,
   resolveRespondIoContactIdentifier,
   syncLeadToRespondIo,
   provisionKidsConsent,
@@ -27,6 +28,33 @@ function jsonResponse(body, init = {}) {
     headers: { 'content-type': 'application/json' }
   });
 }
+
+test('resolveLeadClassFormat allows Maia campaign to send powerCycle to Momence without payment data', () => {
+  assert.equal(resolveLeadClassFormat({ type: 'powerCycle' }), 'powerCycle');
+  assert.equal(resolveLeadClassFormat({ class_format: 'Barre 57' }), 'Barre 57');
+  assert.equal(resolveLeadClassFormat({ type: 'Strength Lab' }), 'Barre 57');
+  assert.equal(resolveLeadClassFormat({}), 'Barre 57');
+
+  const payload = buildMomenceLeadRequestPayload({
+    firstName: 'Maia',
+    lastName: 'Lead',
+    email: 'maia-lead@example.com',
+    phoneNumber: '+919876543210',
+    center: 'Supreme Headquarters, Bandra',
+    type: resolveLeadClassFormat({ type: 'powerCycle' }),
+    waiverAccepted: 'accepted',
+    source_form: 'barre-trial-form',
+    utm_source: 'Influencer',
+    utm_campaign: 'Maia'
+  }, {
+    token: 'token',
+    sourceId: '8082'
+  });
+
+  assert.equal(payload.type, 'powerCycle');
+  assert.equal(payload.utm_campaign, 'Maia');
+  assert.equal(payload.payment_session_id, undefined);
+});
 
 test('ensureMember finds an existing member by email before creating one', async () => {
   const calls = [];

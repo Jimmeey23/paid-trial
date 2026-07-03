@@ -766,8 +766,9 @@ test('Respond.io payload uses lead contact details and submission custom fields'
       { name: 'Lead ID', value: 'lead_123' },
       { name: 'Event ID', value: 'event_123' },
       { name: 'Source Form', value: 'barre-trial-form' },
-      { name: 'Studio Location', value: 'Supreme Headquarters, Bandra' },
-      { name: 'Class Format', value: 'Barre 57' },
+      { name: 'sourceId', value: '8082' },
+      { name: 'Center', value: 'Bandra(W), Mumbai' },
+      { name: 'Class Type', value: 'Barre' },
       { name: 'Preferred Time', value: 'Flexible / Needs Recommendation' },
       { name: 'UTM Source', value: 'instagram' },
       { name: 'UTM Campaign', value: 'july_trials' }
@@ -801,6 +802,8 @@ test('syncLeadToRespondIo upserts the contact and assigns New Enquiry lifecycle'
       center: 'Supreme Headquarters, Bandra',
       type: 'Barre 57',
       time: 'Flexible / Needs Recommendation'
+    }, {
+      sourceId: '201918'
     });
 
     assert.equal(result.sent, true);
@@ -810,6 +813,10 @@ test('syncLeadToRespondIo upserts the contact and assigns New Enquiry lifecycle'
     assert.equal(calls[0].url, 'https://respond.test/v2/contact/create_or_update/email%3Ania%40example.com');
     assert.equal(calls[1].url, 'https://respond.test/v2/contact/email%3Ania%40example.com/lifecycle/update');
     assert.equal(calls[0].options.headers.Authorization, 'Bearer respond-token');
+    assert.equal(
+      JSON.parse(calls[0].options.body).customFields.find((field) => field.name === 'sourceId').value,
+      '201918'
+    );
     assert.deepEqual(JSON.parse(calls[1].options.body), { name: '🤍 New Enquiry' });
   } finally {
     global.fetch = previousFetch;

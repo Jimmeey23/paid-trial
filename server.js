@@ -2735,13 +2735,72 @@ function resolveRespondIoContactIdentifier(leadData = {}) {
   return phoneNumber ? `phone:${phoneNumber}` : '';
 }
 
-function buildRespondIoContactPayload(leadData = {}) {
+function normalizeRespondIoCenter(center = '') {
+  const normalizedCenter = String(center || '').trim().toLowerCase();
+  if (!normalizedCenter) {
+    return '';
+  }
+
+  if (normalizedCenter.includes('supreme') || normalizedCenter.includes('bandra')) {
+    return 'Bandra(W), Mumbai';
+  }
+
+  if (normalizedCenter.includes('kwality') || normalizedCenter.includes('kemps')) {
+    return 'Kemps Corner, Mumbai';
+  }
+
+  if (normalizedCenter.includes('lavelle')) {
+    return "Lavelle Rd, B'luru";
+  }
+
+  if (normalizedCenter.includes('indiranagar')) {
+    return "Indiranagar, B'luru";
+  }
+
+  return sanitizeText(center, 120);
+}
+
+function normalizeRespondIoClassType(classType = '') {
+  const normalizedClassType = String(classType || '').trim().toLowerCase();
+  if (!normalizedClassType) {
+    return '';
+  }
+
+  if (normalizedClassType.includes('barre')) {
+    return 'Barre';
+  }
+
+  if (normalizedClassType.includes('powercycle')) {
+    return 'powerCycle';
+  }
+
+  if (normalizedClassType.includes('strength')) {
+    return 'Strength Lab';
+  }
+
+  return sanitizeText(classType, 80);
+}
+
+function resolveRespondIoSourceId(leadData = {}, options = {}) {
+  return String(
+    options.sourceId
+    || options.respondIoSourceId
+    || options.momenceSourceId
+    || leadData.sourceId
+    || leadData.source_id
+    || resolveMomenceSourceId(leadData)
+    || ''
+  ).trim();
+}
+
+function buildRespondIoContactPayload(leadData = {}, options = {}) {
   const customFields = [
     { name: 'Lead ID', value: leadData.id },
     { name: 'Event ID', value: leadData.event_id },
     { name: 'Source Form', value: leadData.source_form || leadData.sourceForm },
-    { name: 'Studio Location', value: leadData.center },
-    { name: 'Class Format', value: leadData.type || leadData.class_format },
+    { name: 'sourceId', value: resolveRespondIoSourceId(leadData, options) },
+    { name: 'Center', value: normalizeRespondIoCenter(leadData.center) },
+    { name: 'Class Type', value: normalizeRespondIoClassType(leadData.type || leadData.class_format) },
     { name: 'Preferred Time', value: leadData.time },
     { name: 'Child Name', value: leadData.childName },
     { name: 'Child Age', value: leadData.childAge },
@@ -2793,7 +2852,7 @@ async function postRespondIoJson(pathname, body, config) {
   }
 }
 
-async function syncLeadToRespondIo(leadData) {
+async function syncLeadToRespondIo(leadData, options = {}) {
   const config = getRespondIoConfig();
   if (!config.token) {
     return { sent: false, reason: 'Respond.io API key not configured' };
@@ -2807,7 +2866,7 @@ async function syncLeadToRespondIo(leadData) {
   const encodedIdentifier = encodeURIComponent(identifier);
   const contact = await postRespondIoJson(
     `/contact/create_or_update/${encodedIdentifier}`,
-    buildRespondIoContactPayload(leadData),
+    buildRespondIoContactPayload(leadData, options),
     config
   );
 
@@ -2831,7 +2890,9 @@ async function sendRespondIoLead(leadData, dependencies = {}) {
   const syncToRespondIo = dependencies.syncLeadToRespondIo || syncLeadToRespondIo;
 
   try {
-    const result = await syncToRespondIo(leadData);
+    const result = await syncToRespondIo(leadData, {
+      sourceId: dependencies.respondIoSourceId || dependencies.momenceSourceId
+    });
     if (result.sent) {
       console.log(`Respond.io contact synced: ${result.identifier} (${result.lifecycleStage || 'no lifecycle'})`);
     } else {
@@ -3500,11 +3561,14 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
       });
     }
 
-    await sendRespondIoLead(leadData);
+    const influencerSourceId = process.env.MOMENCE_INFLUENCER_SOURCE_ID || '201918';
+    await sendRespondIoLead(leadData, {
+      respondIoSourceId: influencerSourceId
+    });
 
     try {
       await submitToMomence(leadData, {
-        sourceId: process.env.MOMENCE_INFLUENCER_SOURCE_ID || '201918'
+        sourceId: influencerSourceId
       });
     } catch (error) {
       console.error('Momence lead webhook failed for influencer Barre:', error.message);

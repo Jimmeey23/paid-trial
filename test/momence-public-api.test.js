@@ -763,6 +763,7 @@ test('Respond.io payload uses lead contact details and submission custom fields'
     email: 'nia@example.com',
     phone: '+919876543210',
     countryCode: 'IN',
+    channelId: 523696,
     custom_fields: [
       { name: 'lead_id', value: 'lead_123' },
       { name: 'event_id', value: 'event_123' },
@@ -814,6 +815,7 @@ test('syncLeadToRespondIo upserts the contact and assigns New Enquiry lifecycle'
     assert.equal(calls[0].url, 'https://respond.test/v2/contact/create_or_update/email:nia@example.com');
     assert.equal(calls[1].url, 'https://respond.test/v2/contact/email:nia@example.com/lifecycle/update');
     assert.equal(calls[0].options.headers.Authorization, 'Bearer respond-token');
+    assert.equal(JSON.parse(calls[0].options.body).channelId, 523696);
     assert.equal(
       JSON.parse(calls[0].options.body).custom_fields.find((field) => field.name === 'source_id').value,
       '201918'

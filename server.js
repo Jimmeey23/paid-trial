@@ -69,6 +69,7 @@ const DEFAULT_KIDS_CONSENT_PREDEFINED_WAIVER_IDS = [
 ];
 const DEFAULT_RESPOND_IO_BASE_URL = 'https://api.respond.io/v2';
 const DEFAULT_RESPOND_IO_LIFECYCLE_STAGE = 'New Enquiry';
+const DEFAULT_RESPOND_IO_CHANNEL_ID = 523696;
 const DEFAULT_RESPOND_IO_RETRY_ATTEMPTS = 4;
 const DEFAULT_RESPOND_IO_RETRY_DELAY_MS = 1500;
 const DEFAULT_MOMENCE_CHILD_DOB_CUSTOMER_FIELD_ID = 6592;
@@ -2719,6 +2720,10 @@ function getRespondIoConfig() {
     baseUrl: String(process.env.RESPOND_IO_BASE_URL || process.env.RESPONDIO_BASE_URL || DEFAULT_RESPOND_IO_BASE_URL)
       .trim()
       .replace(/\/+$/, ''),
+    channelId: parseInteger(
+      process.env.RESPOND_IO_CHANNEL_ID || process.env.RESPONDIO_CHANNEL_ID,
+      DEFAULT_RESPOND_IO_CHANNEL_ID
+    ),
     lifecycleStage: String(
       process.env.RESPOND_IO_LIFECYCLE_STAGE
       || process.env.RESPONDIO_LIFECYCLE_STAGE
@@ -2795,6 +2800,12 @@ function resolveRespondIoSourceId(leadData = {}, options = {}) {
   ).trim();
 }
 
+function resolveRespondIoChannelId(options = {}) {
+  const configuredChannelId = options.channelId || options.respondIoChannelId;
+  const parsedChannelId = parseInteger(configuredChannelId, getRespondIoConfig().channelId);
+  return parsedChannelId > 0 ? parsedChannelId : '';
+}
+
 function buildRespondIoContactPayload(leadData = {}, options = {}) {
   const customFields = [
     { name: 'lead_id', value: leadData.id },
@@ -2826,6 +2837,7 @@ function buildRespondIoContactPayload(leadData = {}, options = {}) {
     email: normalizeEmail(leadData.email),
     phone: sanitizePhone(leadData.phoneNumber || leadData.phone),
     countryCode: normalizeCountryIso(leadData.phoneCountry || 'IN'),
+    channelId: resolveRespondIoChannelId(options),
     ...(customFields.length ? { custom_fields: customFields } : {})
   };
 }

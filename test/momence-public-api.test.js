@@ -9,9 +9,12 @@ const {
   buildOpenBarreMembershipConfig,
   buildStudioComplimentaryClassMembershipConfig,
   buildMomenceLeadRequestPayload,
+  buildRespondIoContactPayload,
   buildInfluencerSubmissionSuccessPayload,
   normalizePhoneDigits,
   processLeadSubmission,
+  resolveRespondIoContactIdentifier,
+  syncLeadToRespondIo,
   provisionKidsConsent,
   provisionInfluencerMembership,
   resolveScheduleLocationIds,
@@ -733,6 +736,101 @@ test('processLeadSubmission only sends Meta after Momence sync succeeds', async 
   assert.equal(result.momenceSynced, false);
   assert.equal(result.event_id, 'lead_event_id');
   assert.equal(metaSendCount, 0);
+});
+
+test('Respond.io payload uses lead contact details and submission custom fields', () => {
+  const leadData = {
+    id: 'lead_123',
+    event_id: 'event_123',
+    firstName: 'Nia',
+    lastName: 'Shah',
+    email: 'NIA@EXAMPLE.COM',
+    phoneNumber: '98765 43210',
+    phoneCountry: 'in',
+    source_form: 'barre-trial-form',
+    center: 'Supreme Headquarters, Bandra',
+    type: 'Barre 57',
+    time: 'Flexible / Needs Recommendation',
+    utm_source: 'instagram',
+    utm_campaign: 'july_trials'
+  };
+
+  assert.equal(resolveRespondIoContactIdentifier(leadData), 'email:nia@example.com');
+  assert.deepEqual(buildRespondIoContactPayload(leadData), {
+    firstName: 'Nia',
+    lastName: 'Shah',
+    email: 'nia@example.com',
+    phone: '+919876543210',
+    countryCode: 'IN',
+    customFields: [
+      { name: 'Lead ID', value: 'lead_123' },
+      { name: 'Event ID', value: 'event_123' },
+      { name: 'Source Form', value: 'barre-trial-form' },
+      { name: 'Studio Location', value: 'Supreme Headquarters, Bandra' },
+      { name: 'Class Format', value: 'Barre 57' },
+      { name: 'Preferred Time', value: 'Flexible / Needs Recommendation' },
+      { name: 'UTM Source', value: 'instagram' },
+      { name: 'UTM Campaign', value: 'july_trials' }
+    ]
+  });
+});
+
+test('syncLeadToRespondIo upserts the contact and assigns New Enquiry lifecycle', async () => {
+  const previousApiKey = process.env.RESPOND_IO_API_KEY;
+  const previousBaseUrl = process.env.RESPOND_IO_BASE_URL;
+  const previousLifecycle = process.env.RESPOND_IO_LIFECYCLE_STAGE;
+  const previousFetch = global.fetch;
+  const calls = [];
+
+  process.env.RESPOND_IO_API_KEY = 'respond-token';
+  process.env.RESPOND_IO_BASE_URL = 'https://respond.test/v2/';
+  delete process.env.RESPOND_IO_LIFECYCLE_STAGE;
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    return jsonResponse({ id: 456 });
+  };
+
+  try {
+    const result = await syncLeadToRespondIo({
+      id: 'lead_123',
+      event_id: 'event_123',
+      firstName: 'Nia',
+      lastName: 'Shah',
+      email: 'nia@example.com',
+      phoneNumber: '+919876543210',
+      center: 'Supreme Headquarters, Bandra',
+      type: 'Barre 57',
+      time: 'Flexible / Needs Recommendation'
+    });
+
+    assert.equal(result.sent, true);
+    assert.equal(result.identifier, 'email:nia@example.com');
+    assert.equal(result.lifecycleStage, '🤍 New Enquiry');
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].url, 'https://respond.test/v2/contact/create_or_update/email%3Ania%40example.com');
+    assert.equal(calls[1].url, 'https://respond.test/v2/contact/email%3Ania%40example.com/lifecycle/update');
+    assert.equal(calls[0].options.headers.Authorization, 'Bearer respond-token');
+    assert.deepEqual(JSON.parse(calls[1].options.body), { name: '🤍 New Enquiry' });
+  } finally {
+    global.fetch = previousFetch;
+    if (previousApiKey === undefined) {
+      delete process.env.RESPOND_IO_API_KEY;
+    } else {
+      process.env.RESPOND_IO_API_KEY = previousApiKey;
+    }
+
+    if (previousBaseUrl === undefined) {
+      delete process.env.RESPOND_IO_BASE_URL;
+    } else {
+      process.env.RESPOND_IO_BASE_URL = previousBaseUrl;
+    }
+
+    if (previousLifecycle === undefined) {
+      delete process.env.RESPOND_IO_LIFECYCLE_STAGE;
+    } else {
+      process.env.RESPOND_IO_LIFECYCLE_STAGE = previousLifecycle;
+    }
+  }
 });
 
 test('provisionInfluencerMembership falls back to Supabase sync with Studio Complimentary Class when direct checkout fails', async () => {

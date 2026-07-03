@@ -67,6 +67,8 @@ const DEFAULT_KIDS_CONSENT_PREDEFINED_WAIVER_IDS = [
   ...DEFAULT_KIDS_PARENT_CONSENT_PREDEFINED_WAIVER_IDS,
   ...DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS
 ];
+const DEFAULT_RESPOND_IO_BASE_URL = 'https://api.respond.io/v2';
+const DEFAULT_RESPOND_IO_LIFECYCLE_STAGE = '🤍 New Enquiry';
 const DEFAULT_MOMENCE_CHILD_DOB_CUSTOMER_FIELD_ID = 6592;
 const KIDS_BATCH_OPTIONS = {
   'Supreme Headquarters, Bandra': [
@@ -2709,6 +2711,142 @@ async function sendMetaLeadEvent(leadData, req) {
   return { sent: true, eventId, response: responseText };
 }
 
+function getRespondIoConfig() {
+  return {
+    token: String(process.env.RESPOND_IO_API_KEY || process.env.RESPONDIO_API_KEY || '').trim(),
+    baseUrl: String(process.env.RESPOND_IO_BASE_URL || process.env.RESPONDIO_BASE_URL || DEFAULT_RESPOND_IO_BASE_URL)
+      .trim()
+      .replace(/\/+$/, ''),
+    lifecycleStage: String(
+      process.env.RESPOND_IO_LIFECYCLE_STAGE
+      || process.env.RESPONDIO_LIFECYCLE_STAGE
+      || DEFAULT_RESPOND_IO_LIFECYCLE_STAGE
+    ).trim()
+  };
+}
+
+function resolveRespondIoContactIdentifier(leadData = {}) {
+  const email = normalizeEmail(leadData.email);
+  if (email) {
+    return `email:${email}`;
+  }
+
+  const phoneNumber = sanitizePhone(leadData.phoneNumber || leadData.phone);
+  return phoneNumber ? `phone:${phoneNumber}` : '';
+}
+
+function buildRespondIoContactPayload(leadData = {}) {
+  const customFields = [
+    { name: 'Lead ID', value: leadData.id },
+    { name: 'Event ID', value: leadData.event_id },
+    { name: 'Source Form', value: leadData.source_form || leadData.sourceForm },
+    { name: 'Studio Location', value: leadData.center },
+    { name: 'Class Format', value: leadData.type || leadData.class_format },
+    { name: 'Preferred Time', value: leadData.time },
+    { name: 'Child Name', value: leadData.childName },
+    { name: 'Child Age', value: leadData.childAge },
+    { name: 'Batch Preference', value: leadData.batch || leadData.batchPreference },
+    { name: 'UTM Source', value: leadData.utm_source },
+    { name: 'UTM Medium', value: leadData.utm_medium },
+    { name: 'UTM Campaign', value: leadData.utm_campaign },
+    { name: 'Landing Page', value: leadData.landing_page }
+  ]
+    .filter((field) => field.value !== undefined && field.value !== null && String(field.value).trim())
+    .map((field) => ({
+      name: field.name,
+      value: String(field.value).trim().slice(0, 1000)
+    }));
+
+  return {
+    firstName: sanitizeText(leadData.firstName, 80),
+    lastName: sanitizeText(leadData.lastName, 80),
+    email: normalizeEmail(leadData.email),
+    phone: sanitizePhone(leadData.phoneNumber || leadData.phone),
+    countryCode: normalizeCountryIso(leadData.phoneCountry || 'IN'),
+    ...(customFields.length ? { customFields } : {})
+  };
+}
+
+async function postRespondIoJson(pathname, body, config) {
+  const response = await fetch(`${config.baseUrl}${pathname}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`Respond.io API error: ${response.status} ${responseText || response.statusText}`.trim());
+  }
+
+  if (!responseText) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch (error) {
+    return { raw: responseText };
+  }
+}
+
+async function syncLeadToRespondIo(leadData) {
+  const config = getRespondIoConfig();
+  if (!config.token) {
+    return { sent: false, reason: 'Respond.io API key not configured' };
+  }
+
+  const identifier = resolveRespondIoContactIdentifier(leadData);
+  if (!identifier) {
+    return { sent: false, reason: 'Lead has no email or phone for Respond.io contact identifier' };
+  }
+
+  const encodedIdentifier = encodeURIComponent(identifier);
+  const contact = await postRespondIoJson(
+    `/contact/create_or_update/${encodedIdentifier}`,
+    buildRespondIoContactPayload(leadData),
+    config
+  );
+
+  if (config.lifecycleStage) {
+    await postRespondIoJson(
+      `/contact/${encodedIdentifier}/lifecycle/update`,
+      { name: config.lifecycleStage },
+      config
+    );
+  }
+
+  return {
+    sent: true,
+    identifier,
+    lifecycleStage: config.lifecycleStage,
+    contactId: contact.id || contact.contactId || contact?.data?.id || ''
+  };
+}
+
+async function sendRespondIoLead(leadData, dependencies = {}) {
+  const syncToRespondIo = dependencies.syncLeadToRespondIo || syncLeadToRespondIo;
+
+  try {
+    const result = await syncToRespondIo(leadData);
+    if (result.sent) {
+      console.log(`Respond.io contact synced: ${result.identifier} (${result.lifecycleStage || 'no lifecycle'})`);
+    } else {
+      console.log(`Respond.io sync skipped: ${result.reason}`);
+    }
+    return result;
+  } catch (error) {
+    console.error('Respond.io sync failed:', error.message || error);
+    return {
+      sent: false,
+      error: error.message || 'Unable to sync lead to Respond.io.'
+    };
+  }
+}
+
 function buildMomenceLeadRequestPayload(leadData, options = {}) {
   const momenceToken = options.token || process.env.MOMENCE_API_TOKEN || process.env.MOMENCE_TOKEN;
   const momenceSourceId = resolveMomenceSourceId(leadData, options);
@@ -2780,6 +2918,7 @@ async function processLeadSubmission(leadData, req, dependencies = {}) {
   const persistLead = dependencies.storeLeadData || storeLeadData;
   const sendMetaEvent = dependencies.sendMetaLeadEvent || sendMetaLeadEvent;
   const syncToMomence = dependencies.submitToMomence || submitToMomence;
+  const sendRespondIo = dependencies.sendRespondIoLead || sendRespondIoLead;
   const skipMomenceLeadWebhook = Boolean(dependencies.skipMomenceLeadWebhook);
   let momenceSyncResult = { success: true, error: '' };
 
@@ -2787,6 +2926,8 @@ async function processLeadSubmission(leadData, req, dependencies = {}) {
     ip_address: getClientIp(req),
     user_agent: req.get('user-agent') || ''
   });
+
+  await sendRespondIo(leadData, dependencies);
 
   if (!skipMomenceLeadWebhook) {
     try {
@@ -3270,6 +3411,8 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
       });
     }
 
+    await sendRespondIoLead(leadData);
+
     // Standard Barre submissions only create the Momence lead for team follow-up.
     try {
       await submitToMomence(leadData);
@@ -3356,6 +3499,8 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
         error: 'Unable to save your trial request. Please try again.'
       });
     }
+
+    await sendRespondIoLead(leadData);
 
     try {
       await submitToMomence(leadData, {
@@ -3621,6 +3766,9 @@ module.exports.buildInfluencerSubmissionSuccessPayload = buildInfluencerSubmissi
 module.exports.normalizePhoneDigits = normalizePhoneDigits;
 module.exports.processLeadSubmission = processLeadSubmission;
 module.exports.handleKidsLeadSubmission = handleKidsLeadSubmission;
+module.exports.buildRespondIoContactPayload = buildRespondIoContactPayload;
+module.exports.resolveRespondIoContactIdentifier = resolveRespondIoContactIdentifier;
+module.exports.syncLeadToRespondIo = syncLeadToRespondIo;
 module.exports.provisionKidsConsent = provisionKidsConsent;
 module.exports.provisionKidsMumTribeClass = provisionKidsMumTribeClass;
 module.exports.provisionOpenBarreMembership = provisionOpenBarreMembership;

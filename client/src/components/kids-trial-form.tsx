@@ -510,6 +510,10 @@ export function KidsTrialForm({
       saveTrialSuccessPayload({
         eventId: typeof result.event_id === "string" ? result.event_id : payload.event_id,
         firstName: payload.firstName,
+        lastName: payload.lastName,
+        email: payload.email,
+        phoneNumber: payload.phoneNumber,
+        phoneCountry: payload.phoneCountry,
         studioName: eventVenue || lockedStudioDisplayName || selectedStudio?.name || formData.studio,
         studioBackendName: selectedStudioBackendName,
         studioLocationId: selectedStudio?.scheduleLocationId,

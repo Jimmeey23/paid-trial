@@ -34,6 +34,10 @@ export interface SuccessSchedule {
 export interface TrialSuccessPayload {
   eventId?: string
   firstName?: string
+  lastName?: string
+  email?: string
+  phoneNumber?: string
+  phoneCountry?: string
   studioName?: string
   studioBackendName?: string
   studioLocationId?: string

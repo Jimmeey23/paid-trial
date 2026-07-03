@@ -710,6 +710,10 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
       saveTrialSuccessPayload({
         eventId: typeof result.event_id === "string" ? result.event_id : payload.event_id,
         firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        phoneNumber: payload.phoneNumber,
+        phoneCountry: payload.phoneCountry,
         studioName: selectedStudio?.name ?? formData.studio,
         studioBackendName: selectedStudio?.backendName ?? formData.studio,
         studioLocationId: selectedStudio?.scheduleLocationId,

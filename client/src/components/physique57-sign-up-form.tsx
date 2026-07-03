@@ -951,6 +951,10 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
     saveTrialSuccessPayload({
       eventId,
       firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
+      email: formData.email.trim(),
+      phoneNumber: typeof payload.phoneNumber === "string" ? payload.phoneNumber : formData.phone.trim(),
+      phoneCountry: typeof payload.phoneCountry === "string" ? payload.phoneCountry : getCountryIsoFromCode(formData.countryCode),
       studioName: selectedStudio?.name ?? formData.studio,
       studioBackendName: selectedStudio?.backendName ?? formData.studio,
       studioLocationId: selectedStudio?.scheduleLocationId,

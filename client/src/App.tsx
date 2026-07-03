@@ -6,11 +6,28 @@ import { KidsConsentPage } from "@/components/kids-consent-page"
 import { KidsTrialForm } from "@/components/kids-trial-form"
 import { ScheduleEmbed } from "@/components/schedule-embed"
 import { ThankYouPage } from "@/components/thank-you-page"
+import { readTrialSuccessPayload } from "@/lib/submission-success"
 
 const BRAND_LOGO_URL = "https://i.postimg.cc/6Qt8YppB/Photoroom_20251014_101748.png"
 const BRAND_SITE_URL = "https://www.physique57.in"
 const EMPTY_SCHEDULE_FILTER_IDS: string[] = []
 const BEGINNER_SCHEDULE_TAG_IDS = ["284832"]
+const RESPOND_IO_WIDGET_ID = "respondio__widget"
+const RESPOND_IO_WIDGET_SRC = "https://cdn.respond.io/webchat/widget/widget.js?cId=5a66956c79c60cad45c3cae8d3895e1"
+
+declare global {
+  interface Window {
+    __respond_settings?: {
+      identifier: string
+      firstName?: string
+      lastName?: string
+      phone?: string
+      email?: string
+      countryCode?: string
+      custom_fields?: Record<string, string>
+    }
+  }
+}
 
 const routeMeta = {
   default: {
@@ -135,6 +152,65 @@ function upsertJsonLdScript(scriptId: string, payload: Record<string, unknown>) 
   element.textContent = JSON.stringify(payload)
 }
 
+function normalizeRespondCenter(center = "") {
+  const normalizedCenter = center.trim().toLowerCase()
+  if (!normalizedCenter) return ""
+  if (normalizedCenter.includes("supreme") || normalizedCenter.includes("bandra")) return "Bandra(W), Mumbai"
+  if (normalizedCenter.includes("kwality") || normalizedCenter.includes("kemps")) return "Kemps Corner, Mumbai"
+  if (normalizedCenter.includes("lavelle")) return "Lavelle Rd, B'luru"
+  if (normalizedCenter.includes("indiranagar")) return "Indiranagar, B'luru"
+  return center
+}
+
+function normalizeRespondClassType(classType = "") {
+  const normalizedClassType = classType.trim().toLowerCase()
+  if (!normalizedClassType) return ""
+  if (normalizedClassType.includes("barre")) return "Barre"
+  if (normalizedClassType.includes("powercycle")) return "powerCycle"
+  if (normalizedClassType.includes("strength")) return "Strength Lab!"
+  return classType
+}
+
+function installRespondIoWidget() {
+  if (typeof window === "undefined" || document.getElementById(RESPOND_IO_WIDGET_ID)) {
+    return
+  }
+
+  const successPayload = readTrialSuccessPayload()
+  const email = successPayload?.email?.trim()
+  const phone = successPayload?.phoneNumber?.trim()
+  const identifier = email || phone
+
+  if (identifier) {
+    const customFields = Object.fromEntries(
+      Object.entries({
+        event_id: successPayload?.eventId || successPayload?.leadTracking?.event_id,
+        source_form: successPayload?.sourceForm,
+        center: normalizeRespondCenter(successPayload?.studioBackendName || successPayload?.studioName || ""),
+        class_type: normalizeRespondClassType(successPayload?.classType || successPayload?.formatName || ""),
+        utm_source: successPayload?.leadTracking?.utm_source,
+        utm_campaign: successPayload?.leadTracking?.utm_campaign,
+      }).filter(([, value]) => typeof value === "string" && value.trim())
+    ) as Record<string, string>
+
+    window.__respond_settings = {
+      identifier,
+      firstName: successPayload?.firstName || undefined,
+      lastName: successPayload?.lastName || undefined,
+      phone: phone || undefined,
+      email: email || undefined,
+      countryCode: successPayload?.phoneCountry || "IN",
+      ...(Object.keys(customFields).length ? { custom_fields: customFields } : {}),
+    }
+  }
+
+  const script = document.createElement("script")
+  script.id = RESPOND_IO_WIDGET_ID
+  script.src = RESPOND_IO_WIDGET_SRC
+  script.async = true
+  document.body.appendChild(script)
+}
+
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
   const isBarreRoute = currentPath === "/barre" || currentPath.startsWith("/barre/")
@@ -149,6 +225,10 @@ export default function App() {
   const isThankYouRoute = currentPath === "/thank-you" || currentPath.startsWith("/thank-you/")
   const scheduleLocationId = new URLSearchParams(window.location.search).get("locationId")
   const shouldRenderAnalytics = !["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
+
+  useEffect(() => {
+    installRespondIoWidget()
+  }, [])
 
   useEffect(() => {
     const handlePopState = () => {

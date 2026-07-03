@@ -50,7 +50,7 @@ const routeMeta = {
   },
   maiaBarre: {
     title: "Maia Sethna x Physique 57",
-    description: "Claim your complimentary Barre 57 class with Physique 57 India.",
+    description: "Transform your body with our signature method. Experience the Physique 57 difference.",
     name: "Maia Sethna x Physique 57 Barre Form",
   },
   influencers: {

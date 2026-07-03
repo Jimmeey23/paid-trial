@@ -43,7 +43,7 @@ const KIDS_MUM_TRIBE_ROUTE_META = {
 };
 const MAIA_BARRE_ROUTE_META = {
   title: 'Maia Sethna x Physique 57',
-  description: 'Claim your complimentary Barre 57 class with Physique 57 India.',
+  description: 'Transform your body with our signature method. Experience the Physique 57 difference.',
   image: BRAND_LOGO_URL,
   imageAlt: 'Physique 57 India logo'
 };
@@ -60,6 +60,7 @@ const KIDS_CLASS_TYPE = 'Physique 57 - Juniors';
 const KIDS_SOURCE_FORM = 'kids-trial-form';
 const DEFAULT_REGULAR_MOMENCE_SOURCE_ID = '8082';
 const DEFAULT_KIDS_MOMENCE_SOURCE_ID = '212426';
+const MAIA_MOMENCE_SOURCE_ID = '14729';
 const DEFAULT_MOMENCE_HOST_ID = 13752;
 const MOMENCE_DASHBOARD_ORIGIN = 'https://momence.com';
 const DEFAULT_MOMENCE_DASHBOARD_BASE_URL = `${MOMENCE_DASHBOARD_ORIGIN}/_api/primary`;
@@ -3541,11 +3542,17 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
       });
     }
 
-    await sendRespondIoLead(leadData);
+    const maiaSourceId = isMaiaBarreCampaign(req) ? MAIA_MOMENCE_SOURCE_ID : '';
+
+    await sendRespondIoLead(leadData, {
+      ...(maiaSourceId ? { respondIoSourceId: maiaSourceId } : {})
+    });
 
     // Standard Barre submissions only create the Momence lead for team follow-up.
     try {
-      await submitToMomence(leadData);
+      await submitToMomence(leadData, {
+        ...(maiaSourceId ? { sourceId: maiaSourceId } : {})
+      });
     } catch (error) {
       momenceSyncResult = {
         success: false,

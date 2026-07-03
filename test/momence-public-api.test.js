@@ -48,10 +48,11 @@ test('resolveLeadClassFormat allows Maia campaign to send powerCycle to Momence 
     utm_campaign: 'Maia'
   }, {
     token: 'token',
-    sourceId: '8082'
+    sourceId: '14729'
   });
 
   assert.equal(payload.type, 'powerCycle');
+  assert.equal(payload.sourceId, '14729');
   assert.equal(payload.utm_campaign, 'Maia');
   assert.equal(payload.payment_session_id, undefined);
 });

@@ -22,7 +22,7 @@ app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
 const CLIENT_APP_DIRECTORY = path.join(__dirname, 'dist');
 const CLIENT_APP_INDEX_PATH = path.join(CLIENT_APP_DIRECTORY, 'index.html');
-const BRAND_LOGO_URL = 'https://i.postimg.cc/6Qt8YppB/Photoroom_20251014_101748.png';
+const BRAND_LOGO_URL = '/p57-assets/physique57-logo.jpg';
 const KIDS_ROUTE_META = {
   title: 'Physique 57 Juniors | Kids Strength & Agility Program',
   description: 'Register for Physique 57 Juniors for ages 9-13 and choose your preferred Bandra or Kemps Corner batch.',
@@ -265,7 +265,7 @@ function renderAppIndexWithMeta(req, meta) {
   html = replaceMetaContent(html, 'property="og:image:alt"', meta.imageAlt || 'Physique 57 India');
   html = html.replace(
     /<meta property="og:image" content="[^"]*" \/>/i,
-    (match) => `${match}\n    <meta property="og:logo" content="${escapeHtmlAttribute(imageUrl)}" />\n    <meta name="logo" content="${escapeHtmlAttribute(imageUrl)}" />`
+    (match) => `${match}\n    <meta property="og:image:type" content="image/jpeg" />\n    <meta property="og:image:width" content="800" />\n    <meta property="og:image:height" content="600" />\n    <meta property="og:logo" content="${escapeHtmlAttribute(imageUrl)}" />\n    <meta name="logo" content="${escapeHtmlAttribute(imageUrl)}" />`
   );
   html = replaceMetaContent(html, 'name="twitter:title"', meta.title);
   html = replaceMetaContent(html, 'name="twitter:description"', meta.description);

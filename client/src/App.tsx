@@ -8,7 +8,7 @@ import { ScheduleEmbed } from "@/components/schedule-embed"
 import { ThankYouPage } from "@/components/thank-you-page"
 import { readTrialSuccessPayload } from "@/lib/submission-success"
 
-const BRAND_LOGO_URL = "https://i.postimg.cc/6Qt8YppB/Photoroom_20251014_101748.png"
+const BRAND_LOGO_URL = "/p57-assets/physique57-logo.jpg"
 const BRAND_SITE_URL = "https://www.physique57.in"
 const EMPTY_SCHEDULE_FILTER_IDS: string[] = []
 const BEGINNER_SCHEDULE_TAG_IDS = ["284832"]
@@ -291,6 +291,9 @@ export default function App() {
     upsertMeta("meta[property='og:description']", { property: "og:description", content: meta.description })
     upsertMeta("meta[property='og:image']", { property: "og:image", content: BRAND_LOGO_URL })
     upsertMeta("meta[property='og:image:alt']", { property: "og:image:alt", content: "Physique 57 India logo" })
+    upsertMeta("meta[property='og:image:type']", { property: "og:image:type", content: "image/jpeg" })
+    upsertMeta("meta[property='og:image:width']", { property: "og:image:width", content: "800" })
+    upsertMeta("meta[property='og:image:height']", { property: "og:image:height", content: "600" })
     upsertMeta("meta[property='og:logo']", { property: "og:logo", content: BRAND_LOGO_URL })
     upsertMeta("meta[name='logo']", { name: "logo", content: BRAND_LOGO_URL })
     upsertMeta("meta[name='twitter:title']", { name: "twitter:title", content: meta.title })

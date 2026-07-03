@@ -68,7 +68,9 @@ const DEFAULT_KIDS_CONSENT_PREDEFINED_WAIVER_IDS = [
   ...DEFAULT_KIDS_CHILD_CONSENT_PREDEFINED_WAIVER_IDS
 ];
 const DEFAULT_RESPOND_IO_BASE_URL = 'https://api.respond.io/v2';
-const DEFAULT_RESPOND_IO_LIFECYCLE_STAGE = '🤍 New Enquiry';
+const DEFAULT_RESPOND_IO_LIFECYCLE_STAGE = 'New Enquiry';
+const DEFAULT_RESPOND_IO_RETRY_ATTEMPTS = 4;
+const DEFAULT_RESPOND_IO_RETRY_DELAY_MS = 1500;
 const DEFAULT_MOMENCE_CHILD_DOB_CUSTOMER_FIELD_ID = 6592;
 const KIDS_BATCH_OPTIONS = {
   'Supreme Headquarters, Bandra': [
@@ -2775,7 +2777,7 @@ function normalizeRespondIoClassType(classType = '') {
   }
 
   if (normalizedClassType.includes('strength')) {
-    return 'Strength Lab';
+    return 'Strength Lab!';
   }
 
   return sanitizeText(classType, 80);
@@ -2795,25 +2797,27 @@ function resolveRespondIoSourceId(leadData = {}, options = {}) {
 
 function buildRespondIoContactPayload(leadData = {}, options = {}) {
   const customFields = [
-    { name: 'Lead ID', value: leadData.id },
-    { name: 'Event ID', value: leadData.event_id },
-    { name: 'Source Form', value: leadData.source_form || leadData.sourceForm },
-    { name: 'sourceId', value: resolveRespondIoSourceId(leadData, options) },
-    { name: 'Center', value: normalizeRespondIoCenter(leadData.center) },
-    { name: 'Class Type', value: normalizeRespondIoClassType(leadData.type || leadData.class_format) },
-    { name: 'Preferred Time', value: leadData.time },
-    { name: 'Child Name', value: leadData.childName },
-    { name: 'Child Age', value: leadData.childAge },
-    { name: 'Batch Preference', value: leadData.batch || leadData.batchPreference },
-    { name: 'UTM Source', value: leadData.utm_source },
-    { name: 'UTM Medium', value: leadData.utm_medium },
-    { name: 'UTM Campaign', value: leadData.utm_campaign },
-    { name: 'Landing Page', value: leadData.landing_page }
+    { name: 'lead_id', value: leadData.id },
+    { name: 'event_id', value: leadData.event_id },
+    { name: 'source_form', value: leadData.source_form || leadData.sourceForm },
+    { name: 'source_id', value: resolveRespondIoSourceId(leadData, options) },
+    { name: 'center', value: normalizeRespondIoCenter(leadData.center) },
+    { name: 'class_type', value: normalizeRespondIoClassType(leadData.type || leadData.class_format) },
+    { name: 'preferred_time', value: leadData.time },
+    { name: 'child_name', value: leadData.childName },
+    { name: 'child_age', value: leadData.childAge },
+    { name: 'batch_preference', value: leadData.batch || leadData.batchPreference },
+    { name: 'utm_source', value: leadData.utm_source },
+    { name: 'utm_medium', value: leadData.utm_medium },
+    { name: 'utm_campaign', value: leadData.utm_campaign },
+    { name: 'landing_page', value: leadData.landing_page }
   ]
     .filter((field) => field.value !== undefined && field.value !== null && String(field.value).trim())
     .map((field) => ({
       name: field.name,
-      value: String(field.value).trim().slice(0, 1000)
+      value: typeof field.value === 'number'
+        ? field.value
+        : String(field.value).trim().slice(0, 1000)
     }));
 
   return {
@@ -2822,34 +2826,48 @@ function buildRespondIoContactPayload(leadData = {}, options = {}) {
     email: normalizeEmail(leadData.email),
     phone: sanitizePhone(leadData.phoneNumber || leadData.phone),
     countryCode: normalizeCountryIso(leadData.phoneCountry || 'IN'),
-    ...(customFields.length ? { customFields } : {})
+    ...(customFields.length ? { custom_fields: customFields } : {})
   };
 }
 
-async function postRespondIoJson(pathname, body, config) {
-  const response = await fetch(`${config.baseUrl}${pathname}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-  });
+async function postRespondIoJson(pathname, body, config, options = {}) {
+  const maxAttempts = Number(options.maxAttempts || DEFAULT_RESPOND_IO_RETRY_ATTEMPTS);
+  const retryDelayMs = Number(options.retryDelayMs || DEFAULT_RESPOND_IO_RETRY_DELAY_MS);
+  let lastError = null;
 
-  const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(`Respond.io API error: ${response.status} ${responseText || response.statusText}`.trim());
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await fetch(`${config.baseUrl}${pathname}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      lastError = new Error(`Respond.io API error: ${response.status} ${responseText || response.statusText}`.trim());
+      if ((response.status === 429 || response.status === 449 || response.status >= 500) && attempt < maxAttempts) {
+        const retryAfterSeconds = Number(response.headers?.get?.('retry-after') || 0);
+        await sleep(retryAfterSeconds > 0 ? retryAfterSeconds * 1000 : retryDelayMs * attempt);
+        continue;
+      }
+      throw lastError;
+    }
+
+    if (!responseText) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(responseText);
+    } catch (error) {
+      return { raw: responseText };
+    }
   }
 
-  if (!responseText) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(responseText);
-  } catch (error) {
-    return { raw: responseText };
-  }
+  throw lastError || new Error('Respond.io API request failed.');
 }
 
 async function syncLeadToRespondIo(leadData, options = {}) {
@@ -2863,18 +2881,21 @@ async function syncLeadToRespondIo(leadData, options = {}) {
     return { sent: false, reason: 'Lead has no email or phone for Respond.io contact identifier' };
   }
 
-  const encodedIdentifier = encodeURIComponent(identifier);
   const contact = await postRespondIoJson(
-    `/contact/create_or_update/${encodedIdentifier}`,
+    `/contact/create_or_update/${identifier}`,
     buildRespondIoContactPayload(leadData, options),
     config
   );
 
   if (config.lifecycleStage) {
     await postRespondIoJson(
-      `/contact/${encodedIdentifier}/lifecycle/update`,
+      `/contact/${identifier}/lifecycle/update`,
       { name: config.lifecycleStage },
-      config
+      config,
+      {
+        maxAttempts: DEFAULT_RESPOND_IO_RETRY_ATTEMPTS + 2,
+        retryDelayMs: DEFAULT_RESPOND_IO_RETRY_DELAY_MS
+      }
     );
   }
 

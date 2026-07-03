@@ -453,6 +453,7 @@ test('processLeadSubmission can skip the Momence lead webhook for route-specific
       submitToMomence: async () => {
         submitCalled = true;
       },
+      sendRespondIoLead: async () => ({ sent: false, reason: 'test' }),
       sendMetaLeadEvent: async () => {
         metaCalled = true;
         return { sent: false, reason: 'test' };

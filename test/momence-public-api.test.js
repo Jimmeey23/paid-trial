@@ -724,6 +724,7 @@ test('processLeadSubmission only sends Meta after Momence sync succeeds', async 
       submitToMomence: async () => {
         throw new Error('Momence rejected lead');
       },
+      sendRespondIoLead: async () => ({ sent: false, reason: 'test' }),
       sendMetaLeadEvent: async () => {
         metaSendCount += 1;
         return { sent: true, eventId: 'lead_event_id' };
@@ -762,16 +763,16 @@ test('Respond.io payload uses lead contact details and submission custom fields'
     email: 'nia@example.com',
     phone: '+919876543210',
     countryCode: 'IN',
-    customFields: [
-      { name: 'Lead ID', value: 'lead_123' },
-      { name: 'Event ID', value: 'event_123' },
-      { name: 'Source Form', value: 'barre-trial-form' },
-      { name: 'sourceId', value: '8082' },
-      { name: 'Center', value: 'Bandra(W), Mumbai' },
-      { name: 'Class Type', value: 'Barre' },
-      { name: 'Preferred Time', value: 'Flexible / Needs Recommendation' },
-      { name: 'UTM Source', value: 'instagram' },
-      { name: 'UTM Campaign', value: 'july_trials' }
+    custom_fields: [
+      { name: 'lead_id', value: 'lead_123' },
+      { name: 'event_id', value: 'event_123' },
+      { name: 'source_form', value: 'barre-trial-form' },
+      { name: 'source_id', value: '8082' },
+      { name: 'center', value: 'Bandra(W), Mumbai' },
+      { name: 'class_type', value: 'Barre' },
+      { name: 'preferred_time', value: 'Flexible / Needs Recommendation' },
+      { name: 'utm_source', value: 'instagram' },
+      { name: 'utm_campaign', value: 'july_trials' }
     ]
   });
 });
@@ -808,16 +809,16 @@ test('syncLeadToRespondIo upserts the contact and assigns New Enquiry lifecycle'
 
     assert.equal(result.sent, true);
     assert.equal(result.identifier, 'email:nia@example.com');
-    assert.equal(result.lifecycleStage, '🤍 New Enquiry');
+    assert.equal(result.lifecycleStage, 'New Enquiry');
     assert.equal(calls.length, 2);
-    assert.equal(calls[0].url, 'https://respond.test/v2/contact/create_or_update/email%3Ania%40example.com');
-    assert.equal(calls[1].url, 'https://respond.test/v2/contact/email%3Ania%40example.com/lifecycle/update');
+    assert.equal(calls[0].url, 'https://respond.test/v2/contact/create_or_update/email:nia@example.com');
+    assert.equal(calls[1].url, 'https://respond.test/v2/contact/email:nia@example.com/lifecycle/update');
     assert.equal(calls[0].options.headers.Authorization, 'Bearer respond-token');
     assert.equal(
-      JSON.parse(calls[0].options.body).customFields.find((field) => field.name === 'sourceId').value,
+      JSON.parse(calls[0].options.body).custom_fields.find((field) => field.name === 'source_id').value,
       '201918'
     );
-    assert.deepEqual(JSON.parse(calls[1].options.body), { name: '🤍 New Enquiry' });
+    assert.deepEqual(JSON.parse(calls[1].options.body), { name: 'New Enquiry' });
   } finally {
     global.fetch = previousFetch;
     if (previousApiKey === undefined) {

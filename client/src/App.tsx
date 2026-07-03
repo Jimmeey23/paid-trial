@@ -171,6 +171,14 @@ function normalizeRespondClassType(classType = "") {
   return classType
 }
 
+function resolveRespondLeadSource(sourceForm = "") {
+  const normalizedSourceForm = sourceForm.trim().toLowerCase()
+  if (normalizedSourceForm.includes("influencer")) return "Influencer Marketing"
+  if (normalizedSourceForm.includes("barre")) return "Website Barre"
+  if (normalizedSourceForm.includes("kids")) return "Website Kids"
+  return "Website Paid"
+}
+
 function installRespondIoWidget() {
   if (typeof window === "undefined" || document.getElementById(RESPOND_IO_WIDGET_ID)) {
     return
@@ -186,6 +194,7 @@ function installRespondIoWidget() {
       Object.entries({
         event_id: successPayload?.eventId || successPayload?.leadTracking?.event_id,
         source_form: successPayload?.sourceForm,
+        lead_source: resolveRespondLeadSource(successPayload?.sourceForm || ""),
         center: normalizeRespondCenter(successPayload?.studioBackendName || successPayload?.studioName || ""),
         class_type: normalizeRespondClassType(successPayload?.classType || successPayload?.formatName || ""),
         utm_source: successPayload?.leadTracking?.utm_source,

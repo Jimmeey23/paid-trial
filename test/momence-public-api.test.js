@@ -768,6 +768,7 @@ test('Respond.io payload uses lead contact details and submission custom fields'
       { name: 'lead_id', value: 'lead_123' },
       { name: 'event_id', value: 'event_123' },
       { name: 'source_form', value: 'barre-trial-form' },
+      { name: 'lead_source', value: 'Website Barre' },
       { name: 'source_id', value: '8082' },
       { name: 'center', value: 'Bandra(W), Mumbai' },
       { name: 'class_type', value: 'Barre' },
@@ -776,6 +777,27 @@ test('Respond.io payload uses lead contact details and submission custom fields'
       { name: 'utm_campaign', value: 'july_trials' }
     ]
   });
+});
+
+test('Respond.io lead source maps by submission route', () => {
+  const getLeadSource = (sourceForm) => buildRespondIoContactPayload({
+    id: 'lead_123',
+    event_id: 'event_123',
+    firstName: 'Route',
+    lastName: 'Lead',
+    email: `${sourceForm}@example.com`,
+    phoneNumber: '+919876543210',
+    source_form: sourceForm,
+    center: 'Supreme Headquarters, Bandra',
+    type: 'Barre 57'
+  }).custom_fields.find((field) => field.name === 'lead_source').value;
+
+  assert.equal(getLeadSource('paid-trial-form'), 'Website Paid');
+  assert.equal(getLeadSource('free-trial-form'), 'Website Paid');
+  assert.equal(getLeadSource('barre-trial-form'), 'Website Barre');
+  assert.equal(getLeadSource('influencer-barre-form'), 'Influencer Marketing');
+  assert.equal(getLeadSource('kids-trial-form'), 'Website Kids');
+  assert.equal(getLeadSource('kids-mum-tribe-form'), 'Website Kids');
 });
 
 test('syncLeadToRespondIo upserts the contact and assigns New Enquiry lifecycle', async () => {

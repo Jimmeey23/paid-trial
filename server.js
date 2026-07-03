@@ -2800,6 +2800,23 @@ function resolveRespondIoSourceId(leadData = {}, options = {}) {
   ).trim();
 }
 
+function resolveRespondIoLeadSource(sourceForm = '') {
+  const normalizedSourceForm = String(sourceForm || '').trim().toLowerCase();
+  if (normalizedSourceForm.includes('influencer')) {
+    return 'Influencer Marketing';
+  }
+
+  if (normalizedSourceForm.includes('barre')) {
+    return 'Website Barre';
+  }
+
+  if (normalizedSourceForm.includes('kids')) {
+    return 'Website Kids';
+  }
+
+  return 'Website Paid';
+}
+
 function resolveRespondIoChannelId(options = {}) {
   const configuredChannelId = options.channelId || options.respondIoChannelId;
   const parsedChannelId = parseInteger(configuredChannelId, getRespondIoConfig().channelId);
@@ -2811,6 +2828,7 @@ function buildRespondIoContactPayload(leadData = {}, options = {}) {
     { name: 'lead_id', value: leadData.id },
     { name: 'event_id', value: leadData.event_id },
     { name: 'source_form', value: leadData.source_form || leadData.sourceForm },
+    { name: 'lead_source', value: resolveRespondIoLeadSource(leadData.source_form || leadData.sourceForm) },
     { name: 'source_id', value: resolveRespondIoSourceId(leadData, options) },
     { name: 'center', value: normalizeRespondIoCenter(leadData.center) },
     { name: 'class_type', value: normalizeRespondIoClassType(leadData.type || leadData.class_format) },

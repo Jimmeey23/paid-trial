@@ -291,6 +291,8 @@ export default function App() {
     upsertMeta("meta[property='og:description']", { property: "og:description", content: meta.description })
     upsertMeta("meta[property='og:image']", { property: "og:image", content: BRAND_LOGO_URL })
     upsertMeta("meta[property='og:image:alt']", { property: "og:image:alt", content: "Physique 57 India logo" })
+    upsertMeta("meta[property='og:logo']", { property: "og:logo", content: BRAND_LOGO_URL })
+    upsertMeta("meta[name='logo']", { name: "logo", content: BRAND_LOGO_URL })
     upsertMeta("meta[name='twitter:title']", { name: "twitter:title", content: meta.title })
     upsertMeta("meta[name='twitter:description']", { name: "twitter:description", content: meta.description })
     upsertMeta("meta[name='twitter:image']", { name: "twitter:image", content: BRAND_LOGO_URL })

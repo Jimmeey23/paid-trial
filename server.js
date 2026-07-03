@@ -263,6 +263,10 @@ function renderAppIndexWithMeta(req, meta) {
   html = replaceMetaContent(html, 'property="og:description"', meta.description);
   html = replaceMetaContent(html, 'property="og:image"', imageUrl);
   html = replaceMetaContent(html, 'property="og:image:alt"', meta.imageAlt || 'Physique 57 India');
+  html = html.replace(
+    /<meta property="og:image" content="[^"]*" \/>/i,
+    (match) => `${match}\n    <meta property="og:logo" content="${escapeHtmlAttribute(imageUrl)}" />\n    <meta name="logo" content="${escapeHtmlAttribute(imageUrl)}" />`
+  );
   html = replaceMetaContent(html, 'name="twitter:title"', meta.title);
   html = replaceMetaContent(html, 'name="twitter:description"', meta.description);
   html = replaceMetaContent(html, 'name="twitter:image"', imageUrl);

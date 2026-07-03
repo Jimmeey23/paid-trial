@@ -480,6 +480,35 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
     searchParams.get("utm_source")?.trim().toLowerCase() === "influencer" &&
     searchParams.get("utm_campaign")?.trim().toLowerCase() === "maia"
   const selectedClassFormat = isMaiaBarreCampaign ? formData.classFormat : "Barre 57"
+  const routeCopy = isMaiaBarreCampaign
+    ? {
+        heroBadge: "Maia Sethna x Physique 57",
+        heroTitle: "Experience the Physique 57 Method",
+        heroDescription: "Transform your body with our signature method. Choose Barre 57 or powerCycle for your complimentary studio session.",
+        formBadge: "Maia Sethna x Physique 57",
+        formTitle: "Choose Your Complimentary Session",
+        formDescription: "Select your preferred studio and class format for a complimentary Physique 57 experience.",
+        successTitle: "Thank you for your interest in Physique 57",
+        successDescription: "A member of our Customer Excellence team will be in touch shortly to help you confirm the right studio session.",
+        submitLabel: "Book Your Complimentary Session",
+        submittingLabel: "Booking your session...",
+        benefitsDescription: "Discover the proven advantages that make the Physique 57 Method a preferred choice for fast, visible results and sustainable transformation.",
+        locationsDescription: "Each location carries the Physique 57 Method, with its own neighborhood energy and signature format offerings.",
+      }
+    : {
+        heroBadge: "Barre 57 Trial",
+        heroTitle: "Experience Barre 57",
+        heroDescription: "Join us for a complimentary Barre 57 class and discover the power of this proven method.",
+        formBadge: "Book Your Barre Trial",
+        formTitle: "Claim Your Free Trial",
+        formDescription: "Sign up for your complimentary Barre 57 class.",
+        successTitle: "Thank you for your interest in Barre 57",
+        successDescription: "A member of our Customer Excellence team will be in touch shortly to help you find the right Barre 57 studio session.",
+        submitLabel: "Book Your Free Trial",
+        submittingLabel: "Booking your trial...",
+        benefitsDescription: "Discover the proven advantages that make Barre 57 India the preferred choice for fast, visible results and sustainable transformation.",
+        locationsDescription: "Each location carries the Barre 57 method, with its own neighborhood energy and format offerings.",
+      }
 
   function scheduleRedirectToMomence(url = redirectUrl, delay = 1400) {
     if (typeof window === "undefined") {
@@ -841,10 +870,10 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
           <div className="absolute inset-x-0 bottom-0 p-12 text-white">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-900/10 bg-gradient-to-br from-white/98 via-blue-50/95 to-blue-100/92 px-4 py-2 backdrop-blur-md shadow-sm">
               <Sparkles className="h-4 w-4 text-blue-900" />
-              <span className="text-sm font-semibold text-slate-950">Barre 57 Trial</span>
+              <span className="text-sm font-semibold text-slate-950">{routeCopy.heroBadge}</span>
             </div>
-            <h1 className="mb-4 max-w-md text-5xl font-bold">Experience Barre 57</h1>
-            <p className="max-w-lg text-lg text-white/88">Join us for a complimentary Barre 57 class and discover the power of this proven method.</p>
+            <h1 className="mb-4 max-w-md text-5xl font-bold">{routeCopy.heroTitle}</h1>
+            <p className="max-w-lg text-lg text-white/88">{routeCopy.heroDescription}</p>
           </div>
         </div>
 
@@ -860,12 +889,12 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                     {isInfluencerFlow && complimentaryClassProvisioned ? "Studio Complimentary Class added" : "Request received"}
                   </p>
                   <h2 className="mt-3 text-3xl font-bold text-slate-950 sm:text-4xl">
-                    {isInfluencerFlow && complimentaryClassProvisioned ? "Your complimentary class is ready" : "Thank you for your interest in Barre 57"}
+                    {isInfluencerFlow && complimentaryClassProvisioned ? "Your complimentary class is ready" : routeCopy.successTitle}
                   </h2>
                   <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
                     {isInfluencerFlow
                       ? "You are now being redirected to the class schedule page. A member of our Customer Excellence team will be in touch shortly to help with your next step."
-                      : "A member of our Customer Excellence team will be in touch shortly to help you find the right Barre 57 studio session."}
+                      : routeCopy.successDescription}
                   </p>
                   {isInfluencerFlow && submissionSchedule?.groupedSessions?.length ? (
                     <div className="mt-8 text-left">
@@ -930,10 +959,10 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                   <div className="mb-8">
                     <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-900/30 bg-gradient-to-r from-blue-900/20 to-slate-300/30 px-4 py-2 backdrop-blur-sm">
                       <Sparkles className="h-4 w-4 text-blue-900" />
-                      <span className="text-sm font-semibold text-blue-900">Book Your Barre Trial</span>
+                      <span className="text-sm font-semibold text-blue-900">{routeCopy.formBadge}</span>
                     </div>
-                    <h2 className="mb-2 text-2xl font-bold text-foreground sm:text-3xl">Claim Your Free Trial</h2>
-                    <p className="text-muted-foreground">Sign up for your complimentary Barre 57 class.</p>
+                    <h2 className="mb-2 text-2xl font-bold text-foreground sm:text-3xl">{routeCopy.formTitle}</h2>
+                    <p className="text-muted-foreground">{routeCopy.formDescription}</p>
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-8">
@@ -1138,10 +1167,10 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Booking your trial...
+                          {routeCopy.submittingLabel}
                         </>
                       ) : (
-                        "Book Your Free Trial"
+                        routeCopy.submitLabel
                       )}
                     </Button>
                   </form>
@@ -1156,7 +1185,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                     </div>
                     <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">Key Benefits</h2>
                     <p className="max-w-3xl text-lg leading-relaxed text-muted-foreground">
-                      Discover the proven advantages that make Barre 57 India the preferred choice for fast, visible results and sustainable transformation.
+                      {routeCopy.benefitsDescription}
                     </p>
                   </div>
 
@@ -1210,7 +1239,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                     </div>
                     <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">Choose Your Studio</h2>
                     <p className="max-w-3xl text-lg leading-relaxed text-muted-foreground">
-                      Each location carries the Barre 57 method, with its own neighborhood energy and format offerings.
+                      {routeCopy.locationsDescription}
                     </p>
                   </div>
 

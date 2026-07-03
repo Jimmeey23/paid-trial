@@ -41,6 +41,12 @@ const KIDS_MUM_TRIBE_ROUTE_META = {
   image: '/p57-assets/p57-juniors-hero-2026-1.png',
   imageAlt: 'Young movers at a Physique 57 Juniors barre session'
 };
+const MAIA_BARRE_ROUTE_META = {
+  title: 'Maia Sethna x Physique 57',
+  description: 'Claim your complimentary Barre 57 class with Physique 57 India.',
+  image: BRAND_LOGO_URL,
+  imageAlt: 'Physique 57 India logo'
+};
 const googleSheets = new GoogleSheetsService();
 const supabaseLeadStore = new SupabaseLeadStore();
 const scheduleService = new ScheduleService();
@@ -283,6 +289,12 @@ function sendAppIndex(req, res, meta) {
   return res.sendFile(CLIENT_APP_INDEX_PATH, {
     headers
   });
+}
+
+function isMaiaBarreCampaign(req) {
+  const source = String(req.query.utm_source || '').trim().toLowerCase();
+  const campaign = String(req.query.utm_campaign || '').trim().toLowerCase();
+  return source === 'influencer' && campaign === 'maia';
 }
 
 app.use('/static-assets', express.static(path.join(__dirname, 'assets'), {
@@ -3283,7 +3295,7 @@ app.get(['/barre', '/barre/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
   }
-  return sendAppIndex(req, res);
+  return sendAppIndex(req, res, isMaiaBarreCampaign(req) ? MAIA_BARRE_ROUTE_META : undefined);
 });
 
 app.get(['/influencers', '/influencers/*'], (req, res) => {

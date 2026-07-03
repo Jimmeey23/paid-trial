@@ -48,6 +48,11 @@ const routeMeta = {
       "Book your complimentary Barre 57 class and discover Physique 57 India's signature boutique fitness experience.",
     name: "Barre 57 Complimentary Class Form",
   },
+  maiaBarre: {
+    title: "Maia Sethna x Physique 57",
+    description: "Claim your complimentary Barre 57 class with Physique 57 India.",
+    name: "Maia Sethna x Physique 57 Barre Form",
+  },
   influencers: {
     title: "Physique 57 India | Influencer Barre Experience",
     description:
@@ -232,7 +237,12 @@ export default function App() {
   const isScheduleMumBeginRoute = currentPath === "/schedule-mum-begin" || currentPath.startsWith("/schedule-mum-begin/")
   const isScheduleBlrRoute = currentPath === "/schedule-blr" || currentPath.startsWith("/schedule-blr/")
   const isThankYouRoute = currentPath === "/thank-you" || currentPath.startsWith("/thank-you/")
-  const scheduleLocationId = new URLSearchParams(window.location.search).get("locationId")
+  const searchParams = new URLSearchParams(window.location.search)
+  const scheduleLocationId = searchParams.get("locationId")
+  const isMaiaBarreCampaign =
+    isBarreRoute &&
+    searchParams.get("utm_source")?.trim().toLowerCase() === "influencer" &&
+    searchParams.get("utm_campaign")?.trim().toLowerCase() === "maia"
   const shouldRenderAnalytics = !["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
 
   useEffect(() => {
@@ -249,7 +259,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const meta = isBarreRoute
+    const meta = isMaiaBarreCampaign
+      ? routeMeta.maiaBarre
+      : isBarreRoute
       ? routeMeta.barre
       : isInfluencersRoute
         ? routeMeta.influencers
@@ -312,7 +324,7 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isThankYouRoute])
+  }, [currentPath, isMaiaBarreCampaign, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isThankYouRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />

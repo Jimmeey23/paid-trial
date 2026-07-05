@@ -793,7 +793,7 @@ test('Respond.io payload uses lead contact details and submission custom fields'
     phone: '+919876543210',
     countryCode: 'IN',
     channelId: 523696,
-    custom_fields: [
+    customFields: [
       { name: 'lead_id', value: 'lead_123' },
       { name: 'event_id', value: 'event_123' },
       { name: 'source_form', value: 'barre-trial-form' },
@@ -802,10 +802,129 @@ test('Respond.io payload uses lead contact details and submission custom fields'
       { name: 'center', value: 'Bandra(W), Mumbai' },
       { name: 'class_type', value: 'Barre' },
       { name: 'preferred_time', value: 'Flexible / Needs Recommendation' },
+      { name: 'trial_name', value: 'Nia Shah' },
+      { name: 'trial_phone', value: '+919876543210' },
+      { name: 'trial_location', value: 'Bandra(W), Mumbai' },
+      { name: 'trial_timing', value: 'Flexible / Needs Recommendation' },
+      { name: 'contact_email', value: 'nia@example.com' },
       { name: 'utm_source', value: 'instagram' },
       { name: 'utm_campaign', value: 'july_trials' }
     ]
   });
+});
+
+test('Respond.io payload maps Maia campaign to influencer source fields', () => {
+  const payload = buildRespondIoContactPayload({
+    id: 'lead_maia',
+    event_id: 'event_maia',
+    firstName: 'Maia',
+    lastName: 'Lead',
+    email: 'maia@example.com',
+    phoneNumber: '+919999999999',
+    source_form: 'barre-trial-form',
+    center: 'Supreme Headquarters, Bandra',
+    type: 'powerCycle',
+    time: 'Flexible / Needs Recommendation',
+    utm_source: 'Influencer',
+    utm_campaign: 'Maia'
+  }, {
+    sourceId: '14729'
+  });
+
+  const fields = Object.fromEntries(payload.customFields.map((field) => [field.name, field.value]));
+  assert.equal(fields.lead_source, 'Influencer Marketing');
+  assert.equal(fields.source_id, '14729');
+  assert.equal(fields.class_type, 'powerCycle');
+  assert.equal(fields.trial_name, 'Maia Lead');
+  assert.equal(fields.trial_phone, '+919999999999');
+  assert.equal(fields.trial_location, 'Bandra(W), Mumbai');
+  assert.equal(fields.trial_timing, 'Flexible / Needs Recommendation');
+  assert.equal(fields.contact_email, 'maia@example.com');
+});
+
+test('Respond.io payload updates standard and custom fields for all submitted form routes', () => {
+  const cases = [
+    {
+      source_form: 'paid-trial-form',
+      sourceId: '8082',
+      expectedLeadSource: 'Website Paid',
+      expectedClassType: 'powerCycle'
+    },
+    {
+      source_form: 'barre-trial-form',
+      sourceId: '8082',
+      expectedLeadSource: 'Website Barre',
+      expectedClassType: 'Barre'
+    },
+    {
+      source_form: 'influencer-barre-form',
+      sourceId: '201918',
+      expectedLeadSource: 'Influencer Marketing',
+      expectedClassType: 'Barre'
+    },
+    {
+      source_form: 'kids-trial-form',
+      sourceId: '212426',
+      expectedLeadSource: 'Website Kids',
+      expectedClassType: 'Physique 57 - Juniors',
+      childName: 'Aarav Shah',
+      childAge: 11,
+      batch: 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri'
+    }
+  ];
+
+  for (const item of cases) {
+    const payload = buildRespondIoContactPayload({
+      id: `lead_${item.source_form}`,
+      event_id: `event_${item.source_form}`,
+      firstName: 'Route',
+      lastName: 'Lead',
+      email: `${item.source_form}@example.com`,
+      phoneNumber: '+919876543210',
+      phoneCountry: 'IN',
+      source_form: item.source_form,
+      center: 'Supreme Headquarters, Bandra',
+      type: item.expectedClassType === 'Barre' ? 'Barre 57' : item.expectedClassType,
+      time: 'Flexible / Needs Recommendation',
+      childName: item.childName,
+      childAge: item.childAge,
+      batch: item.batch,
+      utm_source: 'test-source',
+      utm_medium: 'test-medium',
+      utm_campaign: 'test-campaign',
+      landing_page: 'https://trial.physique57india.com/test'
+    }, {
+      sourceId: item.sourceId
+    });
+    const fields = Object.fromEntries(payload.customFields.map((field) => [field.name, field.value]));
+
+    assert.equal(payload.firstName, 'Route');
+    assert.equal(payload.lastName, 'Lead');
+    assert.equal(payload.email, `${item.source_form}@example.com`);
+    assert.equal(payload.phone, '+919876543210');
+    assert.equal(payload.countryCode, 'IN');
+    assert.equal(fields.center, 'Bandra(W), Mumbai');
+    assert.equal(fields.class_type, item.expectedClassType);
+    assert.equal(fields.lead_source, item.expectedLeadSource);
+    assert.equal(fields.source_id, item.sourceId);
+    assert.equal(fields.source_form, item.source_form);
+    assert.equal(fields.preferred_time, 'Flexible / Needs Recommendation');
+    assert.equal(fields.trial_name, 'Route Lead');
+    assert.equal(fields.trial_phone, '+919876543210');
+    assert.equal(fields.trial_location, 'Bandra(W), Mumbai');
+    assert.equal(fields.trial_timing, 'Flexible / Needs Recommendation');
+    assert.equal(fields.contact_email, `${item.source_form}@example.com`);
+    assert.equal(fields.utm_source, 'test-source');
+    assert.equal(fields.utm_medium, 'test-medium');
+    assert.equal(fields.utm_campaign, 'test-campaign');
+    assert.equal(fields.landing_page, 'https://trial.physique57india.com/test');
+
+    if (item.childName) {
+      assert.equal(fields.child_name, item.childName);
+      assert.equal(fields.child_age, item.childAge);
+      assert.equal(fields.batch_preference, item.batch);
+    }
+  }
 });
 
 test('Respond.io lead source maps by submission route', () => {
@@ -819,7 +938,7 @@ test('Respond.io lead source maps by submission route', () => {
     source_form: sourceForm,
     center: 'Supreme Headquarters, Bandra',
     type: 'Barre 57'
-  }).custom_fields.find((field) => field.name === 'lead_source').value;
+  }).customFields.find((field) => field.name === 'lead_source').value;
 
   assert.equal(getLeadSource('paid-trial-form'), 'Website Paid');
   assert.equal(getLeadSource('free-trial-form'), 'Website Paid');
@@ -868,7 +987,7 @@ test('syncLeadToRespondIo upserts the contact and assigns New Enquiry lifecycle'
     assert.equal(calls[0].options.headers.Authorization, 'Bearer respond-token');
     assert.equal(JSON.parse(calls[0].options.body).channelId, 523696);
     assert.equal(
-      JSON.parse(calls[0].options.body).custom_fields.find((field) => field.name === 'source_id').value,
+      JSON.parse(calls[0].options.body).customFields.find((field) => field.name === 'source_id').value,
       '201918'
     );
     assert.deepEqual(JSON.parse(calls[1].options.body), { name: 'New Enquiry' });

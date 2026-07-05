@@ -2823,9 +2823,16 @@ function resolveRespondIoSourceId(leadData = {}, options = {}) {
   ).trim();
 }
 
-function resolveRespondIoLeadSource(sourceForm = '') {
+function resolveRespondIoLeadSource(leadData = {}, options = {}) {
+  const sourceForm = typeof leadData === 'string'
+    ? leadData
+    : leadData.source_form || leadData.sourceForm;
   const normalizedSourceForm = String(sourceForm || '').trim().toLowerCase();
-  if (normalizedSourceForm.includes('influencer')) {
+  const normalizedUtmSource = String(typeof leadData === 'object' ? leadData.utm_source || '' : '').trim().toLowerCase();
+  const normalizedCampaign = String(typeof leadData === 'object' ? leadData.utm_campaign || '' : '').trim().toLowerCase();
+  const sourceId = resolveRespondIoSourceId(typeof leadData === 'object' ? leadData : {}, options);
+
+  if (normalizedUtmSource === 'influencer' || normalizedSourceForm.includes('influencer') || sourceId === MAIA_MOMENCE_SOURCE_ID || normalizedCampaign === 'maia') {
     return 'Influencer Marketing';
   }
 
@@ -2847,15 +2854,29 @@ function resolveRespondIoChannelId(options = {}) {
 }
 
 function buildRespondIoContactPayload(leadData = {}, options = {}) {
+  const fullName = [leadData.firstName, leadData.lastName]
+    .map((value) => sanitizeText(value, 80))
+    .filter(Boolean)
+    .join(' ');
+  const normalizedCenter = normalizeRespondIoCenter(leadData.center);
+  const normalizedPhone = sanitizePhone(leadData.phoneNumber || leadData.phone);
+
   const customFields = [
     { name: 'lead_id', value: leadData.id },
     { name: 'event_id', value: leadData.event_id },
     { name: 'source_form', value: leadData.source_form || leadData.sourceForm },
-    { name: 'lead_source', value: resolveRespondIoLeadSource(leadData.source_form || leadData.sourceForm) },
+    { name: 'lead_source', value: resolveRespondIoLeadSource(leadData, options) },
     { name: 'source_id', value: resolveRespondIoSourceId(leadData, options) },
-    { name: 'center', value: normalizeRespondIoCenter(leadData.center) },
+    { name: 'center', value: normalizedCenter },
     { name: 'class_type', value: normalizeRespondIoClassType(leadData.type || leadData.class_format) },
     { name: 'preferred_time', value: leadData.time },
+    { name: 'trial_name', value: fullName },
+    { name: 'trial_phone', value: normalizedPhone },
+    { name: 'trial_location', value: normalizedCenter },
+    { name: 'trial_timing', value: leadData.time },
+    { name: 'trial_goal', value: leadData.fitness_goal || leadData.fitnessGoal || leadData.trial_goal },
+    { name: 'trial_barrier', value: leadData.medical_history || leadData.medicalHistory || leadData.trial_barrier },
+    { name: 'contact_email', value: normalizeEmail(leadData.email) },
     { name: 'child_name', value: leadData.childName },
     { name: 'child_age', value: leadData.childAge },
     { name: 'batch_preference', value: leadData.batch || leadData.batchPreference },
@@ -2876,10 +2897,10 @@ function buildRespondIoContactPayload(leadData = {}, options = {}) {
     firstName: sanitizeText(leadData.firstName, 80),
     lastName: sanitizeText(leadData.lastName, 80),
     email: normalizeEmail(leadData.email),
-    phone: sanitizePhone(leadData.phoneNumber || leadData.phone),
+    phone: normalizedPhone,
     countryCode: normalizeCountryIso(leadData.phoneCountry || 'IN'),
     channelId: resolveRespondIoChannelId(options),
-    ...(customFields.length ? { custom_fields: customFields } : {})
+    ...(customFields.length ? { customFields } : {})
   };
 }
 

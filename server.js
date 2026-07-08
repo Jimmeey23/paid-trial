@@ -2961,6 +2961,12 @@ async function syncLeadToRespondIo(leadData, options = {}) {
     config
   );
 
+  await postRespondIoJson(
+    `/contact/${identifier}/conversation/status`,
+    { status: 'open' },
+    config
+  );
+
   if (config.lifecycleStage) {
     await postRespondIoJson(
       `/contact/${identifier}/lifecycle/update`,

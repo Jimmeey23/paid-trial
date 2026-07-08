@@ -981,16 +981,18 @@ test('syncLeadToRespondIo upserts the contact and assigns New Enquiry lifecycle'
     assert.equal(result.sent, true);
     assert.equal(result.identifier, 'email:nia@example.com');
     assert.equal(result.lifecycleStage, 'New Enquiry');
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 3);
     assert.equal(calls[0].url, 'https://respond.test/v2/contact/create_or_update/email:nia@example.com');
-    assert.equal(calls[1].url, 'https://respond.test/v2/contact/email:nia@example.com/lifecycle/update');
+    assert.equal(calls[1].url, 'https://respond.test/v2/contact/email:nia@example.com/conversation/status');
+    assert.equal(calls[2].url, 'https://respond.test/v2/contact/email:nia@example.com/lifecycle/update');
     assert.equal(calls[0].options.headers.Authorization, 'Bearer respond-token');
     assert.equal(JSON.parse(calls[0].options.body).channelId, 523696);
     assert.equal(
       JSON.parse(calls[0].options.body).customFields.find((field) => field.name === 'source_id').value,
       '201918'
     );
-    assert.deepEqual(JSON.parse(calls[1].options.body), { name: 'New Enquiry' });
+    assert.deepEqual(JSON.parse(calls[1].options.body), { status: 'open' });
+    assert.deepEqual(JSON.parse(calls[2].options.body), { name: 'New Enquiry' });
   } finally {
     global.fetch = previousFetch;
     if (previousApiKey === undefined) {

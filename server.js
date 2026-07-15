@@ -3469,6 +3469,85 @@ app.get('/api/schedule/sessions', async (req, res) => {
   }
 });
 
+const STUDIO_SESSION_FEEDS = {
+  'sessions-kemps': {
+    studio: 'Kwality House, Kemps Corner',
+    center: 'Kwality House, Kemps Corner',
+    locationId: '9030'
+  },
+  'sessions-bandra': {
+    studio: 'Supreme Headquarters, Bandra',
+    center: 'Supreme Headquarters, Bandra',
+    locationId: '29821'
+  },
+  'sessions-blr': {
+    studio: 'Bangalore (Kenkere House + Copper + Cloves)',
+    center: '',
+    locationId: '22116,36372'
+  }
+};
+
+function buildPublicSessionFeed(sessionsPayload, feedConfig) {
+  return {
+    success: true,
+    studio: feedConfig.studio,
+    timezone: 'Asia/Kolkata',
+    generatedAt: new Date().toISOString(),
+    startDate: sessionsPayload.meta.startDate,
+    endDate: sessionsPayload.meta.endDate,
+    totalSessions: sessionsPayload.meta.totalSessions,
+    sessions: sessionsPayload.sessions.map((session) => ({
+      id: session.id,
+      title: session.title,
+      description: session.description,
+      classFormat: session.classFormat,
+      instructorName: session.instructorName,
+      location: {
+        id: session.locationId,
+        name: session.locationName
+      },
+      date: session.readableDate,
+      startTime: session.readableStartTime,
+      endTime: session.readableEndTime,
+      timeRange: session.readableTimeRange,
+      timezone: session.timezone,
+      startsAt: session.startsAt,
+      endsAt: session.endsAt,
+      durationMinutes: session.durationMinutes,
+      price: session.price,
+      capacity: session.capacity,
+      bookingCount: session.bookingCount,
+      spotsRemaining: session.spotsRemaining,
+      bookingUrl: session.bookingUrl,
+      isCancelled: session.isCancelled,
+      isRecurring: session.isRecurring,
+      tags: session.tags
+    }))
+  };
+}
+
+app.get(Object.keys(STUDIO_SESSION_FEEDS).map((path) => `/${path}`), async (req, res) => {
+  const feedConfig = STUDIO_SESSION_FEEDS[req.path.replace(/^\//, '')];
+
+  try {
+    const sessionsPayload = await scheduleService.getSessions({
+      startDate: sanitizeText(req.query.startDate, 20),
+      endDate: sanitizeText(req.query.endDate, 20),
+      center: feedConfig.center,
+      locationId: feedConfig.locationId
+    });
+
+    return res.json(buildPublicSessionFeed(sessionsPayload, feedConfig));
+  } catch (error) {
+    console.error(`Error loading ${req.path} session feed:`, error);
+    return res.status(503).json({
+      success: false,
+      studio: feedConfig.studio,
+      error: error.message || 'Unable to load the schedule right now.'
+    });
+  }
+});
+
 app.post('/api/submit-lead', applySubmissionRateLimit, async (req, res) => {
   try {
     const validation = validateLeadPayload(req.body);

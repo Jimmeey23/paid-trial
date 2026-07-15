@@ -2,13 +2,19 @@ const DEFAULT_LOOKAHEAD_DAYS = 30;
 
 const CENTER_ALIASES = {
   'Supreme Headquarters, Bandra': ['bandra', 'supreme headquarters', 'supreme hq'],
-  'Kwality House, Kemps Corner': ['kemps', 'kemps corner', 'kwality house', 'grant road']
+  'Kwality House, Kemps Corner': ['kemps', 'kemps corner', 'kwality house', 'grant road'],
+  'Kenkere House, Bangalore': ['kenkere', 'kenkere house', 'bangalore', 'bengaluru'],
+  'Copper + Cloves, Bangalore': ['copper', 'cloves', 'copper and cloves', 'copper + cloves']
 };
 
 const CENTER_LOCATION_IDS = {
   'Supreme Headquarters, Bandra': ['29821'],
-  'Kwality House, Kemps Corner': ['9030']
+  'Kwality House, Kemps Corner': ['9030'],
+  'Kenkere House, Bangalore': ['22116'],
+  'Copper + Cloves, Bangalore': ['36372']
 };
+
+const DISPLAY_TIMEZONE = 'Asia/Kolkata';
 
 const TYPE_ALIASES = {
   Barre: ['barre', 'band barre'],
@@ -62,6 +68,33 @@ function pickId(...values) {
 function safeDate(value) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatReadableDate(date) {
+  if (!date) {
+    return '';
+  }
+
+  return date.toLocaleDateString('en-IN', {
+    timeZone: DISPLAY_TIMEZONE,
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
+function formatReadableTime(date) {
+  if (!date) {
+    return '';
+  }
+
+  return date.toLocaleTimeString('en-IN', {
+    timeZone: DISPLAY_TIMEZONE,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
 }
 
 function deriveDurationMinutes(startDate, endDate, fallback) {
@@ -218,6 +251,13 @@ function normalizeSession(rawSession) {
     locationName,
     startsAt: startsAt ? startsAt.toISOString() : '',
     endsAt: endsAt ? endsAt.toISOString() : '',
+    readableDate: formatReadableDate(startsAt),
+    readableStartTime: formatReadableTime(startsAt),
+    readableEndTime: formatReadableTime(endsAt),
+    readableTimeRange: startsAt && endsAt
+      ? `${formatReadableTime(startsAt)} - ${formatReadableTime(endsAt)}`
+      : formatReadableTime(startsAt),
+    timezone: DISPLAY_TIMEZONE,
     durationMinutes,
     bookingUrl,
     price,
@@ -234,10 +274,13 @@ function normalizeSession(rawSession) {
 }
 
 function filterByCenter(session, center, locationId) {
-  const normalizedLocationId = String(locationId || '').trim();
+  const locationIds = String(locationId || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
 
-  if (normalizedLocationId) {
-    if (String(session.locationId || '').trim() === normalizedLocationId) {
+  if (locationIds.length) {
+    if (locationIds.includes(String(session.locationId || '').trim())) {
       return true;
     }
 

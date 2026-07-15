@@ -1185,7 +1185,6 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
     }
 
     const payload = buildLeadPayload()
-    handleOpenWhatsApp()
 
     await submitLeadToApi(payload)
   }

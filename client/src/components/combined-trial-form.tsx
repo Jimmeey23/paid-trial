@@ -77,8 +77,8 @@ const FORMAT_CARDS: FormatCard[] = [
     bestFor: "Lean muscle, posture, flexibility",
     highlights: [
       "Small isometric movements at the barre for deep muscle fatigue",
-      "Low-impact, joint-friendly — accessible at any fitness level",
-      "Our original signature format, refined over 15+ years",
+      "Low-impact, joint-friendly - accessible at any fitness level",
+      "Our original signature format, refined over 20+ years",
     ],
   },
   {
@@ -110,7 +110,7 @@ const FORMAT_CARDS: FormatCard[] = [
     highlights: [
       "Dumbbells, kettlebells, plyo boxes, bands, and a pull-up bar",
       "Progressive overload for lean muscle and a faster metabolism",
-      "Intermediate level — some strength training experience helps",
+      "Intermediate level - some strength training experience helps",
     ],
   },
 ]

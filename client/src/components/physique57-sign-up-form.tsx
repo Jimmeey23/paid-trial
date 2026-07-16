@@ -1191,7 +1191,7 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
 
   function handleOpenWhatsApp() {
     const message = buildWhatsAppMessage(formData, selectedFormat)
-    const whatsappUrl = `https://wa.me/919769076411?text=${encodeURIComponent(message)}`
+    const whatsappUrl = `https://wa.me/9769665757?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, "_blank", "noopener,noreferrer")
   }
 

@@ -120,6 +120,13 @@ const STUDIO_FORMAT_AVAILABILITY: Record<string, string[]> = {
   "Kwality House, Kemps Corner": ["Barre 57", "powerCycle", "Strength Lab"],
 }
 
+const REVIEW_ACCENTS = [
+  { border: "border-l-rose-400", avatar: "bg-rose-600", chip: "bg-rose-50 text-rose-700" },
+  { border: "border-l-blue-400", avatar: "bg-blue-600", chip: "bg-blue-50 text-blue-700" },
+  { border: "border-l-amber-400", avatar: "bg-amber-600", chip: "bg-amber-50 text-amber-700" },
+  { border: "border-l-emerald-400", avatar: "bg-emerald-600", chip: "bg-emerald-50 text-emerald-700" },
+]
+
 const REVIEW_CARD_WIDTH = 320
 const REVIEW_CARD_GAP = 16
 const REVIEW_CARD_STRIDE = REVIEW_CARD_WIDTH + REVIEW_CARD_GAP
@@ -425,6 +432,12 @@ export function CombinedTrialForm() {
     <div className="relative min-h-screen w-full overflow-x-auto bg-white">
       <canvas ref={confettiCanvasRef} className="pointer-events-none fixed inset-0 z-[70] h-full w-full" />
 
+      <img
+        src="/p57-assets/physique57-logo.jpg"
+        alt="Physique 57 India"
+        className="fixed right-4 top-4 z-50 h-10 w-10 rounded-full border border-slate-200 bg-white object-cover shadow-md sm:h-12 sm:w-12"
+      />
+
       <div className="relative grid min-h-screen w-full min-w-0 lg:grid-cols-[40%_60%]">
         <div className="relative hidden h-screen overflow-hidden bg-slate-950 lg:block">
           <AnimatePresence>
@@ -560,28 +573,53 @@ export function CombinedTrialForm() {
                   </div>
 
                   <div className="space-y-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Studio</p>
-                    <div className="space-y-2">
-                      <Label htmlFor="studio" className="font-medium text-slate-800">
-                        Preferred studio <span className="text-red-600">*</span>
-                      </Label>
-                      <Select value={formData.studio} onValueChange={(value) => handleInputChange("studio", value)}>
-                        <SelectTrigger size="lg" className={cn("w-full border-slate-300 focus:border-slate-900 focus:ring-slate-900/10", errors.studio && "border-red-500")}>
-                          <SelectValue placeholder="Select a studio" />
-                        </SelectTrigger>
-                        <SelectContent className="border-slate-300 bg-white">
-                          {studios.map((studio) => (
-                            <SelectItem key={studio.name} value={studio.name}>
-                              <div>
-                                <div className="font-medium">{studio.name}</div>
-                                <div className="text-xs text-slate-500">{studio.location}</div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Preferred studio <span className="text-red-600">*</span>
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {studios.map((studio) => {
+                        const isSelected = formData.studio === studio.name
+                        const isDimmed = Boolean(formData.studio) && !isSelected
+                        return (
+                          <button
+                            key={studio.name}
+                            type="button"
+                            onClick={() => handleInputChange("studio", studio.name)}
+                            className={cn(
+                              "rounded-xl border p-4 text-left transition-all duration-200 hover:-translate-y-1 hover:shadow-lg",
+                              isSelected ? "border-slate-950 ring-1 ring-slate-950" : "border-slate-200 hover:border-slate-400",
+                              isDimmed && "opacity-40 grayscale hover:opacity-70 hover:grayscale-0"
+                            )}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                                <Building2 className="h-5 w-5 text-slate-700" />
                               </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.studio && <p className="text-sm text-red-600">{errors.studio}</p>}
+                              <div>
+                                <p className="text-sm font-semibold text-slate-950">{studio.name}</p>
+                                <p className="mt-0.5 text-xs text-slate-500">{studio.location}</p>
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })}
                     </div>
+                    {errors.studio && <p className="text-sm text-red-600">{errors.studio}</p>}
+                    {selectedStudio ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            sameOriginApiUrl(`/schedule-mum?locationId=${selectedStudio.scheduleLocationId}`),
+                            "_blank",
+                            "noopener,noreferrer"
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 underline underline-offset-2 hover:text-slate-600"
+                      >
+                        View class schedule for {selectedStudio.name}
+                      </button>
+                    ) : null}
                   </div>
 
                   <div className="space-y-5">
@@ -593,6 +631,7 @@ export function CombinedTrialForm() {
                         {FORMAT_CARDS.filter((format) => availableFormats.includes(format.value)).map((format) => {
                           const isSelected = formData.classFormat === format.value
                           const isHovered = hoveredFormat === format.value
+                          const isDimmed = Boolean(formData.classFormat) && !isSelected
                           return (
                             <div
                               key={format.value}
@@ -631,7 +670,8 @@ export function CombinedTrialForm() {
                                 onClick={() => handleInputChange("classFormat", format.value)}
                                 className={cn(
                                   "group w-full overflow-hidden rounded-xl border text-left transition-all duration-200 hover:-translate-y-1 hover:shadow-lg",
-                                  isSelected ? "border-slate-950 ring-1 ring-slate-950" : "border-slate-200 hover:border-slate-400"
+                                  isSelected ? "border-slate-950 ring-1 ring-slate-950" : "border-slate-200 hover:border-slate-400",
+                                  isDimmed && "opacity-40 grayscale hover:opacity-70 hover:grayscale-0"
                                 )}
                               >
                                 <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-100">
@@ -790,6 +830,7 @@ export function CombinedTrialForm() {
                     >
                       {clientReviews.map((review, index) => {
                         const isActive = index === currentReview
+                        const accent = REVIEW_ACCENTS[index % REVIEW_ACCENTS.length]
                         return (
                           <motion.div
                             key={`${review.name}-${index}`}
@@ -800,18 +841,22 @@ export function CombinedTrialForm() {
                             transition={{ duration: 0.4 }}
                             style={{ width: REVIEW_CARD_WIDTH }}
                             className={cn(
-                              "flex-shrink-0 rounded-xl border p-5 transition-shadow duration-200 hover:shadow-lg",
-                              isActive ? "border-slate-950 shadow-md" : "border-slate-200"
+                              "flex-shrink-0 rounded-2xl border-y border-r border-l-4 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition-shadow duration-200 hover:shadow-lg",
+                              accent.border,
+                              isActive ? "border-slate-300 shadow-md ring-1 ring-slate-950" : "border-slate-200"
                             )}
                           >
-                            <p className="text-sm leading-relaxed text-slate-700">"{review.review}"</p>
+                            <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide", accent.chip)}>
+                              {review.class}
+                            </span>
+                            <p className="mt-3 text-sm leading-relaxed text-slate-700">"{review.review}"</p>
                             <div className="mt-4 flex items-center gap-3">
-                              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white">
+                              <div className={cn("flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white", accent.avatar)}>
                                 {review.name.charAt(0)}
                               </div>
                               <div>
                                 <p className="text-xs font-semibold text-slate-950">{review.name}</p>
-                                <p className="text-xs text-slate-500">{review.class} • {review.date}</p>
+                                <p className="text-xs text-slate-500">{review.date}</p>
                               </div>
                             </div>
                           </motion.div>
@@ -840,7 +885,7 @@ export function CombinedTrialForm() {
                     <h2 className="mt-3 text-2xl font-semibold text-slate-950 sm:text-3xl">Before you book</h2>
                   </div>
                   <div className="space-y-2">
-                    {faqs.slice(0, 6).map((faq, index) => (
+                    {faqs.slice(0, 10).map((faq, index) => (
                       <div key={faq.question} className="overflow-hidden rounded-xl border border-slate-200">
                         <button
                           onClick={() => setOpenFaq(openFaq === index ? null : index)}

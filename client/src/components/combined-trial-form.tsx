@@ -58,6 +58,10 @@ interface FormatCard {
   description: string
   image: string
   imageAlt: string
+  intensity: string
+  duration: string
+  bestFor: string
+  highlights: string[]
 }
 
 const FORMAT_CARDS: FormatCard[] = [
@@ -68,6 +72,14 @@ const FORMAT_CARDS: FormatCard[] = [
     description: "Isometric barre work for lean strength and posture.",
     image: "/p57-assets/p57-barre-studio.jpg",
     imageAlt: "Barre 57 class at the barre, Physique 57 India",
+    intensity: "Moderate",
+    duration: "57 mins",
+    bestFor: "Lean muscle, posture, flexibility",
+    highlights: [
+      "Small isometric movements at the barre for deep muscle fatigue",
+      "Low-impact, joint-friendly — accessible at any fitness level",
+      "Our original signature format, refined over 15+ years",
+    ],
   },
   {
     value: "powerCycle",
@@ -76,6 +88,14 @@ const FORMAT_CARDS: FormatCard[] = [
     description: "Indoor cycling built for stamina and a steady sweat.",
     image: "/p57-assets/p57-cycle-close.jpg",
     imageAlt: "powerCycle indoor cycling class, Physique 57 India",
+    intensity: "Moderate to high",
+    duration: "30 or 45 mins",
+    bestFor: "Cardio conditioning, toned legs, endorphin boost",
+    highlights: [
+      "Rhythm-based choreography set to a curated playlist",
+      "Real riding metrics so you can track progress class to class",
+      "Great cross-training pair with Barre or Strength Lab",
+    ],
   },
   {
     value: "Strength Lab",
@@ -84,6 +104,14 @@ const FORMAT_CARDS: FormatCard[] = [
     description: "Weighted circuits for muscle, mobility, and power.",
     image: "/p57-assets/p57-strength-color.jpg",
     imageAlt: "Strength Lab class, Physique 57 India",
+    intensity: "High",
+    duration: "57 mins",
+    bestFor: "Functional strength, muscular power, conditioning",
+    highlights: [
+      "Dumbbells, kettlebells, plyo boxes, bands, and a pull-up bar",
+      "Progressive overload for lean muscle and a faster metabolism",
+      "Intermediate level — some strength training experience helps",
+    ],
   },
 ]
 
@@ -91,6 +119,11 @@ const STUDIO_FORMAT_AVAILABILITY: Record<string, string[]> = {
   "Supreme Headquarters, Bandra": ["Barre 57", "powerCycle"],
   "Kwality House, Kemps Corner": ["Barre 57", "powerCycle", "Strength Lab"],
 }
+
+const REVIEW_CARD_WIDTH = 320
+const REVIEW_CARD_GAP = 16
+const REVIEW_CARD_STRIDE = REVIEW_CARD_WIDTH + REVIEW_CARD_GAP
+const REVIEW_CARD_CENTER_OFFSET = REVIEW_CARD_WIDTH / 2
 
 const benefitIcons: Record<string, LucideIcon> = {
   sparkles: Sparkles,
@@ -108,7 +141,7 @@ export function CombinedTrialForm() {
     firstName: "",
     lastName: "",
     email: "",
-    countryCode: "+91",
+    countryCode: "IN",
     phone: "",
     studio: "",
     classFormat: "",
@@ -122,6 +155,9 @@ export function CombinedTrialForm() {
   const [showWaiverModal, setShowWaiverModal] = useState(false)
   const [showAllFaqsModal, setShowAllFaqsModal] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
+  const [hoveredFormat, setHoveredFormat] = useState<string | null>(null)
+  const [currentReview, setCurrentReview] = useState<number>(0)
+  const [isReviewPaused, setIsReviewPaused] = useState(false)
   const confettiCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const confettiInstanceRef = useRef<ReturnType<typeof confetti.create> | null>(null)
   const redirectTimeoutRef = useRef<number | null>(null)
@@ -205,6 +241,18 @@ export function CombinedTrialForm() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (isReviewPaused) {
+      return
+    }
+
+    const reviewTimeout = window.setTimeout(() => {
+      setCurrentReview((prev) => (prev + 1) % clientReviews.length)
+    }, 3800)
+
+    return () => window.clearTimeout(reviewTimeout)
+  }, [currentReview, isReviewPaused])
 
   function scheduleRedirectToMomence(url = redirectUrl, delay = 1400) {
     if (typeof window === "undefined") {
@@ -544,27 +592,64 @@ export function CombinedTrialForm() {
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         {FORMAT_CARDS.filter((format) => availableFormats.includes(format.value)).map((format) => {
                           const isSelected = formData.classFormat === format.value
+                          const isHovered = hoveredFormat === format.value
                           return (
-                            <button
+                            <div
                               key={format.value}
-                              type="button"
-                              onClick={() => handleInputChange("classFormat", format.value)}
-                              className={cn(
-                                "group overflow-hidden rounded-xl border text-left transition-colors",
-                                isSelected ? "border-slate-950 ring-1 ring-slate-950" : "border-slate-200 hover:border-slate-400"
-                              )}
+                              className="relative"
+                              onMouseEnter={() => setHoveredFormat(format.value)}
+                              onMouseLeave={() => setHoveredFormat((prev) => (prev === format.value ? null : prev))}
                             >
-                              <div className="relative h-28 w-full overflow-hidden bg-slate-100">
-                                <img src={format.image} alt={format.imageAlt} className="h-full w-full object-cover" />
-                                <span className="absolute left-2 top-2 rounded-md bg-white/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
-                                  {format.tag}
-                                </span>
-                              </div>
-                              <div className="p-3">
-                                <p className="text-sm font-semibold text-slate-950">{format.label}</p>
-                                <p className="mt-1 text-xs leading-snug text-slate-600">{format.description}</p>
-                              </div>
-                            </button>
+                              <AnimatePresence>
+                                {isHovered ? (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute bottom-full left-0 right-0 z-20 mb-2 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-xl"
+                                  >
+                                    <p className="text-sm font-semibold text-slate-950">{format.label}</p>
+                                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-medium text-slate-500">
+                                      <span>Intensity: {format.intensity}</span>
+                                      <span>Duration: {format.duration}</span>
+                                    </div>
+                                    <p className="mt-2 text-xs font-medium text-slate-700">Best for: {format.bestFor}</p>
+                                    <ul className="mt-2 space-y-1">
+                                      {format.highlights.map((highlight) => (
+                                        <li key={highlight} className="flex gap-1.5 text-xs leading-snug text-slate-600">
+                                          <span className="text-slate-400">•</span>
+                                          <span>{highlight}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </motion.div>
+                                ) : null}
+                              </AnimatePresence>
+                              <button
+                                type="button"
+                                onClick={() => handleInputChange("classFormat", format.value)}
+                                className={cn(
+                                  "group w-full overflow-hidden rounded-xl border text-left transition-all duration-200 hover:-translate-y-1 hover:shadow-lg",
+                                  isSelected ? "border-slate-950 ring-1 ring-slate-950" : "border-slate-200 hover:border-slate-400"
+                                )}
+                              >
+                                <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-100">
+                                  <img
+                                    src={format.image}
+                                    alt={format.imageAlt}
+                                    className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                                  />
+                                  <span className="absolute left-2 top-2 rounded-md bg-white/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
+                                    {format.tag}
+                                  </span>
+                                </div>
+                                <div className="p-3">
+                                  <p className="text-sm font-semibold text-slate-950">{format.label}</p>
+                                  <p className="mt-1 text-xs leading-snug text-slate-600">{format.description}</p>
+                                </div>
+                              </button>
+                            </div>
                           )
                         })}
                       </div>
@@ -627,7 +712,7 @@ export function CombinedTrialForm() {
                     {keyBenefits.map((benefit) => {
                       const Icon = benefitIcons[benefit.icon]
                       return (
-                        <div key={benefit.title} className="rounded-xl border border-slate-200 p-5">
+                        <div key={benefit.title} className="rounded-xl border border-slate-200 p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
                           <div className="flex items-start gap-4">
                             <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-950">
                               <Icon className="h-4.5 w-4.5 text-white" />
@@ -650,7 +735,7 @@ export function CombinedTrialForm() {
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {studios.map((studio) => (
-                      <div key={studio.name} className="rounded-xl border border-slate-200 p-5">
+                      <div key={studio.name} className="rounded-xl border border-slate-200 p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
                         <div className="flex items-start gap-4">
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
                             <Building2 className="h-5 w-5 text-slate-700" />
@@ -688,25 +773,63 @@ export function CombinedTrialForm() {
                   </div>
                 </section>
 
-                <section className="mt-20 space-y-8">
+                <section className="mt-20 space-y-8 overflow-hidden">
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Member stories</span>
                     <h2 className="mt-3 text-2xl font-semibold text-slate-950 sm:text-3xl">What members say</h2>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {clientReviews.slice(0, 4).map((review) => (
-                      <div key={review.name} className="rounded-xl border border-slate-200 p-5">
-                        <p className="text-sm leading-relaxed text-slate-700">"{review.review}"</p>
-                        <div className="mt-4 flex items-center gap-3">
-                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white">
-                            {review.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-slate-950">{review.name}</p>
-                            <p className="text-xs text-slate-500">{review.class}</p>
-                          </div>
-                        </div>
-                      </div>
+                  <div
+                    className="relative overflow-hidden"
+                    onMouseEnter={() => setIsReviewPaused(true)}
+                    onMouseLeave={() => setIsReviewPaused(false)}
+                  >
+                    <motion.div
+                      animate={{ x: `calc(50% - ${currentReview * REVIEW_CARD_STRIDE + REVIEW_CARD_CENTER_OFFSET}px)` }}
+                      transition={{ duration: 0.6, ease: "easeInOut" }}
+                      className="flex gap-4"
+                    >
+                      {clientReviews.map((review, index) => {
+                        const isActive = index === currentReview
+                        return (
+                          <motion.div
+                            key={`${review.name}-${index}`}
+                            animate={{
+                              scale: isActive ? 1 : 0.94,
+                              opacity: Math.abs(index - currentReview) <= 2 ? (isActive ? 1 : 0.55) : 0.2,
+                            }}
+                            transition={{ duration: 0.4 }}
+                            style={{ width: REVIEW_CARD_WIDTH }}
+                            className={cn(
+                              "flex-shrink-0 rounded-xl border p-5 transition-shadow duration-200 hover:shadow-lg",
+                              isActive ? "border-slate-950 shadow-md" : "border-slate-200"
+                            )}
+                          >
+                            <p className="text-sm leading-relaxed text-slate-700">"{review.review}"</p>
+                            <div className="mt-4 flex items-center gap-3">
+                              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white">
+                                {review.name.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-slate-950">{review.name}</p>
+                                <p className="text-xs text-slate-500">{review.class} • {review.date}</p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )
+                      })}
+                    </motion.div>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {clientReviews.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentReview(index)}
+                        className={cn(
+                          "h-2 rounded-full transition-all duration-300",
+                          currentReview === index ? "w-6 bg-slate-950" : "w-2 bg-slate-300 hover:bg-slate-500"
+                        )}
+                        aria-label={`View review ${index + 1}`}
+                      />
                     ))}
                   </div>
                 </section>

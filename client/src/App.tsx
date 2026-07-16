@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Analytics } from "@vercel/analytics/react"
 import { Physique57SignUpForm } from "@/components/physique57-sign-up-form"
 import { Barre57TrialForm } from "@/components/barre57-trial-form"
+import { CombinedTrialForm } from "@/components/combined-trial-form"
 import { KidsConsentPage } from "@/components/kids-consent-page"
 import { KidsTrialForm } from "@/components/kids-trial-form"
 import { ScheduleEmbed } from "@/components/schedule-embed"
@@ -91,6 +92,12 @@ const routeMeta = {
     title: "Physique 57 India | Schedule Bengaluru",
     description: "View the Physique 57 India Momence schedule for Bengaluru.",
     name: "Physique 57 Schedule Bengaluru",
+  },
+  combined: {
+    title: "Physique 57 India | All Formats Trial",
+    description:
+      "Book a free trial class at Physique 57 India and choose from Barre 57, powerCycle, or Strength Lab at your preferred studio.",
+    name: "Physique 57 All Formats Trial Form",
   },
   thankYou: {
     title: "Thank You | Physique 57 India Request",
@@ -236,6 +243,7 @@ export default function App() {
   const isScheduleMumRoute = currentPath === "/schedule-mum" || currentPath.startsWith("/schedule-mum/")
   const isScheduleMumBeginRoute = currentPath === "/schedule-mum-begin" || currentPath.startsWith("/schedule-mum-begin/")
   const isScheduleBlrRoute = currentPath === "/schedule-blr" || currentPath.startsWith("/schedule-blr/")
+  const isCombinedRoute = currentPath === "/new" || currentPath.startsWith("/new/")
   const isThankYouRoute = currentPath === "/thank-you" || currentPath.startsWith("/thank-you/")
   const searchParams = new URLSearchParams(window.location.search)
   const scheduleLocationId = searchParams.get("locationId")
@@ -279,9 +287,11 @@ export default function App() {
                     ? routeMeta.scheduleMumBegin
                     : isScheduleBlrRoute
                       ? routeMeta.scheduleBlr
-                      : isThankYouRoute
-                        ? routeMeta.thankYou
-                        : routeMeta.default
+                      : isCombinedRoute
+                        ? routeMeta.combined
+                        : isThankYouRoute
+                          ? routeMeta.thankYou
+                          : routeMeta.default
     const pageUrl = typeof window !== "undefined" ? window.location.href : BRAND_SITE_URL
 
     document.title = meta.title
@@ -329,7 +339,7 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isMaiaBarreCampaign, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isThankYouRoute])
+  }, [currentPath, isMaiaBarreCampaign, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isCombinedRoute, isThankYouRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
@@ -382,9 +392,11 @@ export default function App() {
                   )
                   : isScheduleBlrRoute
                     ? <ScheduleEmbed hostId="33905" locationIds={["22116"]} />
-                    : isThankYouRoute
-                      ? <ThankYouPage />
-                      : <Physique57SignUpForm />
+                    : isCombinedRoute
+                      ? <CombinedTrialForm />
+                      : isThankYouRoute
+                        ? <ThankYouPage />
+                        : <Physique57SignUpForm />
 
   return (
     <>

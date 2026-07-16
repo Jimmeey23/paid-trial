@@ -3385,6 +3385,13 @@ app.get(['/schedule-blr', '/schedule-blr/*'], (req, res) => {
   return sendAppIndex(req, res);
 });
 
+app.get(['/new', '/new/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(req, res);
+});
+
 app.get(['/test', '/test/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
@@ -3633,7 +3640,7 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
     // Barre submissions don't require payment - remove that check
     const leadData = buildLeadRecord({
       ...validation.data,
-      source_form: 'barre-trial-form',
+      source_form: sanitizeText(req.body?.source_form, 60) || 'barre-trial-form',
       class_format: resolveLeadClassFormat(validation.data)
     });
 

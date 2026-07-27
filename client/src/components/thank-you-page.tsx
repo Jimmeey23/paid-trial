@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import confetti from "canvas-confetti"
 import {
   CalendarCheck2,
   CheckCircle2,
@@ -58,6 +59,64 @@ const THANK_YOU_GALLERY_IMAGES = [
     alt: "Physique 57 barre studio practice",
   },
 ]
+
+function ThankYouConfetti() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const instanceRef = useRef<ReturnType<typeof confetti.create> | null>(null)
+
+  useEffect(() => {
+    if (!canvasRef.current) {
+      return
+    }
+
+    instanceRef.current = confetti.create(canvasRef.current, {
+      resize: true,
+      useWorker: true,
+    })
+
+    return () => {
+      instanceRef.current?.reset()
+      instanceRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const shoot = () => {
+      const fire = instanceRef.current ?? confetti
+      fire({
+        particleCount: 90,
+        startVelocity: 48,
+        spread: 82,
+        ticks: 250,
+        gravity: 0.9,
+        scalar: 1.05,
+        origin: { x: 0, y: 0.78 },
+        angle: 42,
+        colors: ["#0f172a", "#be123c", "#1d4ed8", "#059669", "#f59e0b", "#ffffff"],
+      })
+      fire({
+        particleCount: 90,
+        startVelocity: 48,
+        spread: 82,
+        ticks: 250,
+        gravity: 0.9,
+        scalar: 1.05,
+        origin: { x: 1, y: 0.78 },
+        angle: 138,
+        colors: ["#0f172a", "#be123c", "#1d4ed8", "#059669", "#f59e0b", "#ffffff"],
+      })
+    }
+
+    const bursts = [0, 180, 420, 720, 1080]
+    const timeouts = bursts.map((delay) => window.setTimeout(shoot, delay))
+
+    return () => {
+      timeouts.forEach((timeout) => window.clearTimeout(timeout))
+    }
+  }, [])
+
+  return <canvas ref={canvasRef} className="pointer-events-none fixed inset-0 z-[70] h-full w-full" />
+}
 
 function getScheduleUrl(payload: TrialSuccessPayload | null) {
   if (payload?.schedulePageUrl) {
@@ -150,7 +209,7 @@ function KidsHeroImage() {
   const [primaryImage] = KIDS_THANK_YOU_HERO_IMAGES
 
   return (
-    <div className="relative min-h-[420px] overflow-hidden rounded-[8px] bg-slate-900 shadow-[0_28px_80px_rgba(15,23,42,0.28)] sm:min-h-[560px] lg:min-h-[calc(100vh-4rem)]">
+    <div className="relative min-h-[420px] animate-in overflow-hidden rounded-[8px] bg-slate-900 shadow-[0_28px_80px_rgba(15,23,42,0.28)] fade-in zoom-in-95 duration-1000 sm:min-h-[560px] lg:min-h-[calc(100vh-4rem)]">
       <img src={primaryImage.src} alt={primaryImage.alt} className="absolute inset-0 h-full w-full object-cover" />
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/72 to-transparent p-5 text-white">
         <p className="max-w-xs text-sm font-semibold leading-6">A confident first step into the Physique 57 Juniors practice.</p>
@@ -222,41 +281,41 @@ function KidsThankYouPage({
             <img src={BRAND_LOGO_URL} alt="Physique 57 India" className="h-auto w-24 object-contain sm:w-32" />
 
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
+              <div className="inline-flex animate-in items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm fade-in slide-in-from-top-2 duration-500">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 {isMumTribeSubmission ? "Your class spot is in" : "Your Juniors request is in"}
               </div>
-              <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-normal text-slate-950 sm:text-5xl lg:text-6xl">
+              <h1 className="mt-6 max-w-3xl animate-in text-4xl font-bold leading-tight tracking-normal text-slate-950 fade-in slide-in-from-bottom-3 duration-700 sm:text-5xl lg:text-6xl">
                 {isMumTribeSubmission
                   ? <>Thank you{successPayload?.firstName ? `, ${successPayload.firstName}` : ""}. Your request is in for {eventTitle}.</>
                   : <>Thank you{successPayload?.firstName ? `, ${successPayload.firstName}` : ""}. We are preparing your child's first Juniors session.</>}
               </h1>
-              <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+              <p className="mt-5 max-w-xl animate-in text-base leading-7 text-slate-600 fade-in slide-in-from-bottom-2 duration-700 delay-150 sm:text-lg">
                 {isMumTribeSubmission
                   ? successPayload?.statusMessage || `${eventDateTime}. Taught by ${eventInstructor}.`
                   : "Our team will contact you shortly to confirm the best class timing and make the first studio visit feel clear, calm, and confident."}
               </p>
 
-              <div className="mt-7 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
+              <div className="mt-7 grid animate-in gap-3 fade-in slide-in-from-bottom-2 duration-700 delay-300 sm:grid-cols-2">
+                <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{isMumTribeSubmission ? "Venue" : "Studio"}</p>
                   <p className="mt-2 text-base font-bold leading-6 text-slate-950">{isMumTribeSubmission ? eventVenue : studioName}</p>
                   {!isMumTribeSubmission && selectedStudio?.neighborhood ? (
                     <p className="mt-1 text-sm text-slate-600">{selectedStudio.neighborhood}</p>
                   ) : null}
                 </div>
-                <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{isMumTribeSubmission ? "Event" : "Juniors class"}</p>
                   <p className="mt-2 text-base font-bold leading-6 text-slate-950">{isMumTribeSubmission ? eventTitle : batch || successPayload?.classType || "Physique 57 - Juniors"}</p>
                   {childName ? <p className="mt-1 text-sm text-slate-600">For {childName}</p> : null}
                 </div>
                 {isMumTribeSubmission ? (
                   <>
-                    <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
+                    <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Date & time</p>
                       <p className="mt-2 text-base font-bold leading-6 text-slate-950">{eventDateTime}</p>
                     </div>
-                    <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
+                    <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Taught by</p>
                       <p className="mt-2 text-base font-bold leading-6 text-slate-950">{eventInstructor}</p>
                     </div>
@@ -265,13 +324,13 @@ function KidsThankYouPage({
               </div>
 
               {!isMumTribeSubmission ? (
-                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                  <Button asChild className="h-12 rounded-[8px] bg-slate-950 px-5 text-white hover:bg-slate-800">
+                <div className="mt-7 flex animate-in flex-col gap-3 fade-in slide-in-from-bottom-2 duration-700 delay-500 sm:flex-row">
+                  <Button asChild className="h-12 rounded-[8px] bg-slate-950 px-5 text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-lg">
                     <a href={scheduleUrl}>
                       View schedule <ExternalLink className="h-4 w-4" />
                     </a>
                   </Button>
-                  <Button asChild variant="outline" className="h-12 rounded-[8px] border-slate-300 px-5 text-slate-950 hover:bg-slate-100">
+                  <Button asChild variant="outline" className="h-12 rounded-[8px] border-slate-300 px-5 text-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-100">
                     <a href="/kids">
                       Back to Juniors
                     </a>
@@ -310,8 +369,12 @@ function KidsThankYouPage({
             const Icon = step.icon
 
             return (
-              <div key={step.title} className="grid gap-4 rounded-[8px] border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-[auto_1fr] sm:p-5">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white">
+              <div
+                key={step.title}
+                style={{ animationDelay: `${index * 120}ms` }}
+                className="grid animate-in gap-4 rounded-[8px] border border-slate-200 bg-white p-4 shadow-sm transition duration-300 fade-in slide-in-from-bottom-2 hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[auto_1fr] sm:p-5"
+              >
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
@@ -328,8 +391,8 @@ function KidsThankYouPage({
       <section className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
         <div className="grid gap-3 border-t border-slate-200 pt-6 sm:grid-cols-3">
           {KIDS_THANK_YOU_GALLERY_IMAGES.map((image) => (
-            <div key={image.src} className="overflow-hidden rounded-[8px] bg-slate-900">
-              <img src={image.src} alt={image.alt} className="h-64 w-full object-cover sm:h-72" />
+            <div key={image.src} className="overflow-hidden rounded-[8px] bg-slate-900 shadow-sm">
+              <img src={image.src} alt={image.alt} className="h-64 w-full object-cover transition duration-500 hover:scale-[1.03] sm:h-72" />
             </div>
           ))}
         </div>
@@ -386,18 +449,22 @@ export function ThankYouPage() {
 
   if (isKidsSubmission) {
     return (
-      <KidsThankYouPage
-        successPayload={successPayload}
-        selectedStudio={selectedStudio}
-        scheduleUrl={scheduleUrl}
-        studioName={studioName}
-        isMumTribeSubmission={isMumTribeSubmission}
-      />
+      <>
+        <ThankYouConfetti />
+        <KidsThankYouPage
+          successPayload={successPayload}
+          selectedStudio={selectedStudio}
+          scheduleUrl={scheduleUrl}
+          studioName={studioName}
+          isMumTribeSubmission={isMumTribeSubmission}
+        />
+      </>
     )
   }
 
   return (
     <main className="min-h-screen bg-white text-zinc-950">
+      <ThankYouConfetti />
       <section className="relative overflow-hidden bg-zinc-950 text-white">
         <div className="absolute inset-0 opacity-55">
           <img
@@ -409,16 +476,16 @@ export function ThankYouPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/78 to-zinc-950/20" />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-zinc-950 to-transparent" />
         <div className="relative mx-auto flex min-h-[68vh] max-w-6xl flex-col justify-between px-5 py-8 sm:px-8 lg:px-10">
-          <img src={BRAND_LOGO_URL} alt="Physique 57 India" className="block h-auto w-24 max-w-[48vw] bg-white object-contain p-2 shadow-2xl sm:w-32" />
+          <img src={BRAND_LOGO_URL} alt="Physique 57 India" className="block h-auto w-24 max-w-[48vw] animate-in bg-white object-contain p-2 shadow-2xl fade-in duration-700 sm:w-32" />
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 border border-white/25 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur">
+            <div className="inline-flex animate-in items-center gap-2 border border-white/25 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur fade-in slide-in-from-top-2 duration-500">
               <CheckCircle2 className="h-4 w-4 text-white" />
               Trial request received
             </div>
-            <h1 className="mt-7 max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-7 max-w-2xl animate-in text-4xl font-semibold leading-tight fade-in slide-in-from-bottom-3 duration-700 sm:text-5xl lg:text-6xl">
               Thank you{successPayload?.firstName ? `, ${successPayload.firstName}` : ""}. Your Studio Journey starts here.
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-zinc-200 sm:text-lg">
+            <p className="mt-5 max-w-xl animate-in text-base leading-7 text-zinc-200 fade-in slide-in-from-bottom-2 duration-700 delay-150 sm:text-lg">
               We have received your details. Our Customer Excellence team will help you choose and confirm the right upcoming Signature Experience.
             </p>
           </div>
@@ -456,14 +523,14 @@ export function ThankYouPage() {
                 </>
               ) : null}
             </dl>
-            <Button asChild className="mt-6 w-full rounded-none bg-zinc-950 py-6 text-white hover:bg-zinc-800">
+            <Button asChild className="mt-6 w-full rounded-none bg-zinc-950 py-6 text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-lg">
               <a href={scheduleUrl}>
                 View full live schedule <ExternalLink className="ml-2 h-4 w-4" />
               </a>
             </Button>
           </div>
 
-          <div className="bg-zinc-50 p-6">
+          <div className="bg-zinc-50 p-6 transition hover:bg-zinc-100">
             <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">What happens next</h3>
             <ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-700">
               <li>Please arrive 10 minutes before your first Studio Session. Wear comfortable fitted activewear and bring grip socks if you have them.</li>

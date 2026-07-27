@@ -182,7 +182,7 @@ function KidsThankYouPage({
     ? [
       {
         title: "Spot recorded",
-        text: "Your child has been added to the Mum Tribe class list for the event.",
+        text: `Your child has been added to the ${eventTitle} class list for the event.`,
         icon: CalendarCheck2,
       },
       {
@@ -192,7 +192,7 @@ function KidsThankYouPage({
       },
       {
         title: "Event arrival",
-        text: "Please arrive a little early at Physique 57, Bandra so your child can settle in before class.",
+        text: `Please arrive a little early at ${eventVenue} so your child can settle in before class.`,
         icon: Phone,
       },
     ]
@@ -224,7 +224,7 @@ function KidsThankYouPage({
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                {isMumTribeSubmission ? "Your Mum Tribe spot is in" : "Your Juniors request is in"}
+                {isMumTribeSubmission ? "Your class spot is in" : "Your Juniors request is in"}
               </div>
               <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-normal text-slate-950 sm:text-5xl lg:text-6xl">
                 {isMumTribeSubmission
@@ -303,7 +303,7 @@ function KidsThankYouPage({
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-16">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{isMumTribeSubmission ? "Event details" : "What happens next for your child"}</p>
-          <h2 className="mt-3 text-3xl font-bold leading-tight text-slate-950">{isMumTribeSubmission ? "Everything needed for this Mum Tribe class is captured." : "A simple path from request to first class."}</h2>
+          <h2 className="mt-3 text-3xl font-bold leading-tight text-slate-950">{isMumTribeSubmission ? "Everything needed for this class is captured." : "A simple path from request to first class."}</h2>
         </div>
         <div className="grid gap-3">
           {nextSteps.map((step, index) => {
@@ -353,6 +353,7 @@ export function ThankYouPage() {
   const classType = successPayload?.classType || successPayload?.formatName || "Signature Experience"
   const studioName = successPayload?.studioName || selectedStudio?.name || "Physique 57 India"
   const isMumTribeSubmission = successPayload?.sourceForm === "kids-mum-tribe-form"
+    || successPayload?.sourceForm === "kids-kabir-class-form"
   const isKidsSubmission = successPayload?.sourceForm === "kids-trial-form" || isMumTribeSubmission
 
   useEffect(() => {

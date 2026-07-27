@@ -41,6 +41,12 @@ const KIDS_MUM_TRIBE_ROUTE_META = {
   image: '/p57-assets/p57-juniors-hero-2026-1.png',
   imageAlt: 'Young movers at a Physique 57 Juniors barre session'
 };
+const KIDS_KABIR_ROUTE_META = {
+  title: 'Physique 57 x Kabir Nayar - Kids Class',
+  description: 'Saturday, 1 August, 2026 at 4pm. Taught by Simonelle. Venue: Physique 57, Kemps Corner.',
+  image: '/p57-assets/p57-juniors-hero-2026-1.png',
+  imageAlt: 'Young movers at a Physique 57 Juniors barre session'
+};
 const MAIA_BARRE_ROUTE_META = {
   title: 'Maia Sethna x Physique 57',
   description: 'Transform your body with our signature method. Experience the Physique 57 difference.',
@@ -66,6 +72,8 @@ const MOMENCE_DASHBOARD_ORIGIN = 'https://momence.com';
 const DEFAULT_MOMENCE_DASHBOARD_BASE_URL = `${MOMENCE_DASHBOARD_ORIGIN}/_api/primary`;
 const DEFAULT_KIDS_MUM_TRIBE_CLASS_SESSION_ID = 138939271;
 const DEFAULT_KIDS_MUM_TRIBE_CLASS_HOME_LOCATION_ID = 29821;
+const DEFAULT_KIDS_KABIR_CLASS_SESSION_ID = 140640455;
+const DEFAULT_KIDS_KABIR_CLASS_HOME_LOCATION_ID = 9030;
 const DEFAULT_MOMENCE_WAIVER_LOOKUP_ATTEMPTS = 5;
 const DEFAULT_MOMENCE_WAIVER_LOOKUP_DELAY_MS = 600;
 const DEFAULT_KIDS_PARENT_CONSENT_PREDEFINED_WAIVER_IDS = ['waiver', 'membership-waiver'];
@@ -1697,6 +1705,23 @@ function buildKidsMumTribeClassBookingConfig(overrides = {}) {
   };
 }
 
+function buildKidsKabirClassBookingConfig(overrides = {}) {
+  return {
+    hostId: parseInteger(overrides.hostId ?? process.env.MOMENCE_HOST_ID, DEFAULT_MOMENCE_HOST_ID),
+    sessionId: parseInteger(
+      overrides.sessionId ?? process.env.MOMENCE_KIDS_KABIR_SESSION_ID,
+      DEFAULT_KIDS_KABIR_CLASS_SESSION_ID
+    ),
+    homeLocationId: parseInteger(
+      overrides.homeLocationId ?? process.env.MOMENCE_KIDS_KABIR_HOME_LOCATION_ID,
+      DEFAULT_KIDS_KABIR_CLASS_HOME_LOCATION_ID
+    ),
+    priceInCurrency: Number(overrides.priceInCurrency ?? process.env.MOMENCE_KIDS_KABIR_PRICE_IN_CURRENCY ?? 0),
+    isEmailSent: parseBoolean(overrides.isEmailSent ?? process.env.MOMENCE_KIDS_KABIR_SEND_EMAIL, false),
+    isOverrideCapacity: parseBoolean(overrides.isOverrideCapacity ?? process.env.MOMENCE_KIDS_KABIR_OVERRIDE_CAPACITY, false)
+  };
+}
+
 function buildMomenceChildAccountPayload(childInput = {}) {
   const childDateOfBirth = normalizeDateOnly(childInput.childDateOfBirth || childInput.dateOfBirth || childInput.dob);
   if (!childDateOfBirth) {
@@ -1788,6 +1813,13 @@ async function provisionKidsConsent(leadData, options = {}) {
 async function provisionKidsMumTribeClass(childMemberId, options = {}) {
   const client = options.client || new MomencePublicApiClient(options.clientConfig || {});
   const bookingConfig = buildKidsMumTribeClassBookingConfig(options.bookingConfig || {});
+
+  return client.addFreeSessionToMember(childMemberId, bookingConfig);
+}
+
+async function provisionKidsKabirClass(childMemberId, options = {}) {
+  const client = options.client || new MomencePublicApiClient(options.clientConfig || {});
+  const bookingConfig = buildKidsKabirClassBookingConfig(options.bookingConfig || {});
 
   return client.addFreeSessionToMember(childMemberId, bookingConfig);
 }
@@ -3357,6 +3389,13 @@ app.get(['/kids-themumtribe', '/kids-themumtribe/*'], (req, res) => {
   return sendAppIndex(req, res, KIDS_MUM_TRIBE_ROUTE_META);
 });
 
+app.get(['/kids-kabirnayar', '/kids-kabirnayar/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(req, res, KIDS_KABIR_ROUTE_META);
+});
+
 app.get(['/kids-consent', '/kids-consent/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
@@ -3817,6 +3856,7 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
     const submitLead = options.processLeadSubmission || processLeadSubmission;
     const recordKidsConsent = options.provisionKidsConsent || provisionKidsConsent;
     const bookKidsMumTribeClass = options.provisionKidsMumTribeClass || provisionKidsMumTribeClass;
+    const bookKidsKabirClass = options.provisionKidsKabirClass || provisionKidsKabirClass;
     const requestPayload = {
       ...req.body,
       ...(options.fixedCenter ? { center: options.fixedCenter } : {})
@@ -3894,26 +3934,32 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
       });
     }
 
-    if (options.bookMumTribeClass) {
+    const eventClassBooker = options.bookMumTribeClass
+      ? { fn: bookKidsMumTribeClass, label: 'the Mum Tribe class', logLabel: 'Kids Mum Tribe' }
+      : options.bookKabirClass
+        ? { fn: bookKidsKabirClass, label: 'the Kabir Nayar class', logLabel: 'Kids Kabir Nayar' }
+        : null;
+
+    if (eventClassBooker) {
       try {
-        const classBookingResult = await bookKidsMumTribeClass(consentResult.childMemberId);
+        const classBookingResult = await eventClassBooker.fn(consentResult.childMemberId);
         return res.status(200).json({
           ...submissionResult,
           momenceConsent: consentResult,
           momenceClassBooking: classBookingResult
         });
       } catch (error) {
-        console.error('Kids Mum Tribe class booking failed:', error.message);
+        console.error(`${eventClassBooker.logLabel} class booking failed:`, error.message);
         if (options.allowPostSubmitIntegrationFailure) {
           return res.status(200).json({
             ...submissionResult,
             momenceConsent: consentResult,
             momenceClassBooking: {
               success: false,
-              error: error.message || 'Unable to add the Mum Tribe class.'
+              error: error.message || `Unable to add ${eventClassBooker.label}.`
             },
-            warning: 'Your request was received, but the studio team needs to manually add the Mum Tribe class in Momence.',
-            detail: error.message || 'Unable to add the Mum Tribe class.',
+            warning: `Your request was received, but the studio team needs to manually add ${eventClassBooker.label} in Momence.`,
+            detail: error.message || `Unable to add ${eventClassBooker.label}.`,
             requiresManualFollowUp: true
           });
         }
@@ -3923,8 +3969,8 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
           id: leadData.id,
           event_id: leadData.event_id,
           momenceConsent: consentResult,
-          error: 'The child account was created, but the Mum Tribe class could not be added. Please contact the studio team.',
-          detail: error.message || 'Unable to add the Mum Tribe class.'
+          error: `The child account was created, but ${eventClassBooker.label} could not be added. Please contact the studio team.`,
+          detail: error.message || `Unable to add ${eventClassBooker.label}.`
         });
       }
     }
@@ -3959,6 +4005,22 @@ app.post('/api/submit-kids-mum-tribe-lead', applySubmissionRateLimit, async (req
       }
     },
     bookMumTribeClass: true
+  });
+});
+
+app.post('/api/submit-kids-kabir-lead', applySubmissionRateLimit, async (req, res) => {
+  return handleKidsLeadSubmission(req, res, {
+    fixedCenter: 'Kwality House, Kemps Corner',
+    allowMissingBatch: true,
+    skipMomenceLeadWebhook: true,
+    allowPostSubmitIntegrationFailure: true,
+    kidsConsentOptions: {
+      consentOptions: {
+        waiverLookupAttempts: 8,
+        waiverLookupDelayMs: 1000
+      }
+    },
+    bookKabirClass: true
   });
 });
 
@@ -4019,6 +4081,7 @@ module.exports.buildOpenBarreMembershipConfig = buildOpenBarreMembershipConfig;
 module.exports.buildStudioComplimentaryClassMembershipConfig = buildStudioComplimentaryClassMembershipConfig;
 module.exports.buildMomenceLeadRequestPayload = buildMomenceLeadRequestPayload;
 module.exports.buildKidsMumTribeClassBookingConfig = buildKidsMumTribeClassBookingConfig;
+module.exports.buildKidsKabirClassBookingConfig = buildKidsKabirClassBookingConfig;
 module.exports.buildInfluencerSubmissionSuccessPayload = buildInfluencerSubmissionSuccessPayload;
 module.exports.resolveLeadClassFormat = resolveLeadClassFormat;
 module.exports.normalizePhoneDigits = normalizePhoneDigits;
@@ -4029,6 +4092,7 @@ module.exports.resolveRespondIoContactIdentifier = resolveRespondIoContactIdenti
 module.exports.syncLeadToRespondIo = syncLeadToRespondIo;
 module.exports.provisionKidsConsent = provisionKidsConsent;
 module.exports.provisionKidsMumTribeClass = provisionKidsMumTribeClass;
+module.exports.provisionKidsKabirClass = provisionKidsKabirClass;
 module.exports.provisionOpenBarreMembership = provisionOpenBarreMembership;
 module.exports.provisionInfluencerMembership = provisionInfluencerMembership;
 module.exports.provisionOpenBarreViaSupabase = provisionOpenBarreViaSupabase;

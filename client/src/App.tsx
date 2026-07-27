@@ -72,6 +72,12 @@ const routeMeta = {
       "Tuesday, 14 July, 2026 at 4:30pm. Taught by Simonelle De Vitre. Venue: Physique 57, Bandra.",
     name: "Physique 57 X The Mum Tribe",
   },
+  kidsKabir: {
+    title: "Physique 57 x Kabir Nayar - Kids Class",
+    description:
+      "Saturday, 1 August, 2026 at 4pm. Taught by Simonelle. Venue: Physique 57, Kemps Corner.",
+    name: "Physique 57 x Kabir Nayar - Kids Class",
+  },
   kidsConsent: {
     title: "Physique 57 Juniors | Consent Form",
     description:
@@ -238,6 +244,7 @@ export default function App() {
   const isInfluencersRoute = currentPath === "/influencers" || currentPath.startsWith("/influencers/")
   const isKidsRoute = currentPath === "/kids" || currentPath.startsWith("/kids/")
   const isKidsMumTribeRoute = currentPath === "/kids-themumtribe" || currentPath.startsWith("/kids-themumtribe/")
+  const isKidsKabirRoute = currentPath === "/kids-kabirnayar" || currentPath.startsWith("/kids-kabirnayar/")
   const isKidsConsentRoute = currentPath === "/kids-consent" || currentPath.startsWith("/kids-consent/")
   const isTestRoute = currentPath === "/test" || currentPath.startsWith("/test/")
   const isScheduleMumRoute = currentPath === "/schedule-mum" || currentPath.startsWith("/schedule-mum/")
@@ -277,7 +284,9 @@ export default function App() {
           ? routeMeta.kids
           : isKidsMumTribeRoute
             ? routeMeta.kidsMumTribe
-            : isKidsConsentRoute
+            : isKidsKabirRoute
+              ? routeMeta.kidsKabir
+              : isKidsConsentRoute
               ? routeMeta.kidsConsent
               : isTestRoute
                 ? routeMeta.test
@@ -339,7 +348,7 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isMaiaBarreCampaign, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isCombinedRoute, isThankYouRoute])
+  }, [currentPath, isMaiaBarreCampaign, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsKabirRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isCombinedRoute, isThankYouRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
@@ -370,7 +379,30 @@ export default function App() {
               eventVenue="Physique 57, Bandra"
             />
           )
-          : isKidsConsentRoute
+          : isKidsKabirRoute
+            ? (
+              <KidsTrialForm
+                submitEndpoint="/api/submit-kids-kabir-lead"
+                hideBatchSelection
+                lockedStudioName="Kwality House, Kemps Corner"
+                lockedStudioDisplayName="Physique 57, Kemps Corner"
+                formTitle="Physique 57 x Kabir Nayar - Kids Class"
+                formDescription="Saturday, 1 August, 2026 at 4pm. Taught by Simonelle."
+                formBadge="Kabir Nayar - Kids Class"
+                heroEyebrow="Saturday, 1 August, 2026"
+                heroTitle="Physique 57 x Kabir Nayar - Kids Class"
+                heroDescription="Join the Physique 57 x Kabir Nayar Kids Class at 4pm, taught by Simonelle at Physique 57, Kemps Corner."
+                heroHighlights={["4pm", "Simonelle", "Kemps"]}
+                mobileHeroDescription="4pm. Taught by Simonelle. Venue: Physique 57, Kemps Corner."
+                successSourceForm="kids-kabir-class-form"
+                eventTitle="Physique 57 x Kabir Nayar - Kids Class"
+                eventDescription="Saturday, 1 August, 2026 at 4pm. Taught by Simonelle."
+                eventDateTime="Saturday, 1 August, 2026 at 4pm"
+                eventInstructor="Simonelle"
+                eventVenue="Physique 57, Kemps Corner"
+              />
+            )
+            : isKidsConsentRoute
             ? <KidsConsentPage />
             : isTestRoute
               ? <Physique57SignUpForm testMode />

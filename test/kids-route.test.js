@@ -263,8 +263,8 @@ test('Thank you page renders Mum Tribe specific event details without generic ba
   assert.match(source, /Tuesday, 14 July, 2026 at 4:30pm/);
   assert.match(source, /Simonelle De Vitre/);
   assert.match(source, /Physique 57, Bandra/);
-  assert.match(source, /Your Mum Tribe spot is in/);
-  assert.match(source, /Everything needed for this Mum Tribe class is captured/);
+  assert.match(source, /Your class spot is in/);
+  assert.match(source, /Everything needed for this class is captured/);
   assert.match(source, /!isMumTribeSubmission/);
 });
 

@@ -2003,6 +2003,8 @@ function buildStripeMetadata(leadPayload, checkoutConfig) {
     time: String(leadPayload.time || ''),
     product_name: String(checkoutConfig.productName || ''),
     waiver_accepted: String(leadPayload.waiverAccepted || ''),
+    ...Object.fromEntries(TRACKING_FIELDS.map((fieldName) => [fieldName, String(leadPayload[fieldName] || '')])),
+    ...Object.fromEntries(URL_FIELDS.map((fieldName) => [fieldName, String(leadPayload[fieldName] || '')])),
     ...Object.fromEntries(Object.entries(checkoutConfig.metadata || {}).map(([key, value]) => [key, String(value)]))
   };
 }
@@ -2035,7 +2037,9 @@ function buildLeadPayloadFromCheckoutSession(session) {
     event_id: metadata.event_id || '',
     draft_id: metadata.draft_id || '',
     payment_session_id: session?.id || '',
-    source_form: metadata.source_form || metadata.source || 'paid-trial-form'
+    source_form: metadata.source_form || metadata.source || 'paid-trial-form',
+    ...Object.fromEntries(TRACKING_FIELDS.map((fieldName) => [fieldName, metadata[fieldName] || ''])),
+    ...Object.fromEntries(URL_FIELDS.map((fieldName) => [fieldName, metadata[fieldName] || '']))
   };
 }
 
@@ -2699,7 +2703,7 @@ function resolveMomenceSourceId(leadData = {}, options = {}) {
   return process.env.MOMENCE_REGULAR_SOURCE_ID || DEFAULT_REGULAR_MOMENCE_SOURCE_ID;
 }
 
-async function sendMetaLeadEvent(leadData, req) {
+async function sendMetaConversionEvent(leadData, req, options = {}) {
   const pixelId = process.env.META_PIXEL_ID;
   const accessToken = process.env.META_CONVERSIONS_ACCESS_TOKEN;
 
@@ -2707,17 +2711,41 @@ async function sendMetaLeadEvent(leadData, req) {
     return { sent: false, reason: 'Meta Conversions API not configured' };
   }
 
+  const eventName = options.eventName || 'Lead';
   const email = normalizeEmail(leadData.email);
   const phone = normalizePhone(leadData.phoneNumber);
   const firstName = String(leadData.firstName || '').trim().toLowerCase();
   const lastName = String(leadData.lastName || '').trim().toLowerCase();
   const clientUserAgent = req.headers['user-agent'] || '';
   const clientIpAddress = getClientIp(req);
-  const eventId = leadData.event_id;
+  const eventId = options.eventId || leadData.event_id;
+  const externalId = leadData.id || leadData.event_id;
+
+  const customData = {
+    studio_location: leadData.center || '',
+    class_type: leadData.type || '',
+    preferred_time: leadData.time || '',
+    utm_source: leadData.utm_source || '',
+    utm_medium: leadData.utm_medium || '',
+    utm_campaign: leadData.utm_campaign || '',
+    gclid: leadData.gclid || '',
+    gbraid: leadData.gbraid || '',
+    wbraid: leadData.wbraid || ''
+  };
+
+  if (typeof options.value === 'number' && Number.isFinite(options.value)) {
+    customData.value = options.value;
+    customData.currency = String(options.currency || 'INR').toUpperCase();
+  }
+
+  if (options.orderId) {
+    customData.order_id = String(options.orderId);
+  }
+
   const payload = {
     data: [
       {
-        event_name: 'Lead',
+        event_name: eventName,
         event_time: Math.floor(Date.now() / 1000),
         action_source: 'website',
         event_id: eventId,
@@ -2731,19 +2759,9 @@ async function sendMetaLeadEvent(leadData, req) {
           ...(leadData.fbc ? { fbc: leadData.fbc } : {}),
           ...(clientUserAgent ? { client_user_agent: clientUserAgent } : {}),
           ...(clientIpAddress ? { client_ip_address: clientIpAddress } : {}),
-          external_id: [sha256(String(leadData.id))]
+          ...(externalId ? { external_id: [sha256(String(externalId))] } : {})
         },
-        custom_data: {
-          studio_location: leadData.center || '',
-          class_type: leadData.type || '',
-          preferred_time: leadData.time || '',
-          utm_source: leadData.utm_source || '',
-          utm_medium: leadData.utm_medium || '',
-          utm_campaign: leadData.utm_campaign || '',
-          gclid: leadData.gclid || '',
-          gbraid: leadData.gbraid || '',
-          wbraid: leadData.wbraid || ''
-        }
+        custom_data: customData
       }
     ]
   };
@@ -2767,6 +2785,20 @@ async function sendMetaLeadEvent(leadData, req) {
   }
 
   return { sent: true, eventId, response: responseText };
+}
+
+async function sendMetaLeadEvent(leadData, req) {
+  return sendMetaConversionEvent(leadData, req, { eventName: 'Lead' });
+}
+
+async function sendMetaPurchaseEvent(leadData, req, { value, currency, eventId, orderId } = {}) {
+  return sendMetaConversionEvent(leadData, req, {
+    eventName: 'Purchase',
+    value,
+    currency,
+    eventId,
+    orderId
+  });
 }
 
 function getRespondIoConfig() {
@@ -3322,6 +3354,28 @@ app.get('/api/verify-payment', async (req, res) => {
         success: false,
         error: error.message || 'Unable to finalise the paid submission.'
       };
+    }
+
+    if (leadSubmission?.success && String(session?.metadata?.meta_purchase_event_status || '').trim().toLowerCase() !== 'success') {
+      try {
+        const purchaseLeadData = buildLeadPayloadFromCheckoutSession(session);
+        const metaResult = await sendMetaPurchaseEvent(purchaseLeadData, req, {
+          value: typeof session.amount_total === 'number' ? session.amount_total / 100 : undefined,
+          currency: session.currency,
+          eventId: `${purchaseLeadData.event_id || session.id}-purchase`,
+          orderId: session.id
+        });
+
+        await updateCheckoutSessionMetadata(session.id, {
+          meta_purchase_event_status: metaResult.sent ? 'success' : 'skipped'
+        });
+
+        if (metaResult.sent) {
+          console.log(`Meta Conversions API Purchase event sent: ${metaResult.eventId}`);
+        }
+      } catch (error) {
+        console.error('Meta Conversions API Purchase send failed:', error.message);
+      }
     }
 
     return res.json({

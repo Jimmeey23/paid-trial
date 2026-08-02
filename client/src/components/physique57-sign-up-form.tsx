@@ -856,7 +856,10 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
           setStatusMessage({ tone: "success", text: successText })
           setShowSuccessModal(true)
           setIsPostPaymentProcessing(false)
-          redirectToThankYouPage(fallbackPayload, result.leadSubmission, successText)
+          redirectToThankYouPage(fallbackPayload, result.leadSubmission, successText, {
+            value: result.session?.amount_total,
+            currency: result.session?.currency,
+          })
           return
         }
 
@@ -941,7 +944,8 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
   function redirectToThankYouPage(
     payload: Record<string, unknown>,
     result: Record<string, any> = {},
-    statusText = "Your details have been received. A member of our team will get in touch shortly."
+    statusText = "Your details have been received. A member of our team will get in touch shortly.",
+    paymentInfo?: { value?: number; currency?: string }
   ) {
     const eventId = typeof result.event_id === "string"
       ? result.event_id
@@ -969,6 +973,8 @@ export function Physique57SignUpForm({ onSubmit, testMode = false }: Physique57S
         utm_campaign: typeof payload.utm_campaign === "string" ? payload.utm_campaign : undefined,
         utm_source: typeof payload.utm_source === "string" ? payload.utm_source : undefined,
       },
+      purchaseValue: typeof paymentInfo?.value === "number" ? paymentInfo.value / 100 : undefined,
+      purchaseCurrency: paymentInfo?.currency ? paymentInfo.currency.toUpperCase() : undefined,
       createdAt: new Date().toISOString(),
     })
     if (typeof window !== "undefined") {

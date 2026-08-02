@@ -439,6 +439,8 @@ export function ThankYouPage() {
           event_id: eventId,
           utm_campaign: successPayload.leadTracking?.utm_campaign,
           utm_source: successPayload.leadTracking?.utm_source,
+          purchase_value: successPayload.purchaseValue,
+          purchase_currency: successPayload.purchaseCurrency,
         })
         window.sessionStorage.setItem(firedKey, "true")
       } catch {

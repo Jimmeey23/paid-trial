@@ -239,7 +239,10 @@ export function getSubmissionTrackingPayload() {
   }
 }
 
-export function trackLeadSubmission(config: PublicClientConfig | null, leadPayload: { event_id?: string; utm_campaign?: string; utm_source?: string }) {
+export function trackLeadSubmission(
+  config: PublicClientConfig | null,
+  leadPayload: { event_id?: string; utm_campaign?: string; utm_source?: string; purchase_value?: number; purchase_currency?: string }
+) {
   if (!config || typeof window === "undefined") {
     return
   }
@@ -251,6 +254,17 @@ export function trackLeadSubmission(config: PublicClientConfig | null, leadPaylo
     }, {
       eventID: leadPayload.event_id,
     })
+
+    if (typeof leadPayload.purchase_value === "number") {
+      window.fbq("track", "Purchase", {
+        value: leadPayload.purchase_value,
+        currency: leadPayload.purchase_currency || "INR",
+        content_name: leadPayload.utm_campaign || "trial_signup",
+        content_category: leadPayload.utm_source || "direct",
+      }, {
+        eventID: `${leadPayload.event_id}-purchase`,
+      })
+    }
   }
 
   if (typeof window.gtag === "function" && config.googleAdsId && config.googleAdsConversionLabel) {

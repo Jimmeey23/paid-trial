@@ -60,6 +60,8 @@ export interface TrialSuccessPayload {
     utm_campaign?: string
     utm_source?: string
   }
+  purchaseValue?: number
+  purchaseCurrency?: string
   createdAt: string
 }
 

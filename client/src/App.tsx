@@ -14,7 +14,7 @@ const BRAND_SITE_URL = "https://www.physique57.in"
 const EMPTY_SCHEDULE_FILTER_IDS: string[] = []
 const BEGINNER_SCHEDULE_TAG_IDS = ["284832"]
 const RESPOND_IO_WIDGET_ID = "respondio__widget"
-const RESPOND_IO_WIDGET_SRC = "https://cdn.respond.io/webchat/widget/widget.js?cId=bfca9b4f3bea1d947e2bd1087bb47d6"
+const RESPOND_IO_WIDGET_SRC = "https://cdn.respond.io/webchat/widget/widget.js?cId=5a66956c79c60cad45c3cae8d3895e1"
 
 declare global {
   interface Window {

@@ -58,7 +58,7 @@ function createEventId() {
 
 interface Barre57TrialFormProps {
   onSubmit?: (data: any) => void
-  variant?: "barre" | "influencer"
+  variant?: "barre" | "influencer" | "bpb"
 }
 
 interface ScheduleSession {
@@ -437,6 +437,8 @@ const REVIEW_CARD_CENTER_OFFSET = REVIEW_CARD_WIDTH / 2
 
 export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFormProps) {
   const isInfluencerFlow = variant === "influencer"
+  const isBpbFlow = variant === "bpb"
+  const defaultClassFormat = isBpbFlow ? "powerCycle" : "Barre 57"
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -444,7 +446,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
     countryCode: "+91",
     phone: "",
     studio: "",
-    classFormat: "Barre 57",
+    classFormat: defaultClassFormat,
     acceptedTerms: false,
   })
 
@@ -475,12 +477,29 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
   const complimentaryClassProvisioned = (submissionMomence?.membershipProvisioned ?? submissionMomence?.openBarreProvisioned) === true
   const searchParams = new URLSearchParams(window.location.search)
   const isBarrePath = window.location.pathname === "/barre" || window.location.pathname.startsWith("/barre/")
+  const isBpbPath = window.location.pathname === "/bpb" || window.location.pathname.startsWith("/bpb/")
   const isMaiaBarreCampaign =
     isBarrePath &&
     searchParams.get("utm_source")?.trim().toLowerCase() === "influencer" &&
     searchParams.get("utm_campaign")?.trim().toLowerCase() === "maia"
-  const selectedClassFormat = isMaiaBarreCampaign ? formData.classFormat : "Barre 57"
-  const routeCopy = isMaiaBarreCampaign
+  const isPowercycleCampaign = isBpbFlow || isBpbPath
+  const selectedClassFormat = isPowercycleCampaign ? "powerCycle" : isMaiaBarreCampaign ? formData.classFormat : "Barre 57"
+  const routeCopy = isPowercycleCampaign
+    ? {
+        heroBadge: "BPB x Physique 57",
+        heroTitle: "Ride with powerCycle",
+        heroDescription: "Book your BPB campaign session and experience Physique 57 India's signature powerCycle studio ride.",
+        formBadge: "BPB x Physique 57",
+        formTitle: "Book Your powerCycle Session",
+        formDescription: "Select your preferred studio to reserve your complimentary powerCycle class.",
+        successTitle: "Thank you for booking with BPB x Physique 57",
+        successDescription: "A member of our Customer Excellence team will be in touch shortly to confirm your powerCycle session.",
+        submitLabel: "Book powerCycle Session",
+        submittingLabel: "Booking your session...",
+        benefitsDescription: "Experience the high-energy powerCycle format from Physique 57, designed to build stamina, strength, and confidence.",
+        locationsDescription: "Choose your preferred Physique 57 studio for your BPB powerCycle session.",
+      }
+    : isMaiaBarreCampaign
     ? {
         heroBadge: "Maia Sethna x Physique 57",
         heroTitle: "Experience the Physique 57 Method",
@@ -703,7 +722,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         type: selectedClassFormat,
         waiverAccepted: formData.acceptedTerms ? "accepted" : "",
         event_id: eventIdRef.current,
-        source_form: isInfluencerFlow ? "influencer-barre-form" : "barre-trial-form",
+        source_form: isInfluencerFlow ? "influencer-barre-form" : isPowercycleCampaign ? "bpb-powercycle-form" : "barre-trial-form",
         ...trackingPayload,
       } as Record<string, string>
 
@@ -741,7 +760,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         countryCode: "+91",
         phone: "",
         studio: "",
-        classFormat: "Barre 57",
+        classFormat: defaultClassFormat,
         acceptedTerms: false,
       })
       eventIdRef.current = createEventId()
@@ -757,7 +776,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         studioLocationId: selectedStudio?.scheduleLocationId,
         formatName: selectedClassFormat,
         classType: selectedClassFormat === "powerCycle" ? "powerCycle" : "Barre",
-        sourceForm: isInfluencerFlow ? "influencer-barre-form" : "barre-trial-form",
+        sourceForm: isInfluencerFlow ? "influencer-barre-form" : isPowercycleCampaign ? "bpb-powercycle-form" : "barre-trial-form",
         statusMessage: result.error || result.warning || "Your details have been received.",
         redirectUrl: nextRedirectUrl,
         schedulePageUrl: result.schedule?.schedulePageUrl,
@@ -1093,12 +1112,12 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                         {errors.studio && <p className="text-sm text-destructive">{errors.studio}</p>}
                       </div>
 
-                      {isMaiaBarreCampaign ? (
+                      {isMaiaBarreCampaign || isPowercycleCampaign ? (
                         <div className="space-y-2">
                           <Label htmlFor="classFormat" className="font-semibold">
                             Preferred class format <span className="text-destructive">*</span>
                           </Label>
-                          <Select value={formData.classFormat} onValueChange={(value) => handleInputChange("classFormat", value)}>
+                          <Select value={selectedClassFormat} onValueChange={(value) => handleInputChange("classFormat", value)} disabled={isPowercycleCampaign}>
                             <SelectTrigger
                               size="lg"
                               className="w-full border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15"
@@ -1106,8 +1125,14 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                               <SelectValue placeholder="Select a class format" />
                             </SelectTrigger>
                             <SelectContent className="border-slate-300 bg-white/95">
-                              <SelectItem value="Barre 57">Barre 57</SelectItem>
-                              <SelectItem value="powerCycle">powerCycle</SelectItem>
+                              {isPowercycleCampaign ? (
+                                <SelectItem value="powerCycle">powerCycle</SelectItem>
+                              ) : (
+                                <>
+                                  <SelectItem value="Barre 57">Barre 57</SelectItem>
+                                  <SelectItem value="powerCycle">powerCycle</SelectItem>
+                                </>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>

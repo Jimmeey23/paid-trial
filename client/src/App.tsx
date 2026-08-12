@@ -54,6 +54,12 @@ const routeMeta = {
     description: "Transform your body with our signature method. Experience the Physique 57 difference.",
     name: "Maia Sethna x Physique 57 Barre Form",
   },
+  bpb: {
+    title: "BPB x Physique 57 | powerCycle Session",
+    description:
+      "Book your BPB powerCycle session with Physique 57 India and reserve your complimentary studio experience.",
+    name: "BPB x Physique 57 powerCycle Form",
+  },
   influencers: {
     title: "Physique 57 India | Influencer Barre Experience",
     description:
@@ -241,6 +247,7 @@ function installRespondIoWidget() {
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
   const isBarreRoute = currentPath === "/barre" || currentPath.startsWith("/barre/")
+  const isBpbRoute = currentPath === "/bpb" || currentPath.startsWith("/bpb/")
   const isInfluencersRoute = currentPath === "/influencers" || currentPath.startsWith("/influencers/")
   const isKidsRoute = currentPath === "/kids" || currentPath.startsWith("/kids/")
   const isKidsMumTribeRoute = currentPath === "/kids-themumtribe" || currentPath.startsWith("/kids-themumtribe/")
@@ -276,6 +283,8 @@ export default function App() {
   useEffect(() => {
     const meta = isMaiaBarreCampaign
       ? routeMeta.maiaBarre
+      : isBpbRoute
+      ? routeMeta.bpb
       : isBarreRoute
       ? routeMeta.barre
       : isInfluencersRoute
@@ -348,10 +357,12 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isMaiaBarreCampaign, isBarreRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsKabirRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isCombinedRoute, isThankYouRoute])
+  }, [currentPath, isMaiaBarreCampaign, isBarreRoute, isBpbRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsKabirRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isCombinedRoute, isThankYouRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
+    : isBpbRoute
+      ? <Barre57TrialForm variant="bpb" />
     : isInfluencersRoute
       ? <Barre57TrialForm variant="influencer" />
       : isKidsRoute

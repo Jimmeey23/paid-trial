@@ -53,6 +53,12 @@ const MAIA_BARRE_ROUTE_META = {
   image: BRAND_LOGO_URL,
   imageAlt: 'Physique 57 India logo'
 };
+const BPB_POWERCYCLE_ROUTE_META = {
+  title: 'BPB x Physique 57 | powerCycle Session',
+  description: 'Book your BPB powerCycle session with Physique 57 India and reserve your complimentary studio experience.',
+  image: BRAND_LOGO_URL,
+  imageAlt: 'Physique 57 India logo'
+};
 const googleSheets = new GoogleSheetsService();
 const supabaseLeadStore = new SupabaseLeadStore();
 const scheduleService = new ScheduleService();
@@ -308,6 +314,19 @@ function isMaiaBarreCampaign(req) {
   const source = String(req.query.utm_source || '').trim().toLowerCase();
   const campaign = String(req.query.utm_campaign || '').trim().toLowerCase();
   return source === 'influencer' && campaign === 'maia';
+}
+
+function isBpbPowerCycleCampaign(leadData = {}) {
+  const sourceForm = String(leadData.source_form || leadData.sourceForm || '').trim().toLowerCase();
+  return sourceForm === 'bpb-powercycle-form';
+}
+
+function resolveBarreCampaignSourceId(req, leadData = {}) {
+  if (isMaiaBarreCampaign(req) || isBpbPowerCycleCampaign(leadData)) {
+    return MAIA_MOMENCE_SOURCE_ID;
+  }
+
+  return '';
 }
 
 app.use('/static-assets', express.static(path.join(__dirname, 'assets'), {
@@ -3422,6 +3441,13 @@ app.get(['/barre', '/barre/*'], (req, res) => {
   return sendAppIndex(req, res, isMaiaBarreCampaign(req) ? MAIA_BARRE_ROUTE_META : undefined);
 });
 
+app.get(['/bpb', '/bpb/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(req, res, BPB_POWERCYCLE_ROUTE_META);
+});
+
 app.get(['/influencers', '/influencers/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
@@ -3752,16 +3778,16 @@ app.post('/api/submit-barre-lead', applySubmissionRateLimit, async (req, res) =>
       });
     }
 
-    const maiaSourceId = isMaiaBarreCampaign(req) ? MAIA_MOMENCE_SOURCE_ID : '';
+    const barreCampaignSourceId = resolveBarreCampaignSourceId(req, leadData);
 
     await sendRespondIoLead(leadData, {
-      ...(maiaSourceId ? { respondIoSourceId: maiaSourceId } : {})
+      ...(barreCampaignSourceId ? { respondIoSourceId: barreCampaignSourceId } : {})
     });
 
     // Standard Barre submissions only create the Momence lead for team follow-up.
     try {
       await submitToMomence(leadData, {
-        ...(maiaSourceId ? { sourceId: maiaSourceId } : {})
+        ...(barreCampaignSourceId ? { sourceId: barreCampaignSourceId } : {})
       });
     } catch (error) {
       momenceSyncResult = {

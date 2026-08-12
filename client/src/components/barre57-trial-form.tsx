@@ -494,7 +494,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         formDescription: "Select your preferred studio to reserve your complimentary powerCycle class.",
         successTitle: "Thank you for booking with BPB x Physique 57",
         successDescription: "A member of our Customer Excellence team will be in touch shortly to confirm your powerCycle session.",
-        submitLabel: "Book powerCycle Session",
+        submitLabel: "Submit Interest",
         submittingLabel: "Booking your session...",
         benefitsDescription: "Experience the high-energy powerCycle format from Physique 57, designed to build stamina, strength, and confidence.",
         locationsDescription: "Choose your preferred Physique 57 studio for your BPB powerCycle session.",

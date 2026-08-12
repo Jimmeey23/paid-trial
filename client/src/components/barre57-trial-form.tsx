@@ -711,6 +711,14 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
 
       // Get tracking payload
       const trackingPayload = getSubmissionTrackingPayload()
+      const campaignTrackingOverrides = isPowercycleCampaign
+        ? {
+            utm_source: "influencer",
+            utm_medium: "influencer",
+            utm_campaign: "bpb_brown_paper_bag",
+            utm_content: "brown_paper_bag",
+          }
+        : {}
 
       const payload = {
         firstName: formData.firstName,
@@ -724,6 +732,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         event_id: eventIdRef.current,
         source_form: isInfluencerFlow ? "influencer-barre-form" : isPowercycleCampaign ? "bpb-powercycle-form" : "barre-trial-form",
         ...trackingPayload,
+        ...campaignTrackingOverrides,
       } as Record<string, string>
 
       const response = await fetch(sameOriginApiUrl(isInfluencerFlow ? "/api/submit-influencer-lead" : "/api/submit-barre-lead"), {

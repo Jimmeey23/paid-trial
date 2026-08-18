@@ -61,6 +61,12 @@ const STUDIO_FORMAT_AVAILABILITY: Record<string, string[]> = {
   "Kwality House, Kemps Corner": ["Barre 57", "powerCycle", "Strength Lab"],
 }
 
+const FORMAT_DESCRIPTIONS: Record<string, string> = {
+  "Barre 57": "Isometric barre work for lean strength and posture.",
+  powerCycle: "Indoor cycling built for stamina and a steady sweat.",
+  "Strength Lab": "Weighted circuits for muscle, mobility, and power.",
+}
+
 interface Barre57TrialFormProps {
   onSubmit?: (data: any) => void
   variant?: "barre" | "influencer" | "bpb" | "influencerSignup"
@@ -1174,13 +1180,14 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                                     type="button"
                                     onClick={() => handleInputChange("classFormat", format)}
                                     className={cn(
-                                      "rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+                                      "rounded-xl border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
                                       isSelected
-                                        ? "border-blue-900 bg-blue-900/10 text-blue-900 ring-1 ring-blue-900"
-                                        : "border-slate-300/95 bg-white/70 text-slate-700 hover:border-slate-400"
+                                        ? "border-blue-900 bg-blue-900/10 ring-1 ring-blue-900"
+                                        : "border-slate-300/95 bg-white/70 hover:border-slate-400"
                                     )}
                                   >
-                                    {format}
+                                    <p className={cn("text-sm font-semibold", isSelected ? "text-blue-900" : "text-slate-900")}>{format}</p>
+                                    <p className="mt-1 text-xs leading-snug text-slate-600">{FORMAT_DESCRIPTIONS[format]}</p>
                                   </button>
                                 )
                               })}

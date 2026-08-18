@@ -66,6 +66,12 @@ const routeMeta = {
       "Claim your Studio Complimentary Class and view the latest Barre 57 schedule at your preferred Physique 57 India studio.",
     name: "Physique 57 Influencer Barre Form",
   },
+  influencerSignup: {
+    title: "Physique 57 India | Influencer Sign Up",
+    description:
+      "Claim your Studio Complimentary Class and choose Barre 57, powerCycle, or Strength Lab at your preferred Physique 57 India studio.",
+    name: "Physique 57 Influencer Sign Up Form",
+  },
   kids: {
     title: "Physique 57 Juniors | Kids Strength & Agility Program",
     description:
@@ -249,6 +255,7 @@ export default function App() {
   const isBarreRoute = currentPath === "/barre" || currentPath.startsWith("/barre/")
   const isBpbRoute = currentPath === "/bpb" || currentPath.startsWith("/bpb/")
   const isInfluencersRoute = currentPath === "/influencers" || currentPath.startsWith("/influencers/")
+  const isInfluencerSignupRoute = currentPath === "/influencer-signup" || currentPath.startsWith("/influencer-signup/")
   const isKidsRoute = currentPath === "/kids" || currentPath.startsWith("/kids/")
   const isKidsMumTribeRoute = currentPath === "/kids-themumtribe" || currentPath.startsWith("/kids-themumtribe/")
   const isKidsKabirRoute = currentPath === "/kids-kabirnayar" || currentPath.startsWith("/kids-kabirnayar/")
@@ -287,7 +294,9 @@ export default function App() {
       ? routeMeta.bpb
       : isBarreRoute
       ? routeMeta.barre
-      : isInfluencersRoute
+      : isInfluencerSignupRoute
+        ? routeMeta.influencerSignup
+        : isInfluencersRoute
         ? routeMeta.influencers
         : isKidsRoute
           ? routeMeta.kids
@@ -357,12 +366,14 @@ export default function App() {
         url: BRAND_LOGO_URL,
       },
     })
-  }, [currentPath, isMaiaBarreCampaign, isBarreRoute, isBpbRoute, isInfluencersRoute, isKidsRoute, isKidsMumTribeRoute, isKidsKabirRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isCombinedRoute, isThankYouRoute])
+  }, [currentPath, isMaiaBarreCampaign, isBarreRoute, isBpbRoute, isInfluencersRoute, isInfluencerSignupRoute, isKidsRoute, isKidsMumTribeRoute, isKidsKabirRoute, isKidsConsentRoute, isTestRoute, isScheduleMumRoute, isScheduleMumBeginRoute, isScheduleBlrRoute, isCombinedRoute, isThankYouRoute])
 
   const pageContent = isBarreRoute
     ? <Barre57TrialForm />
     : isBpbRoute
       ? <Barre57TrialForm variant="bpb" />
+    : isInfluencerSignupRoute
+      ? <Barre57TrialForm variant="influencerSignup" />
     : isInfluencersRoute
       ? <Barre57TrialForm variant="influencer" />
       : isKidsRoute

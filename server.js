@@ -73,6 +73,7 @@ const KIDS_SOURCE_FORM = 'kids-trial-form';
 const DEFAULT_REGULAR_MOMENCE_SOURCE_ID = '8082';
 const DEFAULT_KIDS_MOMENCE_SOURCE_ID = '212426';
 const MAIA_MOMENCE_SOURCE_ID = '14729';
+const INFLUENCER_SIGNUP_MOMENCE_SOURCE_ID = '212426';
 const DEFAULT_MOMENCE_HOST_ID = 13752;
 const MOMENCE_DASHBOARD_ORIGIN = 'https://momence.com';
 const DEFAULT_MOMENCE_DASHBOARD_BASE_URL = `${MOMENCE_DASHBOARD_ORIGIN}/_api/primary`;
@@ -3455,6 +3456,13 @@ app.get(['/influencers', '/influencers/*'], (req, res) => {
   return sendAppIndex(req, res);
 });
 
+app.get(['/influencer-signup', '/influencer-signup/*'], (req, res) => {
+  if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
+    return res.status(404).send('App not found');
+  }
+  return sendAppIndex(req, res);
+});
+
 app.get(['/kids', '/kids/*'], (req, res) => {
   if (!fs.existsSync(CLIENT_APP_INDEX_PATH)) {
     return res.status(404).send('App not found');
@@ -3924,6 +3932,99 @@ app.post('/api/submit-influencer-lead', applySubmissionRateLimit, async (req, re
     }));
   } catch (error) {
     console.error('Error submitting influencer Barre lead:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'An unexpected error occurred.'
+    });
+  }
+});
+
+app.post('/api/submit-influencer-signup-lead', applySubmissionRateLimit, async (req, res) => {
+  try {
+    const validation = validateLeadPayload(req.body);
+
+    if (validation.isBot) {
+      return res.status(202).json({
+        success: true,
+        id: 'filtered',
+        redirectUrl: getPublicClientConfig().redirectUrl
+      });
+    }
+
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed.',
+        fieldErrors: validation.fieldErrors
+      });
+    }
+
+    const leadData = buildLeadRecord({
+      ...validation.data,
+      source_form: 'influencer-signup-form',
+      class_format: resolveLeadClassFormat(validation.data)
+    });
+
+    const storeResult = await supabaseLeadStore.saveBarreLeadData(leadData, {
+      ip_address: getClientIp(req),
+      user_agent: req.get('user-agent') || ''
+    });
+
+    if (!storeResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Unable to save your trial request. Please try again.'
+      });
+    }
+
+    await sendRespondIoLead(leadData, {
+      respondIoSourceId: INFLUENCER_SIGNUP_MOMENCE_SOURCE_ID
+    });
+
+    let momenceSyncResult = { success: true, error: '' };
+    try {
+      await submitToMomence(leadData, {
+        sourceId: INFLUENCER_SIGNUP_MOMENCE_SOURCE_ID
+      });
+    } catch (error) {
+      momenceSyncResult = {
+        success: false,
+        error: error.message || 'Unable to submit to Momence.'
+      };
+      console.error('Momence sync failed for influencer signup:', momenceSyncResult.error);
+    }
+
+    if (!momenceSyncResult.success) {
+      return res.status(200).json({
+        success: true,
+        stored: true,
+        momenceSynced: false,
+        event_id: leadData.event_id,
+        warning: 'Your trial request was saved, but we had an issue notifying the studio. Please contact us to confirm.',
+        error: 'Your trial request was saved, but we had an issue notifying the studio. Please contact us to confirm.',
+        detail: momenceSyncResult.error,
+        redirectUrl: getPublicClientConfig().redirectUrl
+      });
+    }
+
+    try {
+      const metaResult = await sendMetaLeadEvent(leadData, req);
+      if (metaResult.sent) {
+        console.log(`Meta Conversions API event sent for influencer signup: ${metaResult.eventId}`);
+      }
+    } catch (error) {
+      console.error('Meta Conversions API send failed for influencer signup:', error.message);
+    }
+
+    return res.json({
+      success: true,
+      id: leadData.id,
+      event_id: leadData.event_id,
+      momenceSynced: true,
+      redirectUrl: getPublicClientConfig().redirectUrl
+    });
+  } catch (error) {
+    console.error('Error submitting influencer signup lead:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'An unexpected error occurred.'

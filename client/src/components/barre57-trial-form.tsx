@@ -58,7 +58,7 @@ function createEventId() {
 
 interface Barre57TrialFormProps {
   onSubmit?: (data: any) => void
-  variant?: "barre" | "influencer" | "bpb"
+  variant?: "barre" | "influencer" | "bpb" | "influencerSignup"
 }
 
 interface ScheduleSession {
@@ -436,7 +436,8 @@ const REVIEW_CARD_STRIDE = REVIEW_CARD_WIDTH + REVIEW_CARD_GAP
 const REVIEW_CARD_CENTER_OFFSET = REVIEW_CARD_WIDTH / 2
 
 export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFormProps) {
-  const isInfluencerFlow = variant === "influencer"
+  const isInfluencerSignupFlow = variant === "influencerSignup"
+  const isInfluencerFlow = variant === "influencer" || isInfluencerSignupFlow
   const isBpbFlow = variant === "bpb"
   const defaultClassFormat = isBpbFlow ? "powerCycle" : "Barre 57"
   const [formData, setFormData] = useState({
@@ -730,12 +731,18 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         type: selectedClassFormat,
         waiverAccepted: formData.acceptedTerms ? "accepted" : "",
         event_id: eventIdRef.current,
-        source_form: isInfluencerFlow ? "influencer-barre-form" : isPowercycleCampaign ? "bpb-powercycle-form" : "barre-trial-form",
+        source_form: isInfluencerSignupFlow
+          ? "influencer-signup-form"
+          : isInfluencerFlow
+            ? "influencer-barre-form"
+            : isPowercycleCampaign
+              ? "bpb-powercycle-form"
+              : "barre-trial-form",
         ...trackingPayload,
         ...campaignTrackingOverrides,
       } as Record<string, string>
 
-      const response = await fetch(sameOriginApiUrl(isInfluencerFlow ? "/api/submit-influencer-lead" : "/api/submit-barre-lead"), {
+      const response = await fetch(sameOriginApiUrl(isInfluencerSignupFlow ? "/api/submit-influencer-signup-lead" : isInfluencerFlow ? "/api/submit-influencer-lead" : "/api/submit-barre-lead"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -785,7 +792,13 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
         studioLocationId: selectedStudio?.scheduleLocationId,
         formatName: selectedClassFormat,
         classType: selectedClassFormat === "powerCycle" ? "powerCycle" : "Barre",
-        sourceForm: isInfluencerFlow ? "influencer-barre-form" : isPowercycleCampaign ? "bpb-powercycle-form" : "barre-trial-form",
+        sourceForm: isInfluencerSignupFlow
+          ? "influencer-signup-form"
+          : isInfluencerFlow
+            ? "influencer-barre-form"
+            : isPowercycleCampaign
+              ? "bpb-powercycle-form"
+              : "barre-trial-form",
         statusMessage: result.error || result.warning || "Your details have been received.",
         redirectUrl: nextRedirectUrl,
         schedulePageUrl: result.schedule?.schedulePageUrl,

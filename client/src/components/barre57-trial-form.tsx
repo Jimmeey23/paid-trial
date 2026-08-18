@@ -1040,25 +1040,25 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
               </div>
             ) : (
               <>
-                <div className="min-w-0 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.12)] ring-1 ring-slate-200/50 backdrop-blur-xl sm:p-7 lg:p-8">
+                <div className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_50px_rgba(15,23,42,0.08)] sm:p-7 lg:p-8">
                   <div className="mb-7">
                     <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-blue-900/10 px-3.5 py-1.5">
                       <Sparkles className="h-3.5 w-3.5 text-blue-900" />
                       <span className="text-xs font-semibold tracking-wide text-blue-900">{routeCopy.formBadge}</span>
                     </div>
                     <h2 className="mb-1.5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{routeCopy.formTitle}</h2>
-                    <p className="text-sm text-muted-foreground">{routeCopy.formDescription}</p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{routeCopy.formDescription}</p>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-6">
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
                       <div className="flex items-center gap-2">
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-900 text-[11px] font-bold text-white">1</span>
                         <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Your details</span>
                       </div>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor="firstName" className="font-semibold">
+                          <Label htmlFor="firstName" className="text-sm font-semibold text-slate-800">
                             First name <span className="text-destructive">*</span>
                           </Label>
                           <Input
@@ -1074,7 +1074,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="lastName" className="font-semibold">
+                          <Label htmlFor="lastName" className="text-sm font-semibold text-slate-800">
                             Last name <span className="text-destructive">*</span>
                           </Label>
                           <Input
@@ -1090,7 +1090,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="email" className="font-semibold">
+                          <Label htmlFor="email" className="text-sm font-semibold text-slate-800">
                             Email <span className="text-destructive">*</span>
                           </Label>
                           <Input
@@ -1107,7 +1107,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="phone" className="font-semibold">
+                          <Label htmlFor="phone" className="text-sm font-semibold text-slate-800">
                             Phone number <span className="text-destructive">*</span>
                           </Label>
                           <div className="grid grid-cols-[56px_minmax(0,1fr)] items-stretch gap-2">
@@ -1145,13 +1145,13 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                       </div>
                     </div>
 
-                    <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-6">
+                    <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
                       <div className="flex items-center gap-2">
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-900 text-[11px] font-bold text-white">2</span>
                         <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Studio &amp; format</span>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="studio" className="font-semibold">
+                        <Label htmlFor="studio" className="text-sm font-semibold text-slate-800">
                           Preferred studio <span className="text-destructive">*</span>
                         </Label>
                         <Select value={formData.studio} onValueChange={(value) => handleInputChange("studio", value)}>
@@ -1180,7 +1180,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
 
                       {isInfluencerSignupFlow ? (
                         <div className="space-y-2">
-                          <Label className="font-semibold">
+                          <Label className="text-sm font-semibold text-slate-800">
                             Preferred class format <span className="text-destructive">*</span>
                           </Label>
                           {!formData.studio ? (
@@ -1195,14 +1195,17 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                                     type="button"
                                     onClick={() => handleInputChange("classFormat", format)}
                                     className={cn(
-                                      "rounded-xl border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+                                      "relative rounded-xl border bg-white px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
                                       isSelected
-                                        ? "border-blue-900 bg-blue-900/10 ring-1 ring-blue-900"
-                                        : "border-slate-200 bg-white hover:border-slate-300"
+                                        ? "border-blue-900 ring-2 ring-blue-900/20"
+                                        : "border-slate-200 hover:border-slate-300"
                                     )}
                                   >
-                                    <p className={cn("text-sm font-semibold", isSelected ? "text-blue-900" : "text-slate-900")}>{format}</p>
-                                    <p className="mt-1 text-xs leading-snug text-slate-600">{FORMAT_DESCRIPTIONS[format]}</p>
+                                    {isSelected && (
+                                      <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-blue-900" />
+                                    )}
+                                    <p className={cn("pr-5 text-sm font-semibold", isSelected ? "text-blue-900" : "text-slate-900")}>{format}</p>
+                                    <p className="mt-1 text-xs leading-snug text-slate-500">{FORMAT_DESCRIPTIONS[format]}</p>
                                   </button>
                                 )
                               })}
@@ -1211,7 +1214,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                         </div>
                       ) : isMaiaBarreCampaign || isPowercycleCampaign ? (
                         <div className="space-y-2">
-                          <Label htmlFor="classFormat" className="font-semibold">
+                          <Label htmlFor="classFormat" className="text-sm font-semibold text-slate-800">
                             Preferred class format <span className="text-destructive">*</span>
                           </Label>
                           <Select value={selectedClassFormat} onValueChange={(value) => handleInputChange("classFormat", value)} disabled={isPowercycleCampaign}>
@@ -1236,31 +1239,30 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                       ) : null}
                     </div>
 
-                    <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-6">
+                    <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
                       <div className="flex items-center gap-2">
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-900 text-[11px] font-bold text-white">3</span>
                         <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Confirmation</span>
                       </div>
-                      <div className="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white px-4 py-3 sm:items-center sm:gap-4">
+                      <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 sm:items-center sm:gap-4">
                         <Checkbox
                           id="terms"
                           checked={formData.acceptedTerms}
                           onCheckedChange={(checked) => handleInputChange("acceptedTerms", Boolean(checked))}
-                          className={cn("mt-0.5 h-5 w-5 rounded-md border-slate-400 data-[state=checked]:border-blue-900 data-[state=checked]:bg-blue-900 sm:mt-0", errors.acceptedTerms && "border-destructive")}
+                          className={cn("mt-0.5 h-5 w-5 rounded-md border-slate-300 data-[state=checked]:border-blue-900 data-[state=checked]:bg-blue-900 sm:mt-0", errors.acceptedTerms && "border-destructive")}
                         />
                         <div className="flex-1">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <label htmlFor="terms" className="cursor-pointer text-sm font-semibold leading-relaxed text-slate-900 sm:flex-1">
+                            <label htmlFor="terms" className="cursor-pointer text-sm font-medium leading-relaxed text-slate-800 sm:flex-1">
                               I have read and accept the waiver. <span className="text-destructive">*</span>
                             </label>
-                            <Button
+                            <button
                               type="button"
-                              variant="outline"
-                              className="h-9 rounded-full border-slate-300 bg-white px-4 text-xs font-semibold tracking-[0.08em] text-slate-800 hover:border-slate-900 hover:bg-slate-900 hover:text-white sm:self-auto"
+                              className="text-xs font-semibold text-blue-900 underline underline-offset-2 hover:text-blue-950 sm:shrink-0"
                               onClick={() => setShowWaiverModal(true)}
                             >
                               View waiver
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1270,10 +1272,10 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                     {statusMessage && (
                       <div
                         className={cn(
-                          "rounded-xl border px-4 py-3 text-sm",
+                          "rounded-xl border px-4 py-3 text-sm font-medium",
                           statusMessage.tone === "error"
-                            ? "border-red-300 bg-red-50 text-red-800"
-                            : "border-emerald-300 bg-emerald-50 text-emerald-800"
+                            ? "border-red-200 bg-red-50 text-red-700"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700"
                         )}
                       >
                         {statusMessage.text}
@@ -1284,7 +1286,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                       id="barre-submit-button"
                       type="submit"
                       size="lg"
-                      className="h-12 w-full rounded-xl bg-blue-900 text-base font-semibold shadow-md transition-all duration-200 hover:bg-blue-950 hover:shadow-lg"
+                      className="h-12 w-full rounded-xl bg-blue-900 text-base font-semibold shadow-md transition-all duration-200 hover:bg-blue-950 hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
                       disabled={isSubmitting || !isFormValid}
                     >
                       {isSubmitting ? (

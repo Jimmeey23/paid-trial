@@ -503,7 +503,22 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
     : isMaiaBarreCampaign || isInfluencerSignupFlow
       ? formData.classFormat
       : "Barre 57"
-  const routeCopy = isPowercycleCampaign
+  const routeCopy = isInfluencerSignupFlow
+    ? {
+        heroBadge: "Physique 57 Studio Session",
+        heroTitle: "Experience Physique 57",
+        heroDescription: "Choose your preferred studio and class format to book a Physique 57 studio session.",
+        formBadge: "Book Your Session",
+        formTitle: "Claim Your Session",
+        formDescription: "Select your preferred studio and class format to get started.",
+        successTitle: "Thank you for your interest in Physique 57",
+        successDescription: "A member of our Customer Excellence team will be in touch shortly to help you confirm your studio session.",
+        submitLabel: "Book Your Session",
+        submittingLabel: "Submitting your request...",
+        benefitsDescription: "Discover the proven advantages that make Physique 57 India the preferred choice for fast, visible results and sustainable transformation.",
+        locationsDescription: "Each location carries the Physique 57 method, with its own neighborhood energy and format offerings.",
+      }
+    : isPowercycleCampaign
     ? {
         heroBadge: "BPB x Physique 57",
         heroTitle: "Ride with powerCycle",
@@ -1025,23 +1040,23 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
               </div>
             ) : (
               <>
-                <div className="min-w-0 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/80 p-4 shadow-[0_48px_140px_rgba(15,23,42,0.18)] ring-1 ring-slate-200/50 backdrop-blur-xl sm:p-6 lg:p-8">
-                  <div className="mb-8">
-                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-900/30 bg-gradient-to-r from-blue-900/20 to-slate-300/30 px-4 py-2 backdrop-blur-sm">
-                      <Sparkles className="h-4 w-4 text-blue-900" />
-                      <span className="text-sm font-semibold text-blue-900">{routeCopy.formBadge}</span>
+                <div className="min-w-0 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.12)] ring-1 ring-slate-200/50 backdrop-blur-xl sm:p-7 lg:p-8">
+                  <div className="mb-7">
+                    <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-blue-900/10 px-3.5 py-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-blue-900" />
+                      <span className="text-xs font-semibold tracking-wide text-blue-900">{routeCopy.formBadge}</span>
                     </div>
-                    <h2 className="mb-2 text-2xl font-bold text-foreground sm:text-3xl">{routeCopy.formTitle}</h2>
-                    <p className="text-muted-foreground">{routeCopy.formDescription}</p>
+                    <h2 className="mb-1.5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{routeCopy.formTitle}</h2>
+                    <p className="text-sm text-muted-foreground">{routeCopy.formDescription}</p>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="relative space-y-6 rounded-2xl border border-slate-300/90 bg-white/55 p-4 pt-8 shadow-sm sm:p-6 sm:pt-9">
-                      <div className="absolute -top-3 left-4 inline-flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 rounded-full border border-blue-900/20 bg-gradient-to-r from-blue-900/15 to-slate-200/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
-                        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-900">1. Your details</span>
-                        <span className="text-destructive">*</span>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-6">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-900 text-[11px] font-bold text-white">1</span>
+                        <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Your details</span>
                       </div>
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="firstName" className="font-semibold">
                             First name <span className="text-destructive">*</span>
@@ -1051,7 +1066,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                             value={formData.firstName}
                             onChange={(event) => handleInputChange("firstName", event.target.value)}
                             className={cn(
-                              "h-12 border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
+                              "h-12 border-slate-200 bg-white focus:border-slate-800 focus:ring-slate-800/15",
                               errors.firstName && "border-destructive"
                             )}
                           />
@@ -1067,7 +1082,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                             value={formData.lastName}
                             onChange={(event) => handleInputChange("lastName", event.target.value)}
                             className={cn(
-                              "h-12 border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
+                              "h-12 border-slate-200 bg-white focus:border-slate-800 focus:ring-slate-800/15",
                               errors.lastName && "border-destructive"
                             )}
                           />
@@ -1084,7 +1099,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                             value={formData.email}
                             onChange={(event) => handleInputChange("email", event.target.value)}
                             className={cn(
-                              "h-12 border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
+                              "h-12 border-slate-200 bg-white focus:border-slate-800 focus:ring-slate-800/15",
                               errors.email && "border-destructive"
                             )}
                           />
@@ -1097,7 +1112,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                           </Label>
                           <div className="grid grid-cols-[56px_minmax(0,1fr)] items-stretch gap-2">
                             <Select value={formData.countryCode} onValueChange={(value) => handleInputChange("countryCode", value)}>
-                              <SelectTrigger size="lg" className="h-12 w-[56px] min-w-[56px] shrink-0 justify-center border-slate-300/95 bg-white/70 px-2 backdrop-blur-sm">
+                              <SelectTrigger size="lg" className="h-12 w-[56px] min-w-[56px] shrink-0 justify-center border-slate-200 bg-white px-2">
                                 <SelectValue placeholder="Code">
                                   <span className="text-base leading-none">{getCountryOption(formData.countryCode)?.flag}</span>
                                 </SelectValue>
@@ -1120,7 +1135,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                               value={formData.phone}
                               onChange={(event) => handleInputChange("phone", event.target.value)}
                               className={cn(
-                                "h-12 flex-1 border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
+                                "h-12 flex-1 border-slate-200 bg-white focus:border-slate-800 focus:ring-slate-800/15",
                                 errors.phone && "border-destructive"
                               )}
                             />
@@ -1130,12 +1145,12 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                       </div>
                     </div>
 
-                    <div className="relative space-y-5 rounded-2xl border border-slate-300/90 bg-white/55 p-4 pt-8 shadow-sm sm:p-6 sm:pt-9">
-                      <div className="absolute -top-3 left-4 inline-flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 rounded-full border border-blue-900/20 bg-gradient-to-r from-blue-900/15 to-slate-200/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
-                        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-900">2. Studio choice</span>
-                        <span className="text-destructive">*</span>
+                    <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-6">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-900 text-[11px] font-bold text-white">2</span>
+                        <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Studio &amp; format</span>
                       </div>
-                      <div className="space-y-2 mt-4">
+                      <div className="space-y-2">
                         <Label htmlFor="studio" className="font-semibold">
                           Preferred studio <span className="text-destructive">*</span>
                         </Label>
@@ -1143,7 +1158,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                           <SelectTrigger
                             size="lg"
                             className={cn(
-                              "w-full border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15",
+                              "w-full border-slate-200 bg-white focus:border-slate-800 focus:ring-slate-800/15",
                               errors.studio && "border-destructive"
                             )}
                           >
@@ -1183,7 +1198,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                                       "rounded-xl border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
                                       isSelected
                                         ? "border-blue-900 bg-blue-900/10 ring-1 ring-blue-900"
-                                        : "border-slate-300/95 bg-white/70 hover:border-slate-400"
+                                        : "border-slate-200 bg-white hover:border-slate-300"
                                     )}
                                   >
                                     <p className={cn("text-sm font-semibold", isSelected ? "text-blue-900" : "text-slate-900")}>{format}</p>
@@ -1202,7 +1217,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                           <Select value={selectedClassFormat} onValueChange={(value) => handleInputChange("classFormat", value)} disabled={isPowercycleCampaign}>
                             <SelectTrigger
                               size="lg"
-                              className="w-full border-slate-300/95 bg-white/70 backdrop-blur-sm focus:border-slate-800 focus:ring-slate-800/15"
+                              className="w-full border-slate-200 bg-white focus:border-slate-800 focus:ring-slate-800/15"
                             >
                               <SelectValue placeholder="Select a class format" />
                             </SelectTrigger>
@@ -1221,11 +1236,12 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                       ) : null}
                     </div>
 
-                    <div className="relative space-y-3 rounded-2xl border border-slate-300/90 bg-white/55 p-4 pt-9 shadow-sm sm:p-6 sm:pt-10">
-                      <div className="absolute -top-3 left-4 inline-flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 rounded-full border border-blue-900/20 bg-gradient-to-r from-blue-900/15 to-slate-200/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
-                        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-900">3. Confirmation</span>
+                    <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-6">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-900 text-[11px] font-bold text-white">3</span>
+                        <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Confirmation</span>
                       </div>
-                      <div className="flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-3 sm:items-center sm:gap-4">
+                      <div className="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white px-4 py-3 sm:items-center sm:gap-4">
                         <Checkbox
                           id="terms"
                           checked={formData.acceptedTerms}
@@ -1268,7 +1284,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                       id="barre-submit-button"
                       type="submit"
                       size="lg"
-                      className="h-14 w-full bg-gradient-to-r from-blue-950 to-blue-900 text-lg shadow-lg transition-all duration-300 hover:from-slate-950 hover:to-blue-950 hover:shadow-xl"
+                      className="h-12 w-full rounded-xl bg-blue-900 text-base font-semibold shadow-md transition-all duration-200 hover:bg-blue-950 hover:shadow-lg"
                       disabled={isSubmitting || !isFormValid}
                     >
                       {isSubmitting ? (

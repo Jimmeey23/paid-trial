@@ -1157,7 +1157,37 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                         {errors.studio && <p className="text-sm text-destructive">{errors.studio}</p>}
                       </div>
 
-                      {isMaiaBarreCampaign || isPowercycleCampaign || isInfluencerSignupFlow ? (
+                      {isInfluencerSignupFlow ? (
+                        <div className="space-y-2">
+                          <Label className="font-semibold">
+                            Preferred class format <span className="text-destructive">*</span>
+                          </Label>
+                          {!formData.studio ? (
+                            <p className="text-sm text-muted-foreground">Select a studio to see available formats.</p>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                              {availableClassFormats.map((format) => {
+                                const isSelected = selectedClassFormat === format
+                                return (
+                                  <button
+                                    key={format}
+                                    type="button"
+                                    onClick={() => handleInputChange("classFormat", format)}
+                                    className={cn(
+                                      "rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+                                      isSelected
+                                        ? "border-blue-900 bg-blue-900/10 text-blue-900 ring-1 ring-blue-900"
+                                        : "border-slate-300/95 bg-white/70 text-slate-700 hover:border-slate-400"
+                                    )}
+                                  >
+                                    {format}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ) : isMaiaBarreCampaign || isPowercycleCampaign ? (
                         <div className="space-y-2">
                           <Label htmlFor="classFormat" className="font-semibold">
                             Preferred class format <span className="text-destructive">*</span>
@@ -1172,12 +1202,6 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                             <SelectContent className="border-slate-300 bg-white/95">
                               {isPowercycleCampaign ? (
                                 <SelectItem value="powerCycle">powerCycle</SelectItem>
-                              ) : isInfluencerSignupFlow ? (
-                                availableClassFormats.map((format) => (
-                                  <SelectItem key={format} value={format}>
-                                    {format}
-                                  </SelectItem>
-                                ))
                               ) : (
                                 <>
                                   <SelectItem value="Barre 57">Barre 57</SelectItem>

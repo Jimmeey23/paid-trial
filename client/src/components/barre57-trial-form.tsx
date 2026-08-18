@@ -56,6 +56,11 @@ function createEventId() {
   return `lead_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 }
 
+const STUDIO_FORMAT_AVAILABILITY: Record<string, string[]> = {
+  "Supreme Headquarters, Bandra": ["Barre 57", "powerCycle"],
+  "Kwality House, Kemps Corner": ["Barre 57", "powerCycle", "Strength Lab"],
+}
+
 interface Barre57TrialFormProps {
   onSubmit?: (data: any) => void
   variant?: "barre" | "influencer" | "bpb" | "influencerSignup"
@@ -484,7 +489,14 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
     searchParams.get("utm_source")?.trim().toLowerCase() === "influencer" &&
     searchParams.get("utm_campaign")?.trim().toLowerCase() === "maia"
   const isPowercycleCampaign = isBpbFlow || isBpbPath
-  const selectedClassFormat = isPowercycleCampaign ? "powerCycle" : isMaiaBarreCampaign ? formData.classFormat : "Barre 57"
+  const availableClassFormats = selectedStudio
+    ? STUDIO_FORMAT_AVAILABILITY[selectedStudio.backendName] || ["Barre 57", "powerCycle"]
+    : ["Barre 57", "powerCycle", "Strength Lab"]
+  const selectedClassFormat = isPowercycleCampaign
+    ? "powerCycle"
+    : isMaiaBarreCampaign || isInfluencerSignupFlow
+      ? formData.classFormat
+      : "Barre 57"
   const routeCopy = isPowercycleCampaign
     ? {
         heroBadge: "BPB x Physique 57",
@@ -644,10 +656,21 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
   }, [currentReview])
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
+    setFormData((prev) => {
+      if (field === "studio" && isInfluencerSignupFlow) {
+        const nextStudio = studios.find((studio) => studio.name === value)
+        const nextFormats = nextStudio ? STUDIO_FORMAT_AVAILABILITY[nextStudio.backendName] || [] : []
+        return {
+          ...prev,
+          studio: value,
+          classFormat: nextFormats.includes(prev.classFormat) ? prev.classFormat : nextFormats[0] || "Barre 57",
+        }
+      }
+      return {
+        ...prev,
+        [field]: value,
+      }
+    })
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -1134,7 +1157,7 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                         {errors.studio && <p className="text-sm text-destructive">{errors.studio}</p>}
                       </div>
 
-                      {isMaiaBarreCampaign || isPowercycleCampaign ? (
+                      {isMaiaBarreCampaign || isPowercycleCampaign || isInfluencerSignupFlow ? (
                         <div className="space-y-2">
                           <Label htmlFor="classFormat" className="font-semibold">
                             Preferred class format <span className="text-destructive">*</span>
@@ -1149,6 +1172,12 @@ export function Barre57TrialForm({ onSubmit, variant = "barre" }: Barre57TrialFo
                             <SelectContent className="border-slate-300 bg-white/95">
                               {isPowercycleCampaign ? (
                                 <SelectItem value="powerCycle">powerCycle</SelectItem>
+                              ) : isInfluencerSignupFlow ? (
+                                availableClassFormats.map((format) => (
+                                  <SelectItem key={format} value={format}>
+                                    {format}
+                                  </SelectItem>
+                                ))
                               ) : (
                                 <>
                                   <SelectItem value="Barre 57">Barre 57</SelectItem>

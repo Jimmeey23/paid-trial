@@ -188,13 +188,13 @@ const FIELD_CONTROL_CLASS =
 const FIELD_ERROR_CLASS = "text-sm font-semibold text-destructive"
 const FIELD_INVALID_CLASS = "border-destructive bg-red-50/40 focus-visible:ring-destructive/15"
 const SECTION_PANEL_CLASS =
-  "rounded-[22px] border border-slate-200/70 bg-gradient-to-b from-white via-white to-slate-50/60 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-18px_rgba(15,23,42,0.22)] ring-1 ring-white/90 transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(15,23,42,0.28)] sm:p-5"
+  "px-4 py-6 sm:px-7 sm:py-8"
 const SECTION_ICON_CLASS =
-  "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border bg-white shadow-[0_10px_24px_rgba(15,23,42,0.06)] ring-4"
+  "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[11px] border"
 const SECTION_TITLE_CLASS =
   "mt-1 text-xl font-semibold leading-snug tracking-[-0.02em] text-slate-950"
 const SECTION_BADGE_CLASS =
-  "w-fit rounded-full border bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+  "w-fit text-[10px] font-semibold uppercase tracking-[0.24em]"
 
 const KIDS_BATCH_OPTIONS: Record<string, string[]> = {
   "Supreme Headquarters, Bandra": [
@@ -248,7 +248,8 @@ function calculateAgeFromDob(dateOfBirth: string) {
 
 function dobBoundsForAgeRange() {
   const today = new Date()
-  const toInputValue = (date: Date) => date.toISOString().slice(0, 10)
+  const toInputValue = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 
   // Oldest allowed: turns JUNIORS_MAX_AGE + 1 tomorrow at the earliest.
   const min = new Date(today.getFullYear() - (JUNIORS_MAX_AGE + 1), today.getMonth(), today.getDate() + 1)
@@ -783,8 +784,8 @@ export function KidsTrialForm({
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="relative space-y-5 p-3 sm:p-4 lg:p-5">
-                <div className="rounded-[24px] border border-slate-200/90 bg-white/95 p-3 shadow-[0_18px_52px_rgba(15,23,42,0.07)] ring-1 ring-white/80 sm:p-4">
+              <form onSubmit={handleSubmit} className="relative bg-white">
+                <div className="divide-y divide-slate-200/70">
                 <div className={SECTION_PANEL_CLASS}>
                   <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3">
@@ -865,7 +866,7 @@ export function KidsTrialForm({
                   </div>
                 </div>
 
-                <div className={cn(SECTION_PANEL_CLASS, "mt-4")}>
+                <div className={SECTION_PANEL_CLASS}>
                   <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3">
                       <div className={cn(SECTION_ICON_CLASS, "border-violet-100 text-violet-700 ring-violet-50")}>
@@ -968,7 +969,7 @@ export function KidsTrialForm({
                 </div>
 
                 {!hideBatchSelection ? (
-                  <div className={cn(SECTION_PANEL_CLASS, "mt-4")}>
+                  <div className={SECTION_PANEL_CLASS}>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex items-start gap-3">
                         <div className={cn(SECTION_ICON_CLASS, "border-emerald-100 text-emerald-700 ring-emerald-50")}>
@@ -1013,14 +1014,14 @@ export function KidsTrialForm({
                               aria-pressed={isSelected}
                               onClick={() => handleInputChange("batch", batch.value)}
                               className={cn(
-                                "group min-w-0 rounded-[16px] border bg-white px-3.5 py-3 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50/80 sm:px-4",
+                                "group min-w-0 rounded-[14px] border bg-white px-3.5 py-3 text-left transition-all duration-200 hover:border-slate-300 hover:bg-slate-50/70 sm:px-4",
                                 isSelected
-                                  ? "border-slate-950 bg-slate-50/70 ring-2 ring-slate-950/10"
-                                  : "border-slate-200/90"
+                                  ? "border-slate-950 bg-slate-50/70"
+                                  : "border-slate-200"
                               )}
                             >
                               <div className="flex min-w-0 items-start gap-3">
-                                <div className={cn("flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl shadow-sm", batch.accent)}>
+                                <div className={cn("flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[11px]", batch.accent)}>
                                   <Calendar className="h-4 w-4" />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -1032,7 +1033,7 @@ export function KidsTrialForm({
                                   </div>
                                   <div className="mt-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                     <h3 className="break-words text-sm font-semibold leading-snug text-slate-950 [overflow-wrap:anywhere] sm:text-base">{batch.days}</h3>
-                                    <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200">
+                                    <span className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-slate-700">
                                       <Clock className={cn("h-3.5 w-3.5", batch.metaAccent)} />
                                       {batch.time}
                                     </span>
@@ -1055,7 +1056,7 @@ export function KidsTrialForm({
                           )
                         })
                       ) : (
-                        <div className="rounded-[18px] border border-dashed border-slate-300 bg-white/70 p-4 text-sm leading-6 text-slate-600 md:col-span-2">
+                        <div className="rounded-[14px] bg-slate-50/80 px-4 py-4 text-sm leading-6 text-slate-500 md:col-span-2">
                           Select a studio to see available Juniors classes.
                         </div>
                       )}
@@ -1063,8 +1064,8 @@ export function KidsTrialForm({
                   </div>
                 ) : null}
 
-                  <div className="mt-6 space-y-5 border-t border-slate-200/80 pt-6">
-                    <div className={cn(SECTION_PANEL_CLASS, "bg-white")}>
+                  <div>
+                    <div className={SECTION_PANEL_CLASS}>
                       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex items-start gap-3">
                           <div className={cn(SECTION_ICON_CLASS, "border-amber-100 text-amber-700 ring-amber-50")}>
@@ -1080,7 +1081,7 @@ export function KidsTrialForm({
                         <p className={cn(SECTION_BADGE_CLASS, "border-amber-100 text-amber-700")}>Required</p>
                       </div>
 
-                      <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
+                      <div className="border-l-2 border-slate-200 pl-4 text-sm leading-6 text-slate-600">
                         <p>
                           Covers capacity to consent, health declaration, release and indemnity, privacy, and class policies for {JUNIORS_PROGRAM_NAME}.{" "}
                           <button
@@ -1130,7 +1131,7 @@ export function KidsTrialForm({
                       </div>
 
                       <div className="mt-4 space-y-2">
-                        <div className="flex items-start gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-4 text-sm leading-6 text-slate-800 transition-all hover:border-slate-300 hover:bg-slate-50">
+                        <div className="flex items-start gap-3 rounded-[14px] bg-slate-50/80 px-4 py-4 text-sm leading-6 text-slate-800 transition-colors hover:bg-slate-100/80">
                           <Label htmlFor="kidsAcceptedTerms" className="sr-only">
                             Accept Juniors consent form
                           </Label>
@@ -1157,10 +1158,11 @@ export function KidsTrialForm({
                       </div>
                     </div>
 
+                    <div className="space-y-4 border-t border-slate-200/70 px-4 py-6 sm:px-7">
                     {statusMessage ? (
                       <div
                         className={cn(
-                          "rounded-xl border px-4 py-3 text-sm",
+                          "rounded-[12px] border px-4 py-3 text-sm",
                           statusMessage.tone === "error"
                             ? "border-red-300 bg-red-50 text-red-800"
                             : "border-slate-300 bg-slate-50 text-slate-800"
@@ -1185,20 +1187,21 @@ export function KidsTrialForm({
                         "Reserve Their Spot"
                       )}
                     </Button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-3 py-4 sm:px-4">
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="border-t border-slate-200/70 bg-slate-50/60 px-4 py-5 sm:px-7">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
                     {PROGRAM_FEATURES.map((feature) => {
                       const Icon = feature.icon
 
                       return (
-                        <div key={feature.title} className="flex min-w-0 items-center gap-2 rounded-[14px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-                          <div className={cn("flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl", feature.accent)}>
+                        <div key={feature.title} className="flex min-w-0 items-center gap-2.5">
+                          <div className={cn("flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px]", feature.accent)}>
                             <Icon className="h-4 w-4" />
                           </div>
-                          <p className="min-w-0 text-sm font-semibold leading-snug text-slate-800 [overflow-wrap:anywhere]">{feature.title}</p>
+                          <p className="min-w-0 text-[13px] font-semibold leading-snug text-slate-700 [overflow-wrap:anywhere]">{feature.title}</p>
                         </div>
                       )
                     })}

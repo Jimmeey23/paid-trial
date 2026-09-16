@@ -182,19 +182,19 @@ const PARENT_NOTES = [
 
 const FIELD_GROUP_CLASS =
   "group/field space-y-2.5"
-const FIELD_LABEL_CLASS = "inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 transition-colors group-focus-within/field:text-slate-950"
+const FIELD_LABEL_CLASS = "inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 transition-colors group-focus-within/field:text-slate-950"
 const FIELD_CONTROL_CLASS =
-  "h-12 rounded-[15px] border-slate-300/90 bg-white text-[15px] font-medium text-slate-950 shadow-[0_1px_0_rgba(15,23,42,0.03)] transition-all placeholder:text-slate-400 hover:border-slate-400 hover:bg-white focus-visible:border-slate-950 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-slate-950/10"
+  "h-12 rounded-[14px] border-slate-200 bg-white/90 text-[15px] font-medium tracking-[-0.01em] text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 hover:bg-white focus-visible:border-slate-950 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-slate-950/8"
 const FIELD_ERROR_CLASS = "text-sm font-semibold text-destructive"
 const FIELD_INVALID_CLASS = "border-destructive bg-red-50/40 focus-visible:ring-destructive/15"
 const SECTION_PANEL_CLASS =
-  "rounded-[22px] border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/80 p-4 shadow-sm ring-1 ring-white/80 sm:p-5"
+  "rounded-[22px] border border-slate-200/70 bg-gradient-to-b from-white via-white to-slate-50/60 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-18px_rgba(15,23,42,0.22)] ring-1 ring-white/90 transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(15,23,42,0.28)] sm:p-5"
 const SECTION_ICON_CLASS =
   "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border bg-white shadow-[0_10px_24px_rgba(15,23,42,0.06)] ring-4"
 const SECTION_TITLE_CLASS =
-  "mt-1 text-xl font-semibold leading-snug tracking-normal text-slate-950"
+  "mt-1 text-xl font-semibold leading-snug tracking-[-0.02em] text-slate-950"
 const SECTION_BADGE_CLASS =
-  "w-fit rounded-full border bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] shadow-sm"
+  "w-fit rounded-full border bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
 
 const KIDS_BATCH_OPTIONS: Record<string, string[]> = {
   "Supreme Headquarters, Bandra": [
@@ -203,6 +203,59 @@ const KIDS_BATCH_OPTIONS: Record<string, string[]> = {
   "Kwality House, Kemps Corner": [
     "Saturday & Sunday - 3:00 PM",
   ],
+}
+
+const JUNIORS_MIN_AGE = 8
+const JUNIORS_MAX_AGE = 12
+
+const JUNIORS_MARQUEE_ITEMS = [
+  "Build Strength",
+  "Improve Balance",
+  "Boost Agility",
+  "Sharpen Focus",
+  "Build Confidence",
+  "Move With Control",
+  "Barre-Based Training",
+  "Low Impact",
+]
+
+function calculateAgeFromDob(dateOfBirth: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
+    return null
+  }
+
+  const dob = new Date(`${dateOfBirth}T00:00:00`)
+
+  if (Number.isNaN(dob.getTime())) {
+    return null
+  }
+
+  const today = new Date()
+
+  if (dob > today) {
+    return null
+  }
+
+  let age = today.getFullYear() - dob.getFullYear()
+  const monthDelta = today.getMonth() - dob.getMonth()
+
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < dob.getDate())) {
+    age -= 1
+  }
+
+  return age
+}
+
+function dobBoundsForAgeRange() {
+  const today = new Date()
+  const toInputValue = (date: Date) => date.toISOString().slice(0, 10)
+
+  // Oldest allowed: turns JUNIORS_MAX_AGE + 1 tomorrow at the earliest.
+  const min = new Date(today.getFullYear() - (JUNIORS_MAX_AGE + 1), today.getMonth(), today.getDate() + 1)
+  // Youngest allowed: turned JUNIORS_MIN_AGE today.
+  const max = new Date(today.getFullYear() - JUNIORS_MIN_AGE, today.getMonth(), today.getDate())
+
+  return { min: toInputValue(min), max: toInputValue(max) }
 }
 
 function createEventId() {
@@ -298,6 +351,10 @@ export function KidsTrialForm({
   const selectedStudioBackendName = selectedStudio?.backendName || ""
   const batchOptions = selectedStudioBackendName ? KIDS_BATCH_OPTIONS[selectedStudioBackendName] || [] : []
   const batchDetails = selectedStudioBackendName ? JUNIORS_BATCH_DETAILS[selectedStudioBackendName] || [] : []
+  const dobBounds = useMemo(() => dobBoundsForAgeRange(), [])
+  const childAgeValue = Number.parseInt(formData.childAge, 10)
+  const isChildAgeEligible =
+    Number.isFinite(childAgeValue) && childAgeValue >= JUNIORS_MIN_AGE && childAgeValue <= JUNIORS_MAX_AGE
   const selectedCountry = getCountryOption(formData.countryCode)
   const lockedStudio = lockedStudioName
     ? studios.find((studio) => studio.name === lockedStudioName)
@@ -358,6 +415,27 @@ export function KidsTrialForm({
   }, [])
 
   function handleInputChange(field: keyof typeof formData, value: string | boolean) {
+    if (field === "childDateOfBirth" && typeof value === "string") {
+      const derivedAge = calculateAgeFromDob(value.trim())
+
+      setFormData((current) => ({
+        ...current,
+        childDateOfBirth: value,
+        childAge: derivedAge === null ? "" : String(derivedAge),
+      }))
+
+      setErrors((current) => ({
+        ...current,
+        childAge: "",
+        childDateOfBirth:
+          derivedAge !== null && (derivedAge < JUNIORS_MIN_AGE || derivedAge > JUNIORS_MAX_AGE)
+            ? `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${derivedAge}.`
+            : "",
+      }))
+
+      return
+    }
+
     setFormData((current) => ({
       ...current,
       [field]: value,
@@ -373,7 +451,7 @@ export function KidsTrialForm({
 
   function validateForm() {
     const nextErrors: Record<string, string> = {}
-    const parsedAge = Number.parseInt(formData.childAge, 10)
+    const parsedAge = calculateAgeFromDob(formData.childDateOfBirth.trim())
     const signatureRealSignature = signaturePadRef.current?.toRealSignature()
 
     if (!formData.firstName.trim()) {
@@ -396,17 +474,14 @@ export function KidsTrialForm({
     if (!formData.childName.trim()) {
       nextErrors.childName = "Child name is required"
     }
-    if (!formData.childAge.trim()) {
-      nextErrors.childAge = "Child age is required"
-    } else if (!/^\d+$/.test(formData.childAge.trim())) {
-      nextErrors.childAge = "Enter age as a whole number"
-    } else if (parsedAge < 8 || parsedAge > 12) {
-      nextErrors.childAge = "Child age must be between 8 and 12"
-    }
     if (!formData.childDateOfBirth.trim()) {
       nextErrors.childDateOfBirth = "Child date of birth is required"
     } else if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.childDateOfBirth.trim())) {
       nextErrors.childDateOfBirth = "Use YYYY-MM-DD"
+    } else if (parsedAge === null) {
+      nextErrors.childDateOfBirth = "Enter a valid date of birth"
+    } else if (parsedAge < JUNIORS_MIN_AGE || parsedAge > JUNIORS_MAX_AGE) {
+      nextErrors.childDateOfBirth = `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${parsedAge}.`
     }
     if (!hideBatchSelection && !formData.batch) {
       nextErrors.batch = selectedStudio ? "Select a class" : "Select a studio first"
@@ -565,7 +640,7 @@ export function KidsTrialForm({
     && formData.phone.trim()
     && formData.studio
     && formData.childName.trim()
-    && formData.childAge.trim()
+    && isChildAgeEligible
     && formData.childDateOfBirth.trim()
     && (hideBatchSelection || formData.batch)
     && formData.signatureName.trim().length >= 2
@@ -619,14 +694,14 @@ export function KidsTrialForm({
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-950 shadow-lg">
               <Sparkles className="h-6 w-6" />
             </div>
-            <p className="mt-6 text-sm font-semibold uppercase tracking-[0.18em] text-sky-100">{heroEyebrow}</p>
-            <h1 className="mt-2 max-w-md text-5xl font-bold leading-tight">{heroTitle}</h1>
+            <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-100/90">{heroEyebrow}</p>
+            <h1 className="mt-3 max-w-md text-5xl font-bold leading-[1.04] tracking-[-0.035em]">{heroTitle}</h1>
             <p className="mt-4 max-w-md text-base leading-7 text-white/84">
               {heroDescription}
             </p>
             <div className="mt-8 grid max-w-md grid-cols-3 gap-3 text-xs font-semibold uppercase tracking-wide text-white/82">
               {heroHighlights.slice(0, 3).map((highlight) => (
-                <div key={highlight} className="border-l border-white/30 pl-3">{highlight}</div>
+                <div key={highlight} className="border-l border-white/25 pl-3 tracking-[0.2em]">{highlight}</div>
               ))}
             </div>
           </div>
@@ -653,12 +728,12 @@ export function KidsTrialForm({
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_34px_90px_rgba(15,23,42,0.13)] ring-1 ring-white/70">
+            <div className="relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_2px_4px_rgba(15,23,42,0.04),0_40px_100px_-30px_rgba(15,23,42,0.35)] ring-1 ring-white/70">
               <div className="bg-slate-950 text-white">
                 <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-6 lg:px-8">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200 sm:text-xs">P57 Juniors</p>
-                    <h2 className="mt-2 max-w-xl text-[1.7rem] font-bold leading-[1.08] tracking-normal text-white sm:text-3xl sm:leading-[1.12]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-sky-200/90 sm:text-[11px]">P57 Juniors</p>
+                    <h2 className="mt-2 max-w-xl text-[1.7rem] font-bold leading-[1.06] tracking-[-0.03em] text-white sm:text-3xl sm:leading-[1.1]">
                       {formTitle}
                     </h2>
                     <p className="mt-2 max-w-2xl text-sm leading-5 text-white/70 sm:mt-3 sm:text-sm sm:leading-6">
@@ -677,25 +752,34 @@ export function KidsTrialForm({
                       <div
                         key={outcome.title}
                         className={cn(
-                          "flex min-h-[92px] flex-col items-center justify-center bg-slate-950 px-2.5 py-3 text-center sm:min-h-[112px] sm:px-3 sm:py-4",
+                          "group/outcome flex min-h-[92px] flex-col items-center justify-center bg-slate-950 px-2.5 py-3 text-center transition-colors duration-300 hover:bg-slate-900 sm:min-h-[112px] sm:px-3 sm:py-4",
                           index > 2 && "hidden sm:flex"
                         )}
                       >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-400/10 text-sky-300 ring-1 ring-sky-300/20 shadow-[0_10px_28px_rgba(14,165,233,0.08)] sm:h-11 sm:w-11">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-400/10 text-sky-300 ring-1 ring-sky-300/20 shadow-[0_10px_28px_rgba(14,165,233,0.08)] transition-transform duration-300 group-hover/outcome:-translate-y-0.5 sm:h-11 sm:w-11">
                           <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
-                        <p className="mt-2.5 text-[10px] font-extrabold uppercase tracking-[0.13em] leading-4 text-white/88 sm:mt-3 sm:text-[12px] sm:leading-5">{outcome.title}</p>
+                        <p className="mt-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] leading-4 text-white/85 sm:mt-3 sm:text-[11px] sm:leading-5">{outcome.title}</p>
                       </div>
                     )
                   })}
                 </div>
-                <div className="border-t border-slate-800 bg-slate-950 px-4 py-3 text-center text-[10px] font-extrabold uppercase tracking-[0.16em] leading-5 text-white/88 sm:py-4 sm:text-sm sm:tracking-[0.22em]">
-                  <span className="inline-block">Build strength.</span>
-                  <span className="mx-2 text-sky-400">/</span>
-                  <span className="inline-block">Improve balance.</span>
-                  <span className="mx-2 text-sky-400">/</span>
-                  <span className="inline-block sm:hidden">Boost agility.</span>
-                  <span className="hidden sm:inline-block">Boost confidence.</span>
+                <div className="juniors-marquee border-t border-white/10 bg-slate-950 py-3 sm:py-3.5">
+                  <div className="juniors-marquee__track">
+                    {[0, 1].map((loop) => (
+                      <div key={loop} className="flex shrink-0 items-center" aria-hidden={loop === 1}>
+                        {JUNIORS_MARQUEE_ITEMS.map((item) => (
+                          <span
+                            key={`${loop}-${item}`}
+                            className="flex items-center gap-3 whitespace-nowrap px-4 text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/85 sm:text-xs"
+                          >
+                            {item}
+                            <span className="h-1 w-1 rounded-full bg-sky-400/80" />
+                          </span>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -839,32 +923,46 @@ export function KidsTrialForm({
                   </div>
 
                   <div className={FIELD_GROUP_CLASS}>
-                    <Label htmlFor="childAge" className={FIELD_LABEL_CLASS}>Child age <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="childAge"
-                      type="number"
-                      min={8}
-                      max={12}
-                      inputMode="numeric"
-                      value={formData.childAge}
-                      onChange={(event) => handleInputChange("childAge", event.target.value)}
-                      placeholder="10"
-                      className={cn(FIELD_CONTROL_CLASS, errors.childAge && FIELD_INVALID_CLASS)}
-                    />
-                    {errors.childAge ? <p className={FIELD_ERROR_CLASS}>{errors.childAge}</p> : null}
-                  </div>
-
-                  <div className={FIELD_GROUP_CLASS}>
                     <Label htmlFor="childDateOfBirth" className={FIELD_LABEL_CLASS}>Child date of birth <span className="text-destructive">*</span></Label>
                     <Input
                       id="childDateOfBirth"
                       name="childDateOfBirth"
                       type="date"
+                      min={dobBounds.min}
+                      max={dobBounds.max}
                       value={formData.childDateOfBirth}
                       onChange={(event) => handleInputChange("childDateOfBirth", event.target.value)}
                       className={cn(FIELD_CONTROL_CLASS, errors.childDateOfBirth && FIELD_INVALID_CLASS)}
                     />
-                    {errors.childDateOfBirth ? <p className={FIELD_ERROR_CLASS}>{errors.childDateOfBirth}</p> : null}
+                    {errors.childDateOfBirth ? (
+                      <p className={FIELD_ERROR_CLASS}>{errors.childDateOfBirth}</p>
+                    ) : (
+                      <p className="text-xs font-medium text-slate-500">Juniors is open to ages {JUNIORS_MIN_AGE}-{JUNIORS_MAX_AGE}.</p>
+                    )}
+                  </div>
+
+                  <div className={FIELD_GROUP_CLASS}>
+                    <Label htmlFor="childAge" className={FIELD_LABEL_CLASS}>Child age</Label>
+                    <div className="relative">
+                      <Input
+                        id="childAge"
+                        name="childAge"
+                        readOnly
+                        tabIndex={-1}
+                        aria-readonly="true"
+                        value={formData.childAge ? `${formData.childAge} years` : ""}
+                        placeholder="Set by date of birth"
+                        className={cn(
+                          FIELD_CONTROL_CLASS,
+                          "cursor-default bg-slate-50 pr-11 text-slate-700 focus-visible:ring-0",
+                          isChildAgeEligible && "border-emerald-200 bg-emerald-50/60 text-emerald-900"
+                        )}
+                      />
+                      {isChildAgeEligible ? (
+                        <BadgeCheck className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-600" />
+                      ) : null}
+                    </div>
+                    <p className="text-xs font-medium text-slate-500">Calculated automatically.</p>
                   </div>
                   </div>
                 </div>
@@ -1076,7 +1174,7 @@ export function KidsTrialForm({
                       id="kids-submit-button"
                       type="submit"
                       disabled={isSubmitting || !isFormValid}
-                      className="h-14 w-full rounded-[16px] bg-slate-950 text-base font-bold text-white shadow-[0_20px_42px_rgba(15,23,42,0.28)] transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-[0_26px_54px_rgba(15,23,42,0.32)] disabled:translate-y-0 disabled:shadow-none"
+                      className="h-14 w-full rounded-[16px] bg-slate-950 text-base font-semibold uppercase tracking-[0.14em] text-white shadow-[0_20px_42px_-16px_rgba(15,23,42,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-slate-900 hover:shadow-[0_28px_56px_-18px_rgba(15,23,42,0.65)] disabled:translate-y-0 disabled:bg-slate-400 disabled:shadow-none"
                     >
                       {isSubmitting ? (
                         <>
@@ -1115,7 +1213,7 @@ export function KidsTrialForm({
                   <Sparkles className="h-4 w-4 text-slate-800" />
                   <span className="text-sm font-semibold text-slate-950">The Physique 57 Method</span>
                 </div>
-                <h2 className="mt-5 text-3xl font-bold text-slate-950">Inside Juniors</h2>
+                <h2 className="mt-5 text-3xl font-bold tracking-[-0.03em] text-slate-950">Inside Juniors</h2>
                 <p className="mt-3 max-w-3xl break-words text-base leading-7 text-slate-600">
                   Same Physique 57 promise, scaled for juniors: precise movement, expert instruction, low-impact intensity.
                 </p>

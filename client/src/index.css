@@ -121,3 +121,51 @@
     transform: translateY(-1px);
   }
 }
+
+@keyframes juniors-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.juniors-marquee {
+  position: relative;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+.juniors-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: juniors-marquee 32s linear infinite;
+}
+
+.juniors-marquee:hover .juniors-marquee__track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .juniors-marquee__track {
+    animation: none;
+  }
+}
+
+.juniors-hairline {
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    rgba(148, 163, 184, 0.45),
+    transparent
+  );
+}

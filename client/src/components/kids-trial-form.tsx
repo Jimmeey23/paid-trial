@@ -92,36 +92,26 @@ const JUNIORS_BATCH_DETAILS: Record<string, Array<{
 }>> = {
   "Supreme Headquarters, Bandra": [
     {
-      value: "Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri",
-      days: "Tuesday & Friday",
-      time: "4:30 PM",
-      instructors: "Tue: Simonelle, Fri: Cauveri",
+      value: "Saturday & Sunday - 3:30 PM",
+      days: "Saturday & Sunday",
+      time: "3:30 PM",
+      instructors: "",
       studio: "Bandra",
-      note: "A twice-weekly class for posture, alignment, and confidence.",
+      note: "A weekend class for posture, alignment, and confidence.",
       accent: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
       metaAccent: "text-rose-700",
     },
   ],
   "Kwality House, Kemps Corner": [
     {
-      value: "Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir",
-      days: "Batch A - Monday & Thursday",
-      time: "11:30 AM",
-      instructors: "Mon: Simonelle, Thu: Karanvir",
+      value: "Saturday & Sunday - 3:00 PM",
+      days: "Saturday & Sunday",
+      time: "3:00 PM",
+      instructors: "",
       studio: "Kemps Corner",
-      note: "A late-morning class with guided technique and balance work.",
+      note: "A weekend class with guided technique and balance work.",
       accent: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
       metaAccent: "text-sky-700",
-    },
-    {
-      value: "Batch B - Monday & Wednesday - 4:30 PM - Mon: Cauveri, Wed: Pranjali",
-      days: "Batch B - Monday & Wednesday",
-      time: "4:30 PM",
-      instructors: "Mon: Cauveri, Wed: Pranjali",
-      studio: "Kemps Corner",
-      note: "An after-school class for young movers who prefer a later start.",
-      accent: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
-      metaAccent: "text-emerald-700",
     },
   ],
 }
@@ -185,7 +175,7 @@ const STUDIO_JOURNEY_STEPS = [
 ]
 
 const PARENT_NOTES = [
-  "Designed for young movers aged 9 to 13.",
+  "Designed for young movers aged 8 to 12.",
   "We will confirm availability and help you choose the most suitable class.",
   "Your contact details help us coordinate your child's first session.",
 ]
@@ -208,11 +198,10 @@ const SECTION_BADGE_CLASS =
 
 const KIDS_BATCH_OPTIONS: Record<string, string[]> = {
   "Supreme Headquarters, Bandra": [
-    "Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri",
+    "Saturday & Sunday - 3:30 PM",
   ],
   "Kwality House, Kemps Corner": [
-    "Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir",
-    "Batch B - Monday & Wednesday - 4:30 PM - Mon: Cauveri, Wed: Pranjali",
+    "Saturday & Sunday - 3:00 PM",
   ],
 }
 
@@ -265,7 +254,7 @@ export function KidsTrialForm({
   formTitle = "Plan your child's first session",
   formDescription = "Tell us where you would like to visit and which Juniors class works best for your child.",
   formBadge = "P57 Juniors",
-  heroEyebrow = "For ages 9-13",
+  heroEyebrow = "For ages 8-12",
   heroTitle = "Strong Foundations Start Here",
   heroDescription = "Led by experts, the Physique 57 Kids Strength & Agility Program builds strength, balance, mobility, coordination, and athletic power.",
   heroHighlights = ["Posture", "Strength", "Confidence"],
@@ -411,8 +400,8 @@ export function KidsTrialForm({
       nextErrors.childAge = "Child age is required"
     } else if (!/^\d+$/.test(formData.childAge.trim())) {
       nextErrors.childAge = "Enter age as a whole number"
-    } else if (parsedAge < 9 || parsedAge > 13) {
-      nextErrors.childAge = "Child age must be between 9 and 13"
+    } else if (parsedAge < 8 || parsedAge > 12) {
+      nextErrors.childAge = "Child age must be between 8 and 12"
     }
     if (!formData.childDateOfBirth.trim()) {
       nextErrors.childDateOfBirth = "Child date of birth is required"
@@ -854,8 +843,8 @@ export function KidsTrialForm({
                     <Input
                       id="childAge"
                       type="number"
-                      min={9}
-                      max={13}
+                      min={8}
+                      max={12}
                       inputMode="numeric"
                       value={formData.childAge}
                       onChange={(event) => handleInputChange("childAge", event.target.value)}
@@ -951,11 +940,15 @@ export function KidsTrialForm({
                                     </span>
                                   </div>
                                   <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-600 sm:text-sm">
-                                    <span className="inline-flex min-w-0 items-center gap-1.5">
-                                      <Users className={cn("h-3.5 w-3.5 flex-shrink-0", batch.metaAccent)} />
-                                      {batch.instructors}
-                                    </span>
-                                    <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" />
+                                    {batch.instructors ? (
+                                      <>
+                                        <span className="inline-flex min-w-0 items-center gap-1.5">
+                                          <Users className={cn("h-3.5 w-3.5 flex-shrink-0", batch.metaAccent)} />
+                                          {batch.instructors}
+                                        </span>
+                                        <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" />
+                                      </>
+                                    ) : null}
                                     <span className="min-w-0 text-slate-500">{batch.note}</span>
                                   </div>
                                 </div>

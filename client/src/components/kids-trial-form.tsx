@@ -53,28 +53,28 @@ const JUNIORS_USPS = [
   {
     title: "Signature Method DNA",
     description:
-      "Built from the Physique 57 barre-based Interval Overload method, adapted into a precise, age-aware practice for young movers.",
+      "Our Interval Overload method, scaled for growing bodies. Same precision, same standard.",
     icon: Sparkles,
     accent: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
   },
   {
-    title: "Low-Impact, High-Control Movement",
+    title: "Low Impact, High Control",
     description:
-      "Sessions focus on posture, coordination, flexibility, balance, and body control without the stress of high-impact training.",
+      "Posture, balance, and body control built at the barre, with none of the pounding.",
     icon: Shield,
     accent: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
   },
   {
-    title: "Instructor-Led Alignment",
+    title: "Coached, Not Supervised",
     description:
-      "P57 instructors guide form, rhythm, and confidence with the same premium coaching standards used across the adult studio experience.",
+      "Trained P57 instructors cue every rep. The same coaching our adults get.",
     icon: Award,
     accent: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
   },
   {
-    title: "Confidence Through Practice",
+    title: "Confidence That Carries",
     description:
-      "A polished studio journey that helps juniors build strength, focus, musicality, and comfort inside a boutique fitness environment.",
+      "Strength, rhythm, and focus that show up well beyond the studio.",
     icon: Heart,
     accent: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
   },
@@ -97,7 +97,7 @@ const JUNIORS_BATCH_DETAILS: Record<string, Array<{
       time: "3:30 PM",
       instructors: "",
       studio: "Bandra",
-      note: "A weekend class for posture, alignment, and confidence.",
+      note: "Weekend sessions built around posture and confidence.",
       accent: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
       metaAccent: "text-rose-700",
     },
@@ -109,7 +109,7 @@ const JUNIORS_BATCH_DETAILS: Record<string, Array<{
       time: "3:00 PM",
       instructors: "",
       studio: "Kemps Corner",
-      note: "A weekend class with guided technique and balance work.",
+      note: "Weekend sessions with guided technique and balance work.",
       accent: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
       metaAccent: "text-sky-700",
     },
@@ -119,19 +119,19 @@ const JUNIORS_BATCH_DETAILS: Record<string, Array<{
 const JUNIORS_BUILD_AREAS = [
   {
     title: "Postural Intelligence",
-    description: "Clean alignment cues help juniors understand how strength, balance, and control connect.",
+    description: "Alignment cues that teach how strength, balance, and control connect.",
     icon: Target,
     accent: "bg-violet-50 text-violet-700 ring-1 ring-violet-100",
   },
   {
     title: "Rhythm & Focus",
-    description: "Music-led sequencing builds coordination, timing, attention, and comfort with structured movement.",
+    description: "Music-led sequencing that sharpens coordination, timing, and attention.",
     icon: Sparkles,
     accent: "bg-pink-50 text-pink-700 ring-1 ring-pink-100",
   },
   {
     title: "Confident Strength",
-    description: "Low-impact resistance work supports steady progress without overwhelming growing bodies.",
+    description: "Resistance work that builds steadily and never overwhelms.",
     icon: Shield,
     accent: "bg-teal-50 text-teal-700 ring-1 ring-teal-100",
   },
@@ -169,15 +169,15 @@ const PROGRAM_OUTCOMES = [
 ]
 
 const STUDIO_JOURNEY_STEPS = [
-  "A warm welcome at your selected studio",
-  "Instructor-led movement with age-aware cues",
-  "Friendly guidance on the class that suits your child best",
+  "A warm welcome at your studio",
+  "Instructor-led movement, cued for their age",
+  "Guidance on the class that fits your child best",
 ]
 
 const PARENT_NOTES = [
-  "Designed for young movers aged 8 to 12.",
-  "We will confirm availability and help you choose the most suitable class.",
-  "Your contact details help us coordinate your child's first session.",
+  "Built for young movers aged 8 to 12.",
+  "We confirm availability and help you pick the right class.",
+  "Your details let us coordinate their first session.",
 ]
 
 const FIELD_GROUP_CLASS =
@@ -251,14 +251,14 @@ export function KidsTrialForm({
   hideBatchSelection = false,
   lockedStudioName = "",
   lockedStudioDisplayName = "",
-  formTitle = "Plan your child's first session",
-  formDescription = "Tell us where you would like to visit and which Juniors class works best for your child.",
+  formTitle = "Book their first session",
+  formDescription = "Pick your studio and the Juniors class that fits your week.",
   formBadge = "P57 Juniors",
   heroEyebrow = "For ages 8-12",
-  heroTitle = "Strong Foundations Start Here",
-  heroDescription = "Led by experts, the Physique 57 Kids Strength & Agility Program builds strength, balance, mobility, coordination, and athletic power.",
+  heroTitle = "Strong Starts Here",
+  heroDescription = "Physique 57 Juniors builds strength, balance, and coordination at the barre, led by instructors who coach every rep.",
   heroHighlights = ["Posture", "Strength", "Confidence"],
-  mobileHeroDescription = "Build strength. Improve balance. Boost confidence.",
+  mobileHeroDescription = "Strength. Balance. Confidence.",
   successSourceForm = "kids-trial-form",
   eventTitle = "",
   eventDescription = "",
@@ -391,7 +391,7 @@ export function KidsTrialForm({
       nextErrors.phone = "Phone number is required"
     }
     if (!formData.studio) {
-      nextErrors.studio = "Select a center"
+      nextErrors.studio = "Select a studio"
     }
     if (!formData.childName.trim()) {
       nextErrors.childName = "Child name is required"
@@ -409,7 +409,7 @@ export function KidsTrialForm({
       nextErrors.childDateOfBirth = "Use YYYY-MM-DD"
     }
     if (!hideBatchSelection && !formData.batch) {
-      nextErrors.batch = selectedStudio ? "Select a batch preference" : "Select a center first"
+      nextErrors.batch = selectedStudio ? "Select a class" : "Select a studio first"
     }
     if (formData.signatureName.trim().length < 2) {
       nextErrors.signatureName = "Enter the parent/guardian signature name"
@@ -580,9 +580,9 @@ export function KidsTrialForm({
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-950 text-white">
             <CheckCircle2 className="h-9 w-9" />
           </div>
-          <h1 className="mt-6 text-3xl font-bold text-slate-950">Request received</h1>
+          <h1 className="mt-6 text-3xl font-bold text-slate-950">You’re on the list</h1>
           <p className="mx-auto mt-3 max-w-md text-base leading-7 text-slate-600">
-            Our team will contact you shortly to confirm the {JUNIORS_PROGRAM_NAME} batch details.
+            We’ll call shortly to confirm your {JUNIORS_PROGRAM_NAME} class.
           </p>
           <Button className="mt-7 h-12 w-full bg-slate-950 text-white hover:bg-slate-800" onClick={() => window.location.assign(getThankYouUrl())}>
             Continue
@@ -708,7 +708,7 @@ export function KidsTrialForm({
                         <UserRoundCheck className="h-5 w-5 stroke-[1.8]" />
                       </div>
                       <div>
-                        <h3 className={SECTION_TITLE_CLASS}>Contact for confirmation</h3>
+                        <h3 className={SECTION_TITLE_CLASS}>Where we reach you</h3>
                       </div>
                     </div>
                     <p className={cn(SECTION_BADGE_CLASS, "border-sky-100 text-sky-700")}>Parent Details</p>
@@ -788,14 +788,14 @@ export function KidsTrialForm({
                         <BadgeCheck className="h-5 w-5 stroke-[1.8]" />
                       </div>
                       <div>
-                        <h3 className={SECTION_TITLE_CLASS}>Choose the right starting point</h3>
+                        <h3 className={SECTION_TITLE_CLASS}>Your studio and your child</h3>
                       </div>
                     </div>
                     <p className={cn(SECTION_BADGE_CLASS, "border-violet-100 text-violet-700")}>Child & Session</p>
                   </div>
                   <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
                   <div className={FIELD_GROUP_CLASS}>
-                    <Label htmlFor="studio" className={FIELD_LABEL_CLASS}>Center <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="studio" className={FIELD_LABEL_CLASS}>Studio <span className="text-destructive">*</span></Label>
                     {lockedStudio ? (
                       <Input
                         id="studio"
@@ -808,7 +808,7 @@ export function KidsTrialForm({
                     ) : (
                       <Select value={formData.studio} onValueChange={(value) => handleInputChange("studio", value)}>
                         <SelectTrigger id="studio" size="lg" className={cn(FIELD_CONTROL_CLASS, errors.studio && FIELD_INVALID_CLASS)}>
-                          <SelectValue placeholder="Select center" />
+                          <SelectValue placeholder="Select studio" />
                         </SelectTrigger>
                         <SelectContent>
                           {studios.map((studio) => (
@@ -877,11 +877,11 @@ export function KidsTrialForm({
                           <CalendarCheck2 className="h-5 w-5 stroke-[1.8]" />
                         </div>
                         <div>
-                          <h3 className={SECTION_TITLE_CLASS}>Select a class batch</h3>
-                          <p className="mt-1 text-sm leading-6 text-slate-600">Choose a center to see the available Juniors classes.</p>
+                          <h3 className={SECTION_TITLE_CLASS}>Pick a class</h3>
+                          <p className="mt-1 text-sm leading-6 text-slate-600">Select a studio to see available Juniors classes.</p>
                         </div>
                       </div>
-                      <p className={cn(SECTION_BADGE_CLASS, "border-emerald-100 text-emerald-700")}>Batch Preference</p>
+                      <p className={cn(SECTION_BADGE_CLASS, "border-emerald-100 text-emerald-700")}>Class Times</p>
                     </div>
                     <Select
                       value={formData.batch}
@@ -890,7 +890,7 @@ export function KidsTrialForm({
                     >
                       <Label htmlFor="batch" className="sr-only">Batch preference <span className="text-destructive">*</span></Label>
                       <SelectTrigger id="batch" size="lg" className={cn(FIELD_CONTROL_CLASS, "mt-3 min-h-12", errors.batch && FIELD_INVALID_CLASS)}>
-                        <SelectValue placeholder={selectedStudio ? "Select batch" : "Select center first"} />
+                        <SelectValue placeholder={selectedStudio ? "Select a class" : "Select a studio first"} />
                       </SelectTrigger>
                       <SelectContent>
                         {batchOptions.map((batch) => (
@@ -958,7 +958,7 @@ export function KidsTrialForm({
                         })
                       ) : (
                         <div className="rounded-[18px] border border-dashed border-slate-300 bg-white/70 p-4 text-sm leading-6 text-slate-600 md:col-span-2">
-                          Select a center and we will show the available Juniors classes.
+                          Select a studio to see available Juniors classes.
                         </div>
                       )}
                     </div>
@@ -973,9 +973,9 @@ export function KidsTrialForm({
                             <FileText className="h-5 w-5 stroke-[1.8]" />
                           </div>
                           <div>
-                            <h3 className={SECTION_TITLE_CLASS}>Consent and parent signature</h3>
+                            <h3 className={SECTION_TITLE_CLASS}>Consent and signature</h3>
                             <p className="mt-1 text-sm leading-6 text-slate-600">
-                              Review the Juniors consent form, then sign so the consent can be recorded on the Momence member profile.
+                              Review the Juniors consent form and sign. We record it on your child’s member profile.
                             </p>
                           </div>
                         </div>
@@ -984,7 +984,7 @@ export function KidsTrialForm({
 
                       <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
                         <p>
-                          Parent/guardian confirms capacity to consent, health declaration, release and indemnity, personal information consent, and class policies for {JUNIORS_PROGRAM_NAME}.{" "}
+                          Covers capacity to consent, health declaration, release and indemnity, privacy, and class policies for {JUNIORS_PROGRAM_NAME}.{" "}
                           <button
                             type="button"
                             data-consent-modal-trigger
@@ -1081,10 +1081,10 @@ export function KidsTrialForm({
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Submitting...
+                          Reserving...
                         </>
                       ) : (
-                        "Submit Juniors Request"
+                        "Reserve Their Spot"
                       )}
                     </Button>
                   </div>
@@ -1113,11 +1113,11 @@ export function KidsTrialForm({
               <div className="px-1">
                 <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm">
                   <Sparkles className="h-4 w-4 text-slate-800" />
-                  <span className="text-sm font-semibold text-slate-950">Signature Movement Intelligence</span>
+                  <span className="text-sm font-semibold text-slate-950">The Physique 57 Method</span>
                 </div>
-                <h2 className="mt-5 text-3xl font-bold text-slate-950">Inside The Juniors Method</h2>
+                <h2 className="mt-5 text-3xl font-bold text-slate-950">Inside Juniors</h2>
                 <p className="mt-3 max-w-3xl break-words text-base leading-7 text-slate-600">
-                  The Juniors experience carries the same Physique 57 promise: precise movement, premium instruction, low-impact intensity, and a community-led studio journey.
+                  Same Physique 57 promise, scaled for juniors: precise movement, expert instruction, low-impact intensity.
                 </p>
               </div>
 
@@ -1140,8 +1140,8 @@ export function KidsTrialForm({
               <section className="rounded-[26px] border border-white/80 bg-white/90 p-5 shadow-[0_22px_70px_rgba(15,23,42,0.10)] ring-1 ring-white/70 sm:p-6">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">What Young Movers Build</p>
-                    <h3 className="mt-2 text-2xl font-bold text-slate-950">Strength that feels composed, not rushed</h3>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">What They Build</p>
+                    <h3 className="mt-2 text-2xl font-bold text-slate-950">Strength that is controlled, never rushed</h3>
                   </div>
                   <div className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">
                     Low impact
@@ -1167,7 +1167,7 @@ export function KidsTrialForm({
               <section className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
                 <div className="rounded-[26px] border border-white/80 bg-slate-950 p-5 text-white shadow-[0_26px_80px_rgba(15,23,42,0.22)] sm:p-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">First Session Flow</p>
-                  <h3 className="mt-2 text-2xl font-bold">A warm, confident start at the barre</h3>
+                  <h3 className="mt-2 text-2xl font-bold">Their first time at the barre</h3>
                   <div className="mt-5 space-y-3">
                     {STUDIO_JOURNEY_STEPS.map((step, index) => (
                       <div key={step} className="flex gap-3 rounded-[18px] border border-white/10 bg-white/10 p-4">
@@ -1180,7 +1180,7 @@ export function KidsTrialForm({
 
                 <div className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_22px_70px_rgba(15,23,42,0.09)] sm:p-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">Good To Know</p>
-                  <h3 className="mt-2 text-2xl font-bold text-slate-950">Helpful notes before you book</h3>
+                  <h3 className="mt-2 text-2xl font-bold text-slate-950">Before you book</h3>
                   <div className="mt-5 space-y-3">
                     {PARENT_NOTES.map((note) => (
                       <div key={note} className="flex gap-3 rounded-[16px] bg-slate-50 p-3 shadow-sm">

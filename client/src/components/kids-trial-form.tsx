@@ -214,6 +214,8 @@ const KIDS_BATCH_OPTIONS: Record<string, string[]> = Object.fromEntries(
 
 const JUNIORS_MIN_AGE = 8
 const JUNIORS_MAX_AGE = 12
+// Age eligibility is measured as of this date, not today.
+const JUNIORS_AGE_REFERENCE_DATE = new Date(2027, 0, 1)
 
 const JUNIORS_MARQUEE_ITEMS = [
   "Build Strength",
@@ -237,9 +239,9 @@ function calculateAgeFromDob(dateOfBirth: string) {
     return null
   }
 
-  const today = new Date()
+  const today = JUNIORS_AGE_REFERENCE_DATE
 
-  if (dob > today) {
+  if (dob > new Date()) {
     return null
   }
 
@@ -254,13 +256,13 @@ function calculateAgeFromDob(dateOfBirth: string) {
 }
 
 function dobBoundsForAgeRange() {
-  const today = new Date()
+  const today = JUNIORS_AGE_REFERENCE_DATE
   const toInputValue = (date: Date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 
-  // Oldest allowed: turns JUNIORS_MAX_AGE + 1 tomorrow at the earliest.
+  // Oldest allowed: turns JUNIORS_MAX_AGE + 1 the day after the reference date at the earliest.
   const min = new Date(today.getFullYear() - (JUNIORS_MAX_AGE + 1), today.getMonth(), today.getDate() + 1)
-  // Youngest allowed: turned JUNIORS_MIN_AGE today.
+  // Youngest allowed: turns JUNIORS_MIN_AGE on or before the reference date.
   const max = new Date(today.getFullYear() - JUNIORS_MIN_AGE, today.getMonth(), today.getDate())
 
   return { min: toInputValue(min), max: toInputValue(max) }
@@ -437,7 +439,7 @@ export function KidsTrialForm({
         childAge: "",
         childDateOfBirth:
           derivedAge !== null && (derivedAge < JUNIORS_MIN_AGE || derivedAge > JUNIORS_MAX_AGE)
-            ? `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${derivedAge}.`
+            ? `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${derivedAge} as of 1 January 2027.`
             : "",
       }))
 
@@ -489,7 +491,7 @@ export function KidsTrialForm({
     } else if (parsedAge === null) {
       nextErrors.childDateOfBirth = "Enter a valid date of birth"
     } else if (parsedAge < JUNIORS_MIN_AGE || parsedAge > JUNIORS_MAX_AGE) {
-      nextErrors.childDateOfBirth = `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${parsedAge}.`
+      nextErrors.childDateOfBirth = `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${parsedAge} as of 1 January 2027.`
     }
     if (!hideBatchSelection && !formData.batch) {
       nextErrors.batch = selectedStudio ? "Select a class" : "Select a studio first"
@@ -945,7 +947,7 @@ export function KidsTrialForm({
                     {errors.childDateOfBirth ? (
                       <p className={FIELD_ERROR_CLASS}>{errors.childDateOfBirth}</p>
                     ) : (
-                      <p className="text-xs font-medium text-slate-500">Juniors is open to ages {JUNIORS_MIN_AGE}-{JUNIORS_MAX_AGE}.</p>
+                      <p className="text-xs font-medium text-slate-500">Juniors is open to ages {JUNIORS_MIN_AGE}-{JUNIORS_MAX_AGE} as of 1 January 2027.</p>
                     )}
                   </div>
 

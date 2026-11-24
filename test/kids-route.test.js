@@ -22,7 +22,7 @@ function validKidsPayload(overrides = {}) {
     childName: 'Riya Shah',
     childAge: '10',
     childDateOfBirth: '2015-06-01',
-    batch: 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri',
+    batch: 'Saturday only - 3:30 PM',
     waiverAccepted: 'accepted',
     signatureName: 'Asha Shah',
     signatureRealSignature: '[[12,18,24,30]]',
@@ -102,7 +102,7 @@ test('Express serves kids-specific link preview metadata in raw HTML', async () 
     assert.match(html, /<title>Physique 57 Juniors \| Kids Strength &amp; Agility Program<\/title>/);
     assert.match(html, /<meta property="og:title" content="Physique 57 Juniors \| Kids Strength &amp; Agility Program"/);
     assert.match(html, /<meta name="twitter:title" content="Physique 57 Juniors \| Kids Strength &amp; Agility Program"/);
-    assert.match(html, /content="Register for Physique 57 Juniors for ages 9-13/);
+    assert.match(html, /content="Register for Physique 57 Juniors for ages 8-12/);
     assert.match(html, /p57-juniors-hero-2026-1\.png/);
     assert.doesNotMatch(html, /<title>Physique 57 India \| Book Your Trial Class Today<\/title>/);
     assert.doesNotMatch(html, /Juniors Trial/i);
@@ -167,7 +167,6 @@ test('Juniors form contains child name, date of birth, age, conditional batch op
   assert.doesNotMatch(source, /p57-kids-barre-/);
   assert.doesNotMatch(source, /<video/);
   assert.match(source, /Physique 57 - Juniors/);
-  assert.match(source, /Strong foundations start here/i);
   assert.match(source, /Functional Movement/);
   assert.match(source, /Agility Drills/);
   assert.match(source, /Barre-Based Work/);
@@ -192,10 +191,10 @@ test('Juniors form contains child name, date of birth, age, conditional batch op
   assert.match(source, /Child age/);
   assert.match(source, /batch/);
   assert.match(source, /Batch preference/);
-  assert.match(source, /id="batch"/);
-  assert.match(source, /Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri/);
-  assert.match(source, /Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir/);
-  assert.match(source, /Batch B - Monday & Wednesday - 4:30 PM - Mon: Cauveri, Wed: Pranjali/);
+  assert.match(source, /role="radiogroup"/);
+  assert.match(source, /Saturday & Sunday/);
+  assert.match(source, /Saturday only/);
+  assert.match(source, /Sunday only/);
   assert.match(source, /signatureName/);
   assert.match(source, /SignaturePad/);
   assert.match(source, /signatureRealSignature/);
@@ -274,13 +273,9 @@ test('Juniors form uses elevated copy, batch cards, and expanded method sections
   assert.doesNotMatch(source, /Trial Batch Enquiry/);
   assert.doesNotMatch(source, /Brand USPs/);
   assert.match(source, /P57 Juniors/);
-  assert.match(source, /Plan your child's first session/);
-  assert.match(source, /Inside The Juniors Method/);
-  assert.match(source, /What Young Movers Build/);
   assert.match(source, /First Session Flow/);
   assert.doesNotMatch(source, /Available Juniors Batches/);
   assert.match(source, /Good To Know/);
-  assert.match(source, /A warm, confident start at the barre/);
   assert.doesNotMatch(source, /Compare studio timings at a glance/);
   assert.doesNotMatch(source, /#fff7ed/);
   assert.doesNotMatch(source, /radial-gradient\(circle_at_20%_0%/);
@@ -326,7 +321,7 @@ test('validateKidsLeadPayload accepts a valid Bandra kids payload', () => {
   assert.equal(validation.data.childName, 'Riya Shah');
   assert.equal(validation.data.childAge, 10);
   assert.equal(validation.data.childDateOfBirth, '2015-06-01');
-  assert.equal(validation.data.batch, 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri');
+  assert.equal(validation.data.batch, 'Saturday only - 3:30 PM');
   assert.equal(validation.data.signatureName, 'Asha Shah');
   assert.equal(validation.data.signatureRealSignature, '[[12,18,24,30]]');
 });
@@ -349,7 +344,7 @@ test('validateKidsLeadPayload rejects missing or out-of-range child age', () => 
 
   const outOfRangeAge = app.validateKidsLeadPayload(validKidsPayload({ childAge: '18' }));
   assert.equal(outOfRangeAge.isValid, false);
-  assert.equal(outOfRangeAge.fieldErrors.childAge, 'Child age must be between 9 and 13.');
+  assert.equal(outOfRangeAge.fieldErrors.childAge, 'Child age must be between 8 and 12.');
 });
 
 test('validateKidsLeadPayload rejects missing or invalid child date of birth', () => {
@@ -369,7 +364,7 @@ test('validateKidsLeadPayload rejects a batch preference that does not match the
 
   const validation = app.validateKidsLeadPayload(validKidsPayload({
     center: 'Supreme Headquarters, Bandra',
-    batch: 'Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir'
+    batch: 'Saturday & Sunday - 3:00 PM'
   }));
 
   assert.equal(validation.isValid, false);
@@ -411,7 +406,7 @@ test('buildMomenceLeadRequestPayload includes kids-specific fields with Momence 
       childName: 'Riya Shah',
       childAge: 10,
       childDateOfBirth: '2015-06-01',
-      batch: 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri'
+      batch: 'Saturday only - 3:30 PM'
     },
     {
       token: 'token'
@@ -428,7 +423,7 @@ test('buildMomenceLeadRequestPayload includes kids-specific fields with Momence 
   assert.equal(payload.childName, 'Riya Shah');
   assert.equal(payload.childAge, 10);
   assert.equal(payload.childDateOfBirth, '2015-06-01');
-  assert.equal(payload.batch, 'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri');
+  assert.equal(payload.batch, 'Saturday only - 3:30 PM');
   assert.equal(Object.prototype.hasOwnProperty.call(payload, 'batchPreference'), false);
 });
 
@@ -622,4 +617,38 @@ test('Momence dashboard client builds Mum Tribe free class pay-cart request for 
       weightRelative: 1
     }
   ]);
+});
+
+test('dashboard cookie refresh still succeeds when .env cannot be written (read-only serverless disk)', async () => {
+  const savedEnv = { ...process.env };
+  process.env.MOMENCE_LOGIN_EMAIL = 'ops@example.com';
+  process.env.MOMENCE_LOGIN_PASSWORD = 'pw';
+  process.env.MOMENCE_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
+  const calls = [];
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url: String(url), cookie: options.headers?.Cookie || '' });
+    const headers = new Headers();
+    if (String(url).includes('/auth/login')) {
+      headers.append('set-cookie', 'session=fresh; Path=/');
+      return new Response('{}', { status: 200, headers });
+    }
+    if (String(url).includes('/auth/mfa')) {
+      return new Response('{}', { status: 200, headers });
+    }
+    const ok = (options.headers?.Cookie || '').includes('session=fresh');
+    return new Response(ok ? '{"signed":true}' : '{}', { status: ok ? 200 : 401 });
+  };
+
+  try {
+    const client = new app.MomencePublicApiClient({
+      fetchImpl,
+      hostId: 1,
+      dashboardCookies: 'session=stale',
+      envFilePath: '/nonexistent-read-only-dir/.env'
+    });
+    const data = await client.dashboardRequest('/host/1/anything', { method: 'POST', body: '{}' });
+    assert.deepEqual(data, { signed: true });
+  } finally {
+    process.env = savedEnv;
+  }
 });

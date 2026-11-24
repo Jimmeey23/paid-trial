@@ -758,16 +758,26 @@ async function authenticateMomenceDashboard(options = {}) {
   Object.entries(properties).forEach(([key, value]) => {
     process.env[key] = value;
   });
-  updateEnvFileProperties(config.envFilePath, properties);
+  // Persisting to disk is best-effort: serverless hosts (Vercel) have a read-only
+  // filesystem, and the refreshed cookies already live in process.env for this instance.
+  try {
+    updateEnvFileProperties(config.envFilePath, properties);
+  } catch (error) {
+    console.warn(`Momence cookie refresh: could not persist to ${config.envFilePath} (${error.code || error.message}); using in-memory cookies.`);
+  }
 
   if (process.env.MOMENCE_AUTH_BACKUP_PATH) {
-    fs.writeFileSync(process.env.MOMENCE_AUTH_BACKUP_PATH, JSON.stringify({
-      savedAt: new Date().toISOString(),
-      cookies,
-      tokens,
-      loginResponse: loginBody,
-      mfaResponse: mfaBody
-    }, null, 2), 'utf8');
+    try {
+      fs.writeFileSync(process.env.MOMENCE_AUTH_BACKUP_PATH, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        cookies,
+        tokens,
+        loginResponse: loginBody,
+        mfaResponse: mfaBody
+      }, null, 2), 'utf8');
+    } catch (error) {
+      console.warn(`Momence cookie refresh: could not write auth backup (${error.code || error.message}).`);
+    }
   }
 
   return {

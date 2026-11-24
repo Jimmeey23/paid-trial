@@ -12,3 +12,4 @@ CREDENTIALS_PRIVATE.md
 dist/
 *.tsbuildinfo
 .vercel
+.env*.local

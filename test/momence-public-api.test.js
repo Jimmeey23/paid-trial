@@ -60,6 +60,7 @@ test('resolveLeadClassFormat allows Maia campaign to send powerCycle to Momence 
 test('ensureMember finds an existing member by email before creating one', async () => {
   const calls = [];
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     basicAuth: 'Basic test',
     username: 'user@example.com',
     password: 'secret',
@@ -103,6 +104,7 @@ test('ensureMember finds an existing member by email before creating one', async
 test('ensureMember creates a member when email and phone lookups miss', async () => {
   const calls = [];
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     basicAuth: 'Basic test',
     username: 'user@example.com',
     password: 'secret',
@@ -146,6 +148,7 @@ test('ensureMember creates a member when email and phone lookups miss', async ()
 
 test('addMembershipToMember performs a free checkout for the Open Barre membership', async () => {
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     basicAuth: 'Basic test',
     username: 'user@example.com',
     password: 'secret',
@@ -190,6 +193,7 @@ test('addMembershipToMember performs a free checkout for the Open Barre membersh
 test('signKidsConsentWaivers uses the Momence dashboard primary API base by default', async () => {
   const calls = [];
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     dashboardCookies: 'ribbon.connect.sid=session-token',
     hostId: 13752,
     fetchImpl: async (url, options = {}) => {
@@ -228,6 +232,7 @@ test('signKidsConsentWaivers retries waiver lookup when records are not immediat
   const calls = [];
   let waiverLookupCount = 0;
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     dashboardCookies: 'ribbon.connect.sid=session-token',
     hostId: 13752,
     fetchImpl: async (url, options = {}) => {
@@ -272,6 +277,7 @@ test('signKidsConsentWaivers retries waiver lookup when records are not immediat
 test('signKidsConsentWaivers signs only the requested predefined waiver ids through the dashboard API', async () => {
   const calls = [];
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     dashboardBaseUrl: 'https://momence-dashboard.test',
     dashboardCookies: 'csrf_token=csrf-token; session=session-token',
     hostId: 13752,
@@ -352,6 +358,7 @@ test('signKidsConsentWaivers honors explicit kids waiver env ids without replaci
 
   const calls = [];
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     dashboardBaseUrl: 'https://momence-dashboard.test',
     dashboardCookies: 'session=session-token',
     hostId: 13752,
@@ -420,6 +427,7 @@ test('signKidsConsentWaivers refreshes dashboard cookies after an auth failure a
 
   const calls = [];
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     dashboardCookies: 'momence.device.id=old-device; ribbon.connect.sid=old-session',
     envFilePath,
     hostId: 13752,
@@ -500,6 +508,7 @@ test('signKidsConsentWaivers refreshes dashboard cookies after an auth failure a
 test('createChildAccountForMember posts child details with date of birth and captures child member id', async () => {
   const calls = [];
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     dashboardBaseUrl: 'https://momence-dashboard.test',
     dashboardCookies: 'session=session-token',
     hostId: 13752,
@@ -546,6 +555,7 @@ test('createChildAccountForMember posts child details with date of birth and cap
 
 test('createChildAccountForMember accepts customer-wrapped child endpoint responses', async () => {
   const client = new MomencePublicApiClient({
+    cookieWebhookUrl: '',
     dashboardBaseUrl: 'https://momence-dashboard.test',
     dashboardCookies: 'session=session-token',
     hostId: 13752,

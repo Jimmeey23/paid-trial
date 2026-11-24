@@ -544,6 +544,76 @@ function generateTotp(secret, timestamp = Date.now()) {
   return String(code % 1000000).padStart(6, '0');
 }
 
+const SET_COOKIE_ATTRIBUTE_NAMES = new Set([
+  'expires', 'max-age', 'domain', 'path', 'samesite', 'httponly', 'secure', 'priority', 'partitioned'
+]);
+
+// n8n returns Set-Cookie headers joined with "; " (attributes included). Keep only name=value pairs.
+function extractCookiePairsFromSetCookieString(value) {
+  const pairsByName = new Map();
+  String(value || '')
+    .split(';')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.includes('='))
+    .forEach((pair) => {
+      const name = pair.slice(0, pair.indexOf('=')).trim();
+      if (name && !SET_COOKIE_ATTRIBUTE_NAMES.has(name.toLowerCase())) {
+        pairsByName.set(name, pair);
+      }
+    });
+  return [...pairsByName.values()].join('; ');
+}
+
+async function fetchMomenceCookieFromWebhook({ fetchImpl = fetch, webhookUrl, forceRefresh = false } = {}) {
+  if (!webhookUrl) {
+    throw new Error('Momence cookie webhook is not configured. Set MOMENCE_COOKIE_WEBHOOK_URL.');
+  }
+
+  const response = await fetchImpl(webhookUrl, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ forceRefresh: Boolean(forceRefresh) })
+  });
+  const body = await readJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(`Momence cookie webhook failed: ${response.status}`);
+  }
+
+  const result = Array.isArray(body) ? body[0] || {} : body;
+  const cookies = extractCookiePairsFromSetCookieString(result.cookie);
+  if (!cookies) {
+    throw new Error('Momence cookie webhook did not return a cookie.');
+  }
+
+  process.env.MOMENCE_ALL_COOKIES = cookies;
+  return { cookies, cookieExpiresAt: result.cookie_expires_at || result.cookieExpiresAt || null };
+}
+
+let pendingWebhookCookieRefresh = null;
+
+// Forces a fresh Momence login via n8n. Concurrent callers share one refresh. If the forced
+// login fails (e.g. Momence rejects a TOTP code already used in this 30s window by another
+// refresh), fall back to the cookie n8n has cached, as long as it differs from the stale one.
+async function refreshMomenceCookieViaWebhook({ fetchImpl, webhookUrl, staleCookies = '', fallbackDelayMs = 2000 }) {
+  if (!pendingWebhookCookieRefresh) {
+    pendingWebhookCookieRefresh = (async () => {
+      try {
+        return await fetchMomenceCookieFromWebhook({ fetchImpl, webhookUrl, forceRefresh: true });
+      } catch (forcedError) {
+        await sleep(fallbackDelayMs);
+        const cached = await fetchMomenceCookieFromWebhook({ fetchImpl, webhookUrl, forceRefresh: false });
+        if (cached.cookies && cached.cookies !== staleCookies) {
+          return cached;
+        }
+        throw forcedError;
+      }
+    })().finally(() => {
+      pendingWebhookCookieRefresh = null;
+    });
+  }
+  return pendingWebhookCookieRefresh;
+}
+
 function getCookieValue(cookies = '', name = '') {
   return String(cookies || '')
     .split(';')
@@ -1139,6 +1209,7 @@ class MomencePublicApiClient {
     this.dashboardBaseUrl = String(config.dashboardBaseUrl || process.env.MOMENCE_DASHBOARD_BASE_URL || DEFAULT_MOMENCE_DASHBOARD_BASE_URL).replace(/\/$/, '');
     this.dashboardCookies = String(config.dashboardCookies || process.env.MOMENCE_ALL_COOKIES || '').trim();
     this.envFilePath = String(config.envFilePath || process.env.MOMENCE_ENV_FILE || path.join(__dirname, '.env'));
+    this.cookieWebhookUrl = String(config.cookieWebhookUrl ?? process.env.MOMENCE_COOKIE_WEBHOOK_URL ?? '').trim();
     this.dashboardCookieRefreshEnabled = config.dashboardCookieRefreshEnabled !== false
       && !parseBoolean(process.env.MOMENCE_DISABLE_COOKIE_REFRESH, false);
   }
@@ -1229,6 +1300,13 @@ class MomencePublicApiClient {
   }
 
   async executeDashboardRequest(pathname, options = {}) {
+    if (!this.dashboardCookies && this.cookieWebhookUrl) {
+      const result = await fetchMomenceCookieFromWebhook({
+        fetchImpl: this.fetchImpl,
+        webhookUrl: this.cookieWebhookUrl
+      });
+      this.dashboardCookies = result.cookies;
+    }
     this.assertDashboardConfigured();
 
     const csrfToken = getCookieValue(this.dashboardCookies, 'csrf_token');
@@ -1266,6 +1344,16 @@ class MomencePublicApiClient {
   }
 
   async refreshDashboardCookies() {
+    if (this.cookieWebhookUrl) {
+      const result = await refreshMomenceCookieViaWebhook({
+        fetchImpl: this.fetchImpl,
+        webhookUrl: this.cookieWebhookUrl,
+        staleCookies: this.dashboardCookies
+      });
+      this.dashboardCookies = result.cookies;
+      return result;
+    }
+
     const authResult = await authenticateMomenceDashboard({
       fetchImpl: this.fetchImpl,
       envFilePath: this.envFilePath,
@@ -4271,6 +4359,7 @@ module.exports.app = app;
 module.exports.validateLeadPayload = validateLeadPayload;
 module.exports.validateKidsLeadPayload = validateKidsLeadPayload;
 module.exports.MomencePublicApiClient = MomencePublicApiClient;
+module.exports.extractCookiePairsFromSetCookieString = extractCookiePairsFromSetCookieString;
 module.exports.buildOpenBarreMembershipConfig = buildOpenBarreMembershipConfig;
 module.exports.buildStudioComplimentaryClassMembershipConfig = buildStudioComplimentaryClassMembershipConfig;
 module.exports.buildMomenceLeadRequestPayload = buildMomenceLeadRequestPayload;

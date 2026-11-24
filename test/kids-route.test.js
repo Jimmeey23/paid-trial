@@ -552,6 +552,7 @@ test('Momence dashboard client builds Mum Tribe free class pay-cart request for 
 
   const requests = [];
   const client = new app.MomencePublicApiClient({
+    cookieWebhookUrl: '',
     dashboardBaseUrl: 'https://momence.test/_api/primary',
     dashboardCookies: 'momence.device.id=device-1; ribbon.connect.sid=session-1',
     dashboardCookieRefreshEnabled: false,
@@ -641,6 +642,7 @@ test('dashboard cookie refresh still succeeds when .env cannot be written (read-
 
   try {
     const client = new app.MomencePublicApiClient({
+    cookieWebhookUrl: '',
       fetchImpl,
       hostId: 1,
       dashboardCookies: 'session=stale',
@@ -650,5 +652,92 @@ test('dashboard cookie refresh still succeeds when .env cannot be written (read-
     assert.deepEqual(data, { signed: true });
   } finally {
     process.env = savedEnv;
+  }
+});
+
+test('extractCookiePairsFromSetCookieString drops Set-Cookie attributes', () => {
+  const raw = 'momence.device.id=abc; Max-Age=31536000; Domain=.momence.com; Path=/; Expires=Tue, 26 Oct 2027 20:07:55 GMT; HttpOnly; Secure; SameSite=None; ribbon.connect.sid=s%3Axyz; Domain=.momence.com; Path=/; Expires=Tue, 26 Oct 2027 20:07:55 GMT; HttpOnly; SameSite=Lax';
+  assert.equal(app.extractCookiePairsFromSetCookieString(raw), 'momence.device.id=abc; ribbon.connect.sid=s%3Axyz');
+});
+
+test('dashboard 401 fetches a forced fresh cookie from the n8n webhook and retries', async () => {
+  const webhookBodies = [];
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url) === 'https://n8n.example/webhook/cookie') {
+      webhookBodies.push(JSON.parse(options.body));
+      return new Response(JSON.stringify({ cookie: 'ribbon.connect.sid=fresh; Path=/; HttpOnly' }), { status: 200 });
+    }
+    const ok = (options.headers?.Cookie || '') === 'ribbon.connect.sid=fresh';
+    return new Response(ok ? '{"signed":true}' : '{}', { status: ok ? 200 : 401 });
+  };
+  const savedCookies = process.env.MOMENCE_ALL_COOKIES;
+
+  try {
+    const client = new app.MomencePublicApiClient({
+      fetchImpl,
+      hostId: 1,
+      dashboardCookies: 'ribbon.connect.sid=stale',
+      cookieWebhookUrl: 'https://n8n.example/webhook/cookie'
+    });
+    const data = await client.dashboardRequest('/host/1/anything', { method: 'POST', body: '{}' });
+    assert.deepEqual(data, { signed: true });
+    assert.deepEqual(webhookBodies, [{ forceRefresh: true }]);
+  } finally {
+    process.env.MOMENCE_ALL_COOKIES = savedCookies;
+  }
+});
+
+test('dashboard request loads cookie from webhook when none is configured', async () => {
+  const webhookBodies = [];
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url).includes('n8n.example')) {
+      webhookBodies.push(JSON.parse(options.body));
+      return new Response(JSON.stringify([{ cookie: 'ribbon.connect.sid=cached; Path=/' }]), { status: 200 });
+    }
+    return new Response('{"ok":1}', { status: options.headers?.Cookie === 'ribbon.connect.sid=cached' ? 200 : 401 });
+  };
+  const savedCookies = process.env.MOMENCE_ALL_COOKIES;
+  delete process.env.MOMENCE_ALL_COOKIES;
+
+  try {
+    const client = new app.MomencePublicApiClient({
+      fetchImpl,
+      hostId: 1,
+      dashboardCookies: '',
+      cookieWebhookUrl: 'https://n8n.example/webhook/cookie'
+    });
+    assert.deepEqual(await client.dashboardRequest('/x'), { ok: 1 });
+    assert.deepEqual(webhookBodies, [{ forceRefresh: false }]);
+  } finally {
+    process.env.MOMENCE_ALL_COOKIES = savedCookies;
+  }
+});
+
+test('forced webhook refresh failure falls back to the freshly cached n8n cookie', async () => {
+  const webhookBodies = [];
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url).includes('n8n.example')) {
+      const body = JSON.parse(options.body);
+      webhookBodies.push(body);
+      if (body.forceRefresh) {
+        return new Response('{"message":"Error in workflow"}', { status: 500 });
+      }
+      return new Response(JSON.stringify({ cookie: 'ribbon.connect.sid=other-refresh; Path=/' }), { status: 200 });
+    }
+    return new Response('{"ok":1}', { status: options.headers?.Cookie === 'ribbon.connect.sid=other-refresh' ? 200 : 401 });
+  };
+  const savedCookies = process.env.MOMENCE_ALL_COOKIES;
+
+  try {
+    const client = new app.MomencePublicApiClient({
+      fetchImpl,
+      hostId: 1,
+      dashboardCookies: 'ribbon.connect.sid=stale',
+      cookieWebhookUrl: 'https://n8n.example/webhook/cookie'
+    });
+    assert.deepEqual(await client.dashboardRequest('/x'), { ok: 1 });
+    assert.deepEqual(webhookBodies, [{ forceRefresh: true }, { forceRefresh: false }]);
+  } finally {
+    process.env.MOMENCE_ALL_COOKIES = savedCookies;
   }
 });

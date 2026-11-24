@@ -293,16 +293,15 @@ function KidsThankYouPage({
               <p className="mt-5 max-w-xl animate-in text-base leading-7 text-slate-600 fade-in slide-in-from-bottom-2 duration-700 delay-150 sm:text-lg">
                 {isMumTribeSubmission
                   ? successPayload?.statusMessage || `${eventDateTime}. Taught by ${eventInstructor}.`
-                  : "Our team will contact you shortly to confirm the best class timing and make the first studio visit feel clear, calm, and confident."}
+                  : batch
+                    ? `You've chosen ${batch}. Our team will be in touch shortly to confirm your child's first session.`
+                    : "Our team will contact you shortly to confirm the best class timing and make the first studio visit feel clear, calm, and confident."}
               </p>
 
               <div className="mt-7 grid animate-in gap-3 fade-in slide-in-from-bottom-2 duration-700 delay-300 sm:grid-cols-2">
                 <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{isMumTribeSubmission ? "Venue" : "Studio"}</p>
                   <p className="mt-2 text-base font-bold leading-6 text-slate-950">{isMumTribeSubmission ? eventVenue : studioName}</p>
-                  {!isMumTribeSubmission && selectedStudio?.neighborhood ? (
-                    <p className="mt-1 text-sm text-slate-600">{selectedStudio.neighborhood}</p>
-                  ) : null}
                 </div>
                 <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4 transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{isMumTribeSubmission ? "Event" : "Juniors class"}</p>
@@ -342,7 +341,7 @@ function KidsThankYouPage({
             <div className="grid gap-3 border-t border-slate-200 pt-5 text-sm text-slate-600 sm:grid-cols-3">
               <div className="flex items-center gap-2 font-semibold text-slate-800">
                 <Sparkles className="h-4 w-4 text-rose-600" />
-                Ages 9-13
+                Ages 8-12
               </div>
               <div className="flex items-center gap-2 font-semibold text-slate-800">
                 <Shield className="h-4 w-4 text-emerald-600" />

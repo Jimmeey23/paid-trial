@@ -80,7 +80,7 @@ const JUNIORS_USPS = [
   },
 ]
 
-const JUNIORS_BATCH_DETAILS: Record<string, Array<{
+type JuniorsBatchDetail = {
   value: string
   days: string
   time: string
@@ -89,32 +89,44 @@ const JUNIORS_BATCH_DETAILS: Record<string, Array<{
   note: string
   accent: string
   metaAccent: string
-}>> = {
-  "Supreme Headquarters, Bandra": [
-    {
-      value: "Saturday & Sunday - 3:30 PM",
-      days: "Saturday & Sunday",
-      time: "3:30 PM",
-      instructors: "",
-      studio: "Bandra",
-      note: "Weekend sessions built around posture and confidence.",
-      accent: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
-      metaAccent: "text-rose-700",
-    },
-  ],
-  "Kwality House, Kemps Corner": [
-    {
-      value: "Saturday & Sunday - 3:00 PM",
-      days: "Saturday & Sunday",
-      time: "3:00 PM",
-      instructors: "",
-      studio: "Kemps Corner",
-      note: "Weekend sessions with guided technique and balance work.",
-      accent: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
-      metaAccent: "text-sky-700",
-    },
-  ],
 }
+
+const JUNIORS_DAY_OPTIONS = [
+  { days: "Saturday & Sunday", note: "Both weekend days for steady, faster progress." },
+  { days: "Saturday only", note: "One weekend session, every Saturday." },
+  { days: "Sunday only", note: "One weekend session, every Sunday." },
+]
+
+const JUNIORS_STUDIO_BATCHES: Record<string, { time: string; studio: string; accent: string; metaAccent: string }> = {
+  "Supreme Headquarters, Bandra": {
+    time: "3:30 PM",
+    studio: "Bandra",
+    accent: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
+    metaAccent: "text-rose-700",
+  },
+  "Kwality House, Kemps Corner": {
+    time: "3:00 PM",
+    studio: "Kemps Corner",
+    accent: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
+    metaAccent: "text-sky-700",
+  },
+}
+
+const JUNIORS_BATCH_DETAILS: Record<string, JuniorsBatchDetail[]> = Object.fromEntries(
+  Object.entries(JUNIORS_STUDIO_BATCHES).map(([studioName, info]) => [
+    studioName,
+    JUNIORS_DAY_OPTIONS.map((option) => ({
+      value: `${option.days} - ${info.time}`,
+      days: option.days,
+      time: info.time,
+      instructors: "",
+      studio: info.studio,
+      note: option.note,
+      accent: info.accent,
+      metaAccent: info.metaAccent,
+    })),
+  ]),
+)
 
 const JUNIORS_BUILD_AREAS = [
   {
@@ -196,14 +208,9 @@ const SECTION_TITLE_CLASS =
 const SECTION_BADGE_CLASS =
   "w-fit text-[10px] font-semibold uppercase tracking-[0.24em]"
 
-const KIDS_BATCH_OPTIONS: Record<string, string[]> = {
-  "Supreme Headquarters, Bandra": [
-    "Saturday & Sunday - 3:30 PM",
-  ],
-  "Kwality House, Kemps Corner": [
-    "Saturday & Sunday - 3:00 PM",
-  ],
-}
+const KIDS_BATCH_OPTIONS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(JUNIORS_BATCH_DETAILS).map(([studioName, batches]) => [studioName, batches.map((batch) => batch.value)]),
+)
 
 const JUNIORS_MIN_AGE = 8
 const JUNIORS_MAX_AGE = 12

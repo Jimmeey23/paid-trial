@@ -245,8 +245,8 @@ function KidsThankYouPage({
         icon: CalendarCheck2,
       },
       {
-        title: "Consent recorded",
-        text: "The parent/guardian signature is submitted against the Juniors waiver on the member profile.",
+        title: "Consent received",
+        text: "We have received the parent/guardian signature for the Juniors waiver.",
         icon: Shield,
       },
       {
@@ -262,8 +262,8 @@ function KidsThankYouPage({
         icon: Phone,
       },
       {
-        title: "Consent recorded",
-        text: "The parent/guardian signature is submitted against the Juniors waiver on the member profile.",
+        title: "Consent received",
+        text: "We have received the parent/guardian signature for the Juniors waiver.",
         icon: Shield,
       },
       {

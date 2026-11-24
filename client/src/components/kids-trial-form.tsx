@@ -215,7 +215,7 @@ const KIDS_BATCH_OPTIONS: Record<string, string[]> = Object.fromEntries(
 const JUNIORS_MIN_AGE = 8
 const JUNIORS_MAX_AGE = 12
 // Age eligibility is measured as of this date, not today.
-const JUNIORS_AGE_REFERENCE_DATE = new Date(2027, 0, 1)
+const JUNIORS_AGE_REFERENCE_DATE = new Date(2027, 0, 7)
 
 const JUNIORS_MARQUEE_ITEMS = [
   "Build Strength",
@@ -439,7 +439,7 @@ export function KidsTrialForm({
         childAge: "",
         childDateOfBirth:
           derivedAge !== null && (derivedAge < JUNIORS_MIN_AGE || derivedAge > JUNIORS_MAX_AGE)
-            ? `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${derivedAge} as of 1 January 2027.`
+            ? `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${derivedAge} as of 7 January 2027.`
             : "",
       }))
 
@@ -491,7 +491,7 @@ export function KidsTrialForm({
     } else if (parsedAge === null) {
       nextErrors.childDateOfBirth = "Enter a valid date of birth"
     } else if (parsedAge < JUNIORS_MIN_AGE || parsedAge > JUNIORS_MAX_AGE) {
-      nextErrors.childDateOfBirth = `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${parsedAge} as of 1 January 2027.`
+      nextErrors.childDateOfBirth = `Juniors is for ages ${JUNIORS_MIN_AGE}-${JUNIORS_MAX_AGE}. This date of birth gives an age of ${parsedAge} as of 7 January 2027.`
     }
     if (!hideBatchSelection && !formData.batch) {
       nextErrors.batch = selectedStudio ? "Select a class" : "Select a studio first"
@@ -947,7 +947,7 @@ export function KidsTrialForm({
                     {errors.childDateOfBirth ? (
                       <p className={FIELD_ERROR_CLASS}>{errors.childDateOfBirth}</p>
                     ) : (
-                      <p className="text-xs font-medium text-slate-500">Juniors is open to ages {JUNIORS_MIN_AGE}-{JUNIORS_MAX_AGE} as of 1 January 2027.</p>
+                      <p className="text-xs font-medium text-slate-500">Juniors is open to ages {JUNIORS_MIN_AGE}-{JUNIORS_MAX_AGE} as of 7 January 2027.</p>
                     )}
                   </div>
 

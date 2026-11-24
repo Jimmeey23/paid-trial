@@ -4134,6 +4134,26 @@ app.post('/api/submit-influencer-signup-lead', applySubmissionRateLimit, async (
 });
 
 async function handleKidsLeadSubmission(req, res, options = {}) {
+  let submissionResult = null;
+  // Once the Momence lead webhook has delivered the lead, later failures (consent, class
+  // booking, unexpected errors) are logged for the studio team but never shown to the parent.
+  const leadWebhookDelivered = () => Boolean(
+    submissionResult
+    && submissionResult.momenceSynced === true
+    && !submissionResult.momenceLeadWebhookSkipped
+  );
+  const respondSilentSuccess = (extra = {}, issue = '') => {
+    const { warning, error, ...cleanResult } = submissionResult;
+    console.warn('Kids submission post-webhook issue hidden from parent:', issue || 'unknown');
+    return res.status(200).json({
+      ...cleanResult,
+      ...extra,
+      success: true,
+      requiresManualFollowUp: true,
+      postSubmitIssue: issue
+    });
+  };
+
   try {
     const submitLead = options.processLeadSubmission || processLeadSubmission;
     const recordKidsConsent = options.provisionKidsConsent || provisionKidsConsent;
@@ -4169,7 +4189,7 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
       class_format: KIDS_CLASS_TYPE
     });
 
-    const submissionResult = await submitLead(
+    submissionResult = await submitLead(
       leadData,
       req,
       {
@@ -4189,6 +4209,11 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
       consentResult = await recordKidsConsent(leadData, options.kidsConsentOptions || {});
     } catch (error) {
       console.error('Kids consent recording failed:', error.message);
+      if (leadWebhookDelivered()) {
+        return respondSilentSuccess({
+          momenceConsent: { success: false, error: error.message || 'Unable to record kids consent.' }
+        }, error.message || 'Unable to record kids consent.');
+      }
       if (options.allowPostSubmitIntegrationFailure) {
         return res.status(200).json({
           ...submissionResult,
@@ -4232,6 +4257,12 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
         });
       } catch (error) {
         console.error(`${eventClassBooker.logLabel} class booking failed:`, error.message);
+        if (leadWebhookDelivered()) {
+          return respondSilentSuccess({
+            momenceConsent: consentResult,
+            momenceClassBooking: { success: false, error: error.message || `Unable to add ${eventClassBooker.label}.` }
+          }, error.message || `Unable to add ${eventClassBooker.label}.`);
+        }
         if (options.allowPostSubmitIntegrationFailure) {
           return res.status(200).json({
             ...submissionResult,
@@ -4263,6 +4294,9 @@ async function handleKidsLeadSubmission(req, res, options = {}) {
     });
   } catch (error) {
     console.error('Error submitting kids lead:', error);
+    if (leadWebhookDelivered()) {
+      return respondSilentSuccess({}, error.message || 'Unexpected error after lead webhook.');
+    }
     return res.status(500).json({
       success: false,
       error: error.message || 'An unexpected error occurred.'

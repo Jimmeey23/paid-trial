@@ -741,3 +741,42 @@ test('forced webhook refresh failure falls back to the freshly cached n8n cookie
     process.env.MOMENCE_ALL_COOKIES = savedCookies;
   }
 });
+
+function kidsRequest() {
+  return { body: validKidsPayload(), get: () => 'test-agent', headers: {}, ip: '127.0.0.1' };
+}
+
+test('kids handler hides consent failure from parent when the Momence lead webhook was delivered', async () => {
+  const response = createJsonResponseRecorder();
+  await app.handleKidsLeadSubmission(kidsRequest(), response, {
+    processLeadSubmission: async (leadData) => ({
+      success: true, id: leadData.id, event_id: leadData.event_id, momenceSynced: true
+    }),
+    provisionKidsConsent: async () => {
+      throw new Error('Momence dashboard request failed: 401');
+    }
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.warning, undefined);
+  assert.equal(response.body.error, undefined);
+  assert.equal(response.body.requiresManualFollowUp, true);
+  assert.match(response.body.postSubmitIssue, /401/);
+});
+
+test('kids handler still reports consent failure when the Momence lead webhook was not delivered', async () => {
+  const response = createJsonResponseRecorder();
+  await app.handleKidsLeadSubmission(kidsRequest(), response, {
+    processLeadSubmission: async (leadData) => ({
+      success: true, id: leadData.id, event_id: leadData.event_id, momenceSynced: false,
+      warning: 'Your details were saved, but the Momence sync failed.'
+    }),
+    provisionKidsConsent: async () => {
+      throw new Error('Momence dashboard request failed: 401');
+    }
+  });
+
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.body.success, false);
+});

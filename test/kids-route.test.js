@@ -780,3 +780,20 @@ test('kids handler still reports consent failure when the Momence lead webhook w
   assert.equal(response.statusCode, 502);
   assert.equal(response.body.success, false);
 });
+
+test('kids leads use Momence source 212426 even when source env vars are set', () => {
+  const saved = { kids: process.env.MOMENCE_KIDS_SOURCE_ID, general: process.env.MOMENCE_SOURCE_ID };
+  process.env.MOMENCE_KIDS_SOURCE_ID = '99999';
+  process.env.MOMENCE_SOURCE_ID = '88888';
+  try {
+    const payload = app.buildMomenceLeadRequestPayload(
+      { source_form: 'kids-trial-form', firstName: 'A', email: 'a@example.com' },
+      { token: 't', sourceId: app.resolveMomenceSourceId({ source_form: 'kids-trial-form' }) }
+    );
+    assert.equal(payload.sourceId, '212426');
+  } finally {
+    for (const [key, name] of [['kids', 'MOMENCE_KIDS_SOURCE_ID'], ['general', 'MOMENCE_SOURCE_ID']]) {
+      if (saved[key] === undefined) delete process.env[name]; else process.env[name] = saved[key];
+    }
+  }
+});

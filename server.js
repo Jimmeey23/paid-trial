@@ -2817,8 +2817,10 @@ function resolveMomenceSourceId(leadData = {}, options = {}) {
     return options.sourceId;
   }
 
+  // Kids leads always use the kids Momence source; env vars must not reroute them
+  // (a shared MOMENCE_SOURCE_ID previously sent them to the general source).
   if (isKidsLead(leadData)) {
-    return process.env.MOMENCE_KIDS_SOURCE_ID || process.env.MOMENCE_SOURCE_ID || DEFAULT_KIDS_MOMENCE_SOURCE_ID;
+    return DEFAULT_KIDS_MOMENCE_SOURCE_ID;
   }
 
   return process.env.MOMENCE_REGULAR_SOURCE_ID || DEFAULT_REGULAR_MOMENCE_SOURCE_ID;
@@ -4416,3 +4418,4 @@ module.exports.provisionOpenBarreViaSupabase = provisionOpenBarreViaSupabase;
 module.exports.resolveScheduleLocationIds = resolveScheduleLocationIds;
 module.exports.buildStudioSchedulePageUrl = buildStudioSchedulePageUrl;
 module.exports.getScheduleForLead = getScheduleForLead;
+module.exports.resolveMomenceSourceId = resolveMomenceSourceId;

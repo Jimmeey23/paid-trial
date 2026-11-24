@@ -690,7 +690,7 @@ test('buildMomenceLeadRequestPayload can override sourceId for influencer leads'
   assert.equal(payload.email, 'influencer@example.com');
 });
 
-test('buildMomenceLeadRequestPayload keeps the env Momence source for kids but uses 8082 for regular and Barre leads', () => {
+test('buildMomenceLeadRequestPayload pins kids to Momence source 212426 but uses 8082 for regular and Barre leads', () => {
   const previousSourceId = process.env.MOMENCE_SOURCE_ID;
   const previousRegularSourceId = process.env.MOMENCE_REGULAR_SOURCE_ID;
 
@@ -721,7 +721,7 @@ test('buildMomenceLeadRequestPayload keeps the env Momence source for kids but u
 
     assert.equal(regularPayload.sourceId, '8082');
     assert.equal(barrePayload.sourceId, '8082');
-    assert.equal(kidsPayload.sourceId, 'kids-source-only');
+    assert.equal(kidsPayload.sourceId, '212426');
   } finally {
     if (previousSourceId === undefined) {
       delete process.env.MOMENCE_SOURCE_ID;

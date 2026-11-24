@@ -25,7 +25,7 @@ const CLIENT_APP_INDEX_PATH = path.join(CLIENT_APP_DIRECTORY, 'index.html');
 const BRAND_LOGO_URL = '/p57-assets/physique57-logo.jpg';
 const KIDS_ROUTE_META = {
   title: 'Physique 57 Juniors | Kids Strength & Agility Program',
-  description: 'Register for Physique 57 Juniors for ages 9-13 and choose your preferred Bandra or Kemps Corner batch.',
+  description: 'Register for Physique 57 Juniors for ages 8-12 and choose your preferred Bandra or Kemps Corner batch.',
   image: '/p57-assets/p57-juniors-hero-2026-1.png',
   imageAlt: 'Young movers at a Physique 57 Juniors barre session'
 };
@@ -95,15 +95,18 @@ const DEFAULT_RESPOND_IO_CHANNEL_ID = 523696;
 const DEFAULT_RESPOND_IO_RETRY_ATTEMPTS = 4;
 const DEFAULT_RESPOND_IO_RETRY_DELAY_MS = 1500;
 const DEFAULT_MOMENCE_CHILD_DOB_CUSTOMER_FIELD_ID = 6592;
-const KIDS_BATCH_OPTIONS = {
-  'Supreme Headquarters, Bandra': [
-    'Tuesday & Friday - 4:30 PM - Tue: Simonelle, Fri: Cauveri'
-  ],
-  'Kwality House, Kemps Corner': [
-    'Batch A - Monday & Thursday - 11:30 AM - Mon: Simonelle, Thu: Karanvir',
-    'Batch B - Monday & Wednesday - 4:30 PM - Mon: Cauveri, Wed: Pranjali'
-  ]
+const KIDS_BATCH_DAY_OPTIONS = ['Saturday & Sunday', 'Saturday only', 'Sunday only'];
+const KIDS_BATCH_TIMES = {
+  'Supreme Headquarters, Bandra': '3:30 PM',
+  'Kwality House, Kemps Corner': '3:00 PM'
 };
+// Must match JUNIORS_BATCH_DETAILS values in client/src/components/kids-trial-form.tsx
+const KIDS_BATCH_OPTIONS = Object.fromEntries(
+  Object.entries(KIDS_BATCH_TIMES).map(([studio, time]) => [
+    studio,
+    KIDS_BATCH_DAY_OPTIONS.map((days) => `${days} - ${time}`)
+  ])
+);
 
 const STUDIO_SCHEDULE_LOCATION_IDS = {
   'Supreme Headquarters, Bandra': ['29821'],
@@ -2516,8 +2519,8 @@ function validateKidsLeadPayload(payload, options = {}) {
     fieldErrors.childAge = 'Child age is required.';
   } else if (!hasWholeAge || !Number.isInteger(parsedAge)) {
     fieldErrors.childAge = 'Child age must be a whole number.';
-  } else if (parsedAge < 9 || parsedAge > 13) {
-    fieldErrors.childAge = 'Child age must be between 9 and 13.';
+  } else if (parsedAge < 8 || parsedAge > 12) {
+    fieldErrors.childAge = 'Child age must be between 8 and 12.';
   }
 
   const rawChildDateOfBirth = sanitizeText(payload.childDateOfBirth || payload.childDob || payload.dateOfBirth, 10);

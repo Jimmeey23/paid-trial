@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { parsePhoneNumberFromString } from "libphonenumber-js/min"
 import {
+  MapPin,
   Accessibility,
   Activity,
   Award,
@@ -986,90 +987,94 @@ export function KidsTrialForm({
                         </div>
                         <div>
                           <h3 className={SECTION_TITLE_CLASS}>Pick a class</h3>
-                          <p className="mt-1 text-sm leading-6 text-slate-600">Select a studio to see available Juniors classes.</p>
+                          <p className="mt-1 text-sm leading-6 text-slate-600">Weekends only. Pick one day or both.</p>
                         </div>
                       </div>
                       <p className={cn(SECTION_BADGE_CLASS, "border-emerald-100 text-emerald-700")}>Class Times</p>
                     </div>
-                    <Select
-                      value={formData.batch}
-                      onValueChange={(value) => handleInputChange("batch", value)}
-                      disabled={!selectedStudio}
+                    <div
+                      role="radiogroup"
+                      aria-label="Batch preference"
+                      aria-required="true"
+                      aria-invalid={Boolean(errors.batch)}
+                      data-section="batch-card-grid"
+                      className="mt-5 grid gap-3 sm:grid-cols-3"
                     >
-                      <Label htmlFor="batch" className="sr-only">Batch preference <span className="text-destructive">*</span></Label>
-                      <SelectTrigger id="batch" size="lg" className={cn(FIELD_CONTROL_CLASS, "mt-3 min-h-12", errors.batch && FIELD_INVALID_CLASS)}>
-                        <SelectValue placeholder={selectedStudio ? "Select a class" : "Select a studio first"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {batchOptions.map((batch) => (
-                          <SelectItem key={batch} value={batch}>
-                            {batch}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.batch ? <p className={FIELD_ERROR_CLASS}>{errors.batch}</p> : null}
-
-                    <div data-section="batch-card-grid" className="grid gap-2 pt-1">
                       {batchDetails.length ? (
                         batchDetails.map((batch) => {
                           const isSelected = formData.batch === batch.value
+                          const dayChips = batch.days.startsWith("Saturday & Sunday")
+                            ? ["Sat", "Sun"]
+                            : batch.days.startsWith("Saturday")
+                              ? ["Sat"]
+                              : ["Sun"]
+                          const sessionsLabel = dayChips.length === 2 ? "2 classes / week" : "1 class / week"
 
                           return (
                             <button
                               key={batch.value}
                               type="button"
+                              role="radio"
+                              aria-checked={isSelected}
                               data-batch-card
-                              aria-pressed={isSelected}
                               onClick={() => handleInputChange("batch", batch.value)}
                               className={cn(
-                                "group min-w-0 rounded-[14px] border bg-white px-3.5 py-3 text-left transition-all duration-200 hover:border-slate-300 hover:bg-slate-50/70 sm:px-4",
+                                "relative flex min-w-0 flex-col rounded-[16px] border bg-white p-4 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-950/10",
                                 isSelected
-                                  ? "border-slate-950 bg-slate-50/70"
-                                  : "border-slate-200"
+                                  ? "border-slate-950 shadow-[0_8px_24px_-12px_rgba(15,23,42,0.35)] ring-1 ring-slate-950"
+                                  : "border-slate-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_6px_18px_-12px_rgba(15,23,42,0.25)]",
+                                errors.batch && !isSelected && "border-destructive/50"
                               )}
                             >
-                              <div className="flex min-w-0 items-start gap-3">
-                                <div className={cn("flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[11px]", batch.accent)}>
-                                  <Calendar className="h-4 w-4" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-700">{batch.studio}</span>
-                                    {isSelected ? (
-                                      <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white">Selected</span>
-                                    ) : null}
-                                  </div>
-                                  <div className="mt-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                    <h3 className="break-words text-sm font-semibold leading-snug text-slate-950 [overflow-wrap:anywhere] sm:text-base">{batch.days}</h3>
-                                    <span className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-slate-700">
-                                      <Clock className={cn("h-3.5 w-3.5", batch.metaAccent)} />
-                                      {batch.time}
-                                    </span>
-                                  </div>
-                                  <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-600 sm:text-sm">
-                                    {batch.instructors ? (
-                                      <>
-                                        <span className="inline-flex min-w-0 items-center gap-1.5">
-                                          <Users className={cn("h-3.5 w-3.5 flex-shrink-0", batch.metaAccent)} />
-                                          {batch.instructors}
-                                        </span>
-                                        <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" />
-                                      </>
-                                    ) : null}
-                                    <span className="min-w-0 text-slate-500">{batch.note}</span>
-                                  </div>
-                                </div>
+                              <span
+                                aria-hidden="true"
+                                className={cn(
+                                  "absolute right-3.5 top-3.5 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors",
+                                  isSelected ? "border-slate-950 bg-slate-950" : "border-slate-300 bg-white"
+                                )}
+                              >
+                                {isSelected ? <span className="h-1.5 w-1.5 rounded-full bg-white" /> : null}
+                              </span>
+
+                              <div className="flex gap-1.5 pr-7">
+                                {dayChips.map((chip) => (
+                                  <span
+                                    key={chip}
+                                    className={cn(
+                                      "flex h-10 w-10 items-center justify-center rounded-[11px] text-xs font-bold uppercase tracking-[0.06em]",
+                                      isSelected ? "bg-slate-950 text-white" : batch.accent
+                                    )}
+                                  >
+                                    {chip}
+                                  </span>
+                                ))}
                               </div>
+
+                              <h3 className="mt-3 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-slate-950">{batch.days}</h3>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-slate-700">
+                                <span className="inline-flex items-center gap-1">
+                                  <Clock className={cn("h-3.5 w-3.5", batch.metaAccent)} />
+                                  {batch.time}
+                                </span>
+                                <span className="h-1 w-1 rounded-full bg-slate-300" />
+                                <span className="text-slate-500">{sessionsLabel}</span>
+                              </div>
+                              <p className="mt-2 text-xs leading-5 text-slate-500">{batch.note}</p>
+                              <span className="mt-3 inline-flex w-fit items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                                <MapPin className="h-3 w-3" />
+                                {batch.studio}
+                              </span>
                             </button>
                           )
                         })
                       ) : (
-                        <div className="rounded-[14px] bg-slate-50/80 px-4 py-4 text-sm leading-6 text-slate-500 md:col-span-2">
-                          Select a studio to see available Juniors classes.
+                        <div className="flex items-center gap-3 rounded-[14px] border border-dashed border-slate-200 bg-slate-50/80 px-4 py-5 text-sm leading-6 text-slate-500 sm:col-span-3">
+                          <MapPin className="h-4 w-4 flex-shrink-0 text-slate-400" />
+                          Choose a studio above to see its Juniors classes.
                         </div>
                       )}
                     </div>
+                    {errors.batch ? <p className={cn(FIELD_ERROR_CLASS, "mt-2")}>{errors.batch}</p> : null}
                   </div>
                 ) : null}
 
